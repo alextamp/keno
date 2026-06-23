@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/core/theme';
 import { useThemeStore } from '@/core/theme/theme.store';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
@@ -11,6 +12,7 @@ const AVATAR_COLORS = ['#F26522','#7C3AED','#059669','#2563EB','#DB2777','#D9770
 export default function ProfileScreen() {
   const { colors } = useTheme();
   const { isDark, toggle: toggleTheme } = useThemeStore();
+  const insets = useSafeAreaInsets();
   const { user, updateProfile } = useAuthStore();
   const [editing, setEditing] = useState(false);
   const [draftBio, setDraftBio] = useState(user?.bio ?? '');
@@ -48,7 +50,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView style={[styles.root,{backgroundColor:colors.background}]} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.root,{backgroundColor:colors.background}]} contentContainerStyle={[styles.content, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false}>
       <View style={styles.topRow}>
         <Text style={[styles.pageTitle,{color:colors.textPrimary}]}>Profile</Text>
         <Pressable onPress={() => editing ? handleSave() : setEditing(true)} style={[styles.editBtn,{backgroundColor:editing?colors.primary:colors.surfaceVariant}]}>
@@ -144,7 +146,7 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   root:{flex:1},
-  content:{paddingHorizontal:Spacing.lg,paddingTop:56,paddingBottom:100,gap:Spacing.lg},
+  content:{paddingHorizontal:Spacing.lg,gap:Spacing.lg},
   topRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
   pageTitle:{fontSize:26,fontWeight:FontWeight.extrabold,letterSpacing:-0.5},
   editBtn:{paddingHorizontal:Spacing.md,paddingVertical:8,borderRadius:BorderRadius.full},

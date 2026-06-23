@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import { useTheme } from '@/core/theme';
@@ -44,6 +45,7 @@ export default function EventDetailScreen() {
   const { user } = useAuthStore();
   const { upsertEvent, removeEvent } = useEventsStore();
 
+  const insets = useSafeAreaInsets();
   const [event, setEvent] = useState<EventEntity | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -113,7 +115,7 @@ export default function EventDetailScreen() {
     <View style={[styles.container, { backgroundColor: bg }]}>
       {/* Hero */}
       {event.imageUri ? (
-        <View style={styles.heroImage}>
+        <View style={[styles.heroImage, { paddingTop: insets.top }]}>
           <Image source={{ uri: event.imageUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
           <View style={styles.heroBottomScrim} />
           <View style={styles.heroBtns}>
@@ -129,7 +131,7 @@ export default function EventDetailScreen() {
           </View>
         </View>
       ) : (
-        <View style={[styles.topBanner, { backgroundColor: categoryColor }]}>
+        <View style={[styles.topBanner, { backgroundColor: categoryColor, paddingTop: insets.top + 12 }]}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
             <Text style={styles.backIcon}>←</Text>
           </Pressable>
@@ -250,7 +252,7 @@ export default function EventDetailScreen() {
       </ScrollView>
 
       {!isCreator && (
-        <View style={[styles.cta, { backgroundColor: bg, borderTopColor: bord }]}>
+        <View style={[styles.cta, { backgroundColor: bg, borderTopColor: bord, paddingBottom: insets.bottom + 16 }]}>
           <Button
             label={attending ? 'Leave event' : full ? 'Event is full' : 'Join event'}
             onPress={handleJoinLeave}
@@ -305,7 +307,7 @@ const styles = StyleSheet.create({
   heroOverlay: {},
   heroBottomScrim: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 80, backgroundColor: 'rgba(0,0,0,0.38)' },
   heroBtns: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: Spacing.lg, paddingBottom: Spacing.lg, flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  topBanner: { paddingTop: 56, paddingBottom: Spacing.lg, paddingHorizontal: Spacing.lg, flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  topBanner: { paddingBottom: Spacing.lg, paddingHorizontal: Spacing.lg, flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' },
   backIcon: { color: '#fff', fontSize: FontSize.lg, fontWeight: FontWeight.bold },
   categoryLabelWhite: { flex: 1, color: '#fff', fontSize: FontSize.base, fontWeight: FontWeight.semibold },
@@ -338,7 +340,7 @@ const styles = StyleSheet.create({
   avatarCircle: { alignItems: 'center', justifyContent: 'center' },
   avatarInitial: { color: '#fff', fontWeight: FontWeight.bold },
   avatarImg: {},
-  cta: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: Spacing.lg, paddingBottom: Spacing.xl, borderTopWidth: 1 },
+  cta: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, borderTopWidth: 1 },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: Spacing.xl, paddingBottom: 48, alignItems: 'center', gap: Spacing.md },
   modalHandle: { width: 40, height: 4, borderRadius: 2, marginBottom: Spacing.sm },

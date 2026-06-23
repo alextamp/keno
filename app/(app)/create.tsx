@@ -3,6 +3,7 @@ import {
   Alert, Image, KeyboardAvoidingView, Platform, Pressable,
   ScrollView, StyleSheet, Text, View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
@@ -35,6 +36,7 @@ function nextHour(): Date {
 export default function CreateEventScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
   const { upsertEvent } = useEventsStore();
 
@@ -138,7 +140,7 @@ export default function CreateEventScreen() {
 
   return (
     <KeyboardAvoidingView style={[styles.flex, { backgroundColor: bg }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 40 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
         {/* Header */}
         <View style={styles.header}>
@@ -278,7 +280,7 @@ export default function CreateEventScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  container: { flexGrow: 1, paddingHorizontal: Spacing.lg, paddingTop: 56, paddingBottom: 40, gap: Spacing.lg },
+  container: { flexGrow: 1, paddingHorizontal: Spacing.lg, gap: Spacing.lg },
   header: { gap: Spacing.sm },
   backBtn: { alignSelf: 'flex-start', paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: BorderRadius.full },
   backBtnText: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold },

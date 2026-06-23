@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/core/theme';
 import { FontSize, FontWeight, Spacing, BorderRadius } from '@/core/constants/theme';
@@ -19,6 +20,7 @@ const greeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
 export default function FeedScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { events, isLoading, setEvents, setLoading, setError } = useEventsStore();
   const { user } = useAuthStore();
   const [selectedCategory, setSelectedCategory] = useState<EventCategory | null>(null);
@@ -39,7 +41,7 @@ export default function FeedScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border, paddingTop: insets.top + 12 }]}>
         <View>
           <Text style={[styles.greeting, { color: colors.textHint }]}>
             {greeting}, {user?.name.split(' ')[0]} 👋
@@ -114,7 +116,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
-    paddingTop: 56,
     paddingBottom: Spacing.md,
     borderBottomWidth: 1,
   },
@@ -136,7 +137,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   allChipLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.bold },
-  list: { paddingHorizontal: Spacing.lg, paddingBottom: 100 },
+  list: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, paddingBottom: 120 },
   empty: { alignItems: 'center', paddingTop: 64, gap: Spacing.sm },
   emptyEmoji: { fontSize: 52 },
   emptyTitle: { fontSize: FontSize.xl, fontWeight: FontWeight.bold },

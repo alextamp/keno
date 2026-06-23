@@ -74,7 +74,7 @@ export function EventCard({ event, onPress, isJoined = false }: EventCardProps) 
         ) : null}
 
         <View style={styles.metaRow}>
-          <Text style={[styles.meta, { color: colors.textSecondary }]}>
+          <Text style={[styles.meta, { color: colors.textSecondary }]} numberOfLines={1}>
             🕐 {format(event.dateTime, 'EEE d MMM · HH:mm')}
           </Text>
           <Text style={[styles.meta, { color: colors.textSecondary }]} numberOfLines={1}>
@@ -131,17 +131,17 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.bold,
   },
   title: {
-    fontSize: FontSize.lg,
+    fontSize: FontSize.base,
     fontWeight: FontWeight.bold,
-    lineHeight: 24,
+    lineHeight: 22,
     letterSpacing: -0.2,
   },
   description: {
     fontSize: FontSize.sm,
-    lineHeight: 18,
+    lineHeight: 19,
   },
-  metaRow: { gap: 2 },
-  meta: { fontSize: FontSize.sm },
+  metaRow: { gap: 4 },
+  meta: { fontSize: FontSize.sm, lineHeight: 18 },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
