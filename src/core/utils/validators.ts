@@ -1,3 +1,5 @@
+import { getTranslations } from '@/core/i18n';
+
 export interface ValidationResult {
   isValid: boolean;
   errorMessage?: string;
@@ -20,6 +22,7 @@ const KNOWN_UNIVERSITY_DOMAINS = new Set([
   'aegean.gr',      // University of the Aegean
   'ionio.gr',       // Ionian University
   'hua.gr',         // Harokopio University of Athens
+  'eap.gr',         // Hellenic Open University
   // Department sub-domains
   'di.uoa.gr',
   'ece.upatras.gr',
@@ -34,17 +37,15 @@ const KNOWN_UNIVERSITY_DOMAINS = new Set([
 const EMAIL_GR_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.gr$/i;
 
 export function validateUniversityEmail(email: string): ValidationResult {
+  const t = getTranslations();
   const trimmed = email.trim().toLowerCase();
 
   if (!trimmed) {
-    return { isValid: false, errorMessage: 'Email is required.' };
+    return { isValid: false, errorMessage: t.validEmailRequired };
   }
 
   if (!EMAIL_GR_REGEX.test(trimmed)) {
-    return {
-      isValid: false,
-      errorMessage: 'Please use your university email address (must end in .gr).',
-    };
+    return { isValid: false, errorMessage: t.validEmailInvalid };
   }
 
   const domain = trimmed.split('@')[1];
@@ -53,28 +54,27 @@ export function validateUniversityEmail(email: string): ValidationResult {
     [...KNOWN_UNIVERSITY_DOMAINS].some((d) => domain.endsWith(`.${d}`));
 
   if (!isRecognised) {
-    return {
-      isValid: false,
-      errorMessage: `"@${domain}" is not a recognised university domain. Contact support if your university is missing.`,
-    };
+    return { isValid: false, errorMessage: t.validEmailUnrecognised(domain) };
   }
 
   return { isValid: true };
 }
 
 export function validatePassword(password: string): ValidationResult {
-  if (!password) return { isValid: false, errorMessage: 'Password is required.' };
+  const t = getTranslations();
+  if (!password) return { isValid: false, errorMessage: t.validPasswordRequired };
   if (password.length < 8) {
-    return { isValid: false, errorMessage: 'Password must be at least 8 characters.' };
+    return { isValid: false, errorMessage: t.validPasswordMin };
   }
   return { isValid: true };
 }
 
 export function validateName(name: string): ValidationResult {
+  const t = getTranslations();
   const trimmed = name.trim();
-  if (!trimmed) return { isValid: false, errorMessage: 'Name is required.' };
+  if (!trimmed) return { isValid: false, errorMessage: t.validNameRequired };
   if (trimmed.length < 2) {
-    return { isValid: false, errorMessage: 'Name must be at least 2 characters.' };
+    return { isValid: false, errorMessage: t.validNameMin };
   }
   return { isValid: true };
 }

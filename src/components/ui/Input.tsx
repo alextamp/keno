@@ -1,6 +1,7 @@
 import React, { forwardRef, useState } from 'react';
+import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import {
-  StyleSheet, Text, TextInput, TextInputProps, View, ViewStyle,
+  Pressable, StyleSheet, Text, TextInput, TextInputProps, View, ViewStyle,
 } from 'react-native';
 import { useTheme } from '@/core/theme';
 import { BorderRadius, FontSize, FontWeight, Spacing } from '@/core/constants/theme';
@@ -13,29 +14,38 @@ interface InputProps extends TextInputProps {
 }
 
 export const Input = forwardRef<TextInput, InputProps>(
-  ({ label, error, hint, containerStyle, style, ...props }, ref) => {
+  ({ label, error, hint, containerStyle, style, secureTextEntry, ...props }, ref) => {
     const { colors } = useTheme();
     const [focused, setFocused] = useState(false);
+    const [hidden, setHidden] = useState(true);
+
+    const isPassword = secureTextEntry === true;
 
     return (
       <View style={[styles.container, containerStyle]}>
         {label && <Text style={[styles.label, { color: colors.textPrimary }]}>{label}</Text>}
-        <TextInput
-          ref={ref}
-          style={[
-            styles.input,
-            {
-              backgroundColor: focused ? colors.surface : colors.surfaceVariant,
-              color: colors.textPrimary,
-              borderColor: focused ? colors.primary : error ? colors.error : 'transparent',
-            },
-            style,
-          ]}
-          placeholderTextColor={colors.textHint}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          {...props}
-        />
+        <View style={[
+          styles.inputWrap,
+          {
+            backgroundColor: colors.surface,
+            borderColor: error ? colors.error : focused ? colors.primary : colors.borderStrong,
+          },
+        ]}>
+          <TextInput
+            ref={ref}
+            style={[styles.input, { color: colors.textPrimary, flex: 1 }, style]}
+            placeholderTextColor={colors.textHint}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            secureTextEntry={isPassword ? hidden : false}
+            {...props}
+          />
+          {isPassword && (
+            <AnimatedPressable onPress={() => setHidden((v) => !v)} style={styles.eyeBtn} hitSlop={8}>
+              <Text style={styles.eyeIcon}>{hidden ? '👁' : '🙈'}</Text>
+            </AnimatedPressable>
+          )}
+        </View>
         {error ? (
           <Text style={[styles.hint, { color: colors.error }]}>{error}</Text>
         ) : hint ? (
@@ -52,16 +62,22 @@ const styles = StyleSheet.create({
   container: { gap: Spacing.xs },
   label: {
     fontSize: FontSize.sm,
-    fontWeight: FontWeight.semibold,
+    fontWeight: FontWeight.bold,
     letterSpacing: 0.1,
   },
-  input: {
+  inputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: BorderRadius.md,
+    borderWidth: 2.5,
+    minHeight: 50,
+  },
+  input: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm + 2,
     fontSize: FontSize.base,
-    minHeight: 48,
-    borderWidth: 1.5,
   },
+  eyeBtn: { paddingHorizontal: Spacing.md },
+  eyeIcon: { fontSize: 18 },
   hint: { fontSize: FontSize.xs },
 });

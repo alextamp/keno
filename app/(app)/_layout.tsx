@@ -1,99 +1,32 @@
-import React from 'react';
-import { Text } from 'react-native';
-import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '@/core/theme';
-import { FontSize, FontWeight } from '@/core/constants/theme';
-
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
-function TabIcon({
-  name,
-  focusedName,
-  color,
-  size,
-  focused,
-}: {
-  name: IoniconName;
-  focusedName: IoniconName;
-  color: string;
-  size: number;
-  focused: boolean;
-}) {
-  return <Ionicons name={focused ? focusedName : name} size={size} color={color} />;
-}
+import { Stack } from 'expo-router';
+import { useEffect } from 'react';
+import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
+import { useNotificationsStore } from '@/features/notifications/notifications.store';
 
 export default function AppLayout() {
-  const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
-  const tabBarHeight = 54 + insets.bottom;
+  const user = useAuthStore((s) => s.user);
+  const subscribe = useNotificationsStore((s) => s.subscribe);
+  const clear = useNotificationsStore((s) => s.clear);
+
+  useEffect(() => {
+    if (!user) { clear(); return; }
+    const unsub = subscribe(user.id);
+    return unsub;
+  }, [user?.id]);
+
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textHint,
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-          borderTopWidth: 1,
-          height: tabBarHeight,
-          paddingBottom: insets.bottom + 4,
-          paddingTop: 8,
-        },
-        tabBarLabelStyle: {
-          fontSize: FontSize.xs,
-          fontWeight: FontWeight.semibold,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Feed',
-          tabBarIcon: ({ color, size, focused }) => (
-            <TabIcon
-              name="home-outline"
-              focusedName="home"
-              color={color}
-              size={size}
-              focused={focused}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="create"
-        options={{
-          title: 'Create',
-          tabBarIcon: ({ color, size, focused }) => (
-            <TabIcon
-              name="add-circle-outline"
-              focusedName="add-circle"
-              color={color}
-              size={size}
-              focused={focused}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, size, focused }) => (
-            <TabIcon
-              name="person-outline"
-              focusedName="person"
-              color={color}
-              size={size}
-              focused={focused}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen name="event/[id]" options={{ href: null }} />
-    </Tabs>
+    <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+      <Stack.Screen name="index" options={{ animation: 'none' }} />
+      <Stack.Screen name="onboarding" />
+      <Stack.Screen name="notifications" />
+      <Stack.Screen name="search" />
+      <Stack.Screen name="settings" />
+      <Stack.Screen name="event/[id]" />
+      <Stack.Screen name="event/edit/[id]" />
+      <Stack.Screen name="user/[uid]" />
+      <Stack.Screen name="group/[id]" />
+      <Stack.Screen name="group/create" />
+      <Stack.Screen name="leaderboard" />
+    </Stack>
   );
 }

@@ -1,42 +1,37 @@
 export const Colors = {
-  // Primary — Marker Orange
-  primary: '#F26522',
-  primaryLight: '#F4884A',
-  primaryDark: '#D4531A',
+  primary: '#C94D0A',
+  primaryLight: '#E05D18',
+  primaryDark: '#A33D07',
 
-  // Backgrounds — Notebook Cream
-  background: '#FAF9F6',
-  surface: '#FFFFFF',
-  surfaceVariant: '#F2F0EB',
-  border: '#EAE8E3',
+  background: '#F7F3ED',
+  surface: '#FFFEF9',
+  surfaceVariant: '#EDE8DF',
+  border: '#D6CCBE',
+  borderStrong: '#1A1208',
 
-  // Text — Charcoal
-  textPrimary: '#1A1A1A',
-  textSecondary: '#5C5C5C',
-  textHint: '#9E9E9E',
+  textPrimary: '#1A1208',
+  textSecondary: '#5C4A38',
+  textHint: '#A08878',
 
-  // Accents — Community / Nightlife
-  accentPurple: '#8B5CF6',
-  accentPink: '#EC4899',
-  accentGreen: '#10B981',
-  accentBlue: '#3B82F6',
-  accentAmber: '#F59E0B',
+  accentPurple: '#8B3FCC',
+  accentPink: '#CC1F6E',
+  accentGreen: '#0A8A52',
+  accentBlue: '#2952CC',
+  accentAmber: '#CC6B00',
 
-  // Event category chips
-  categoryParty: '#8B5CF6',
-  categorySports: '#10B981',
-  categoryStudy: '#3B82F6',
-  categoryChill: '#EC4899',
-  categoryCoffee: '#F59E0B',
-  categoryOther: '#6B7280',
+  categoryParty: '#8B3FCC',
+  categorySports: '#0A8A52',
+  categoryStudy: '#2952CC',
+  categoryChill: '#CC1F6E',
+  categoryCoffee: '#CC6B00',
+  categoryOther: '#504540',
 
-  // Status
-  error: '#EF4444',
-  success: '#22C55E',
-  warning: '#F59E0B',
+  error: '#DC2626',
+  success: '#16A34A',
+  warning: '#CC6B00',
 
   white: '#FFFFFF',
-  black: '#000000',
+  black: '#1A1208',
 } as const;
 
 export type ColorKey = keyof typeof Colors;

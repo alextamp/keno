@@ -6,5 +6,11 @@ expo-env.d.ts
 # @end expo-cli
 
 node_modules/
+functions/node_modules/
+functions/lib/
 .env.local
 .expo/dev/logs/
+.expo/web/
+.expo/*.png
+.DS_Store
+*.log

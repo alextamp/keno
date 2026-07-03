@@ -1,4 +1,4 @@
-import { TextStyle } from 'react-native';
+import { Platform, TextStyle } from 'react-native';
 import { Colors } from './colors';
 
 export const Spacing = {
@@ -12,8 +12,8 @@ export const Spacing = {
 
 export const BorderRadius = {
   sm: 8,
-  md: 12,
-  lg: 16,
+  md: 14,
+  lg: 18,
   xl: 24,
   full: 9999,
 } as const;
@@ -37,6 +37,19 @@ export const FontWeight = {
   bold: '700' as const,
   extrabold: '800' as const,
 };
+
+// Loaded via expo-font/@expo-google-fonts/comfortaa in the root layout.
+// Chosen specifically because it has real Greek glyph coverage (most
+// hand-drawn/marker Google Fonts are Latin-only and silently fall back to a
+// generic system font for Greek text) while still having character.
+export const DrawFont = 'Comfortaa_700Bold';
+export const DrawFontLight = 'Comfortaa_400Regular';
+
+// Original chalk wordmark font, kept for the "KeNo." brand mark specifically
+// (splash screen, sign-in, share card) — not used for general UI text since
+// it's iOS-only and has no Greek glyphs, which is exactly why DrawFont above
+// moved to Comfortaa. Fine here: it's a few characters of branding, not copy.
+export const LogoFont = Platform.OS === 'ios' ? 'ChalkboardSE-Bold' : undefined;
 
 export const Typography = {
   displayLarge: {
@@ -94,19 +107,20 @@ export const Typography = {
   } satisfies TextStyle,
 } as const;
 
+// Offset shadow = hand-drawn "stamp" look
 export const Shadow = {
   sm: {
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowColor: '#1A1208',
+    shadowOffset: { width: 3, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 0,
+    elevation: 4,
   },
   md: {
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowColor: '#1A1208',
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 0,
+    elevation: 6,
   },
 } as const;

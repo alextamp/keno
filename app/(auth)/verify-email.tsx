@@ -1,20 +1,25 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/core/constants/colors';
 import { BorderRadius, FontSize, FontWeight, Spacing } from '@/core/constants/theme';
+import { useTranslation } from '@/core/i18n';
 
 export default function VerifyEmailScreen() {
-  const { sendEmailVerification, reloadAndCheckVerification, signOut } = useAuthStore();
+  const sendEmailVerification = useAuthStore((s) => s.sendEmailVerification);
+  const reloadAndCheckVerification = useAuthStore((s) => s.reloadAndCheckVerification);
+  const signOut = useAuthStore((s) => s.signOut);
+  const t = useTranslation();
   const [resending, setResending] = useState(false);
   const [checking, setChecking] = useState(false);
   const [resent, setResent] = useState(false);
 
   const handleResend = async () => {
     setResending(true);
-    await sendEmailVerification();
+    const ok = await sendEmailVerification();
     setResending(false);
+    if (!ok) { Alert.alert(t.verifyTitle, t.verifyResendError); return; }
     setResent(true);
     setTimeout(() => setResent(false), 5000);
   };
@@ -32,27 +37,25 @@ export default function VerifyEmailScreen() {
       </View>
 
       <View style={styles.textGroup}>
-        <Text style={styles.title}>Check your inbox</Text>
-        <Text style={styles.body}>
-          We sent a verification link to your university email. Tap it to activate your Keno account, then come back here.
-        </Text>
+        <Text style={styles.title}>{t.verifyTitle}</Text>
+        <Text style={styles.body}>{t.verifyBody}</Text>
       </View>
 
       {resent && (
         <View style={styles.successBanner}>
-          <Text style={styles.successText}>✓  Email resent — check your inbox.</Text>
+          <Text style={styles.successText}>{t.verifyResent}</Text>
         </View>
       )}
 
       <View style={styles.actions}>
         <Button
-          label="I've verified my email"
+          label={t.verifyBtnCheck}
           onPress={handleCheck}
           loading={checking}
           fullWidth
         />
         <Button
-          label="Resend verification email"
+          label={t.verifyBtnResend}
           onPress={handleResend}
           variant="outline"
           loading={resending}
@@ -60,7 +63,7 @@ export default function VerifyEmailScreen() {
           fullWidth
         />
         <Button
-          label="Sign out"
+          label={t.verifyBtnSignOut}
           onPress={signOut}
           variant="ghost"
           labelStyle={{ color: Colors.textSecondary }}

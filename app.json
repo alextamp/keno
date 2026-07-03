@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "keno",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash.png",
       "resizeMode": "contain",
@@ -14,20 +14,56 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.keno.app"
+      "bundleIdentifier": "com.keno.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#FAF9F6"
       },
-      "package": "com.keno.app"
+      "package": "com.keno.app",
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-localization",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#C94D0A"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Keno uses your location to show nearby events."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Keno needs access to your photos to set a profile picture or event cover."
+        }
+      ],
+      "expo-font",
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c6994cc7-63bc-46d9-98a5-ce49a412909e"
+      }
     }
   }
 }

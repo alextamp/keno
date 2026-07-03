@@ -13,6 +13,8 @@ export function userFromFirestore(doc: DocumentSnapshot<DocumentData>): UserMode
     department: data.department as string,
     joinedEvents: (data.joinedEvents as string[]) ?? [],
     createdEvents: (data.createdEvents as string[]) ?? [],
+    following: (data.following as string[]) ?? [],
+    followers: (data.followers as string[]) ?? [],
   };
 }
 

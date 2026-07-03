@@ -38,6 +38,8 @@ export const authRemoteDataSource = {
       department,
       joinedEvents: [],
       createdEvents: [],
+      following: [],
+      followers: [],
     };
 
     await setDoc(doc(db, 'users', firebaseUser.uid), userToFirestore(user));

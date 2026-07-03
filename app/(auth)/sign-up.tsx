@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -14,16 +15,23 @@ import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Colors } from '@/core/constants/colors';
-import { BorderRadius, FontSize, FontWeight, Spacing } from '@/core/constants/theme';
+import { BorderRadius, DrawFont, FontSize, FontWeight, Spacing } from '@/core/constants/theme';
 import {
   validateName,
   validatePassword,
   validateUniversityEmail,
 } from '@/core/utils/validators';
+import { useTranslation, useLanguageStore } from '@/core/i18n';
+import { GREEK_UNIVERSITIES, universityLabel } from '@/core/constants/universities';
 
 export default function SignUpScreen() {
   const router = useRouter();
-  const { signUp, isLoading, error, clearError } = useAuthStore();
+  const signUp = useAuthStore((s) => s.signUp);
+  const isLoading = useAuthStore((s) => s.isLoading);
+  const error = useAuthStore((s) => s.error);
+  const clearError = useAuthStore((s) => s.clearError);
+  const t = useTranslation();
+  const { language } = useLanguageStore();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -34,7 +42,6 @@ export default function SignUpScreen() {
 
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
-  const uniRef = useRef<TextInput>(null);
   const deptRef = useRef<TextInput>(null);
 
   const validate = () => {
@@ -46,8 +53,8 @@ export default function SignUpScreen() {
     if (!nameCheck.isValid) errors.name = nameCheck.errorMessage!;
     if (!emailCheck.isValid) errors.email = emailCheck.errorMessage!;
     if (!passCheck.isValid) errors.password = passCheck.errorMessage!;
-    if (!universityName.trim()) errors.universityName = 'University name is required.';
-    if (!department.trim()) errors.department = 'Department is required.';
+    if (!universityName.trim()) errors.universityName = t.authUniRequired;
+    if (!department.trim()) errors.department = t.authDeptRequired;
 
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
@@ -70,33 +77,34 @@ export default function SignUpScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.flex}
+      style={[styles.flex, { backgroundColor: Colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        automaticallyAdjustKeyboardInsets
       >
         <View style={styles.header}>
           <Link href="/(auth)/sign-in" asChild>
-            <Pressable style={styles.backBtn}>
-              <Text style={styles.backText}>← Back</Text>
-            </Pressable>
+            <AnimatedPressable style={[styles.backBtn, { borderColor: Colors.borderStrong }]}>
+              <Text style={[styles.backText, { fontFamily: DrawFont }]}>{t.editEventBack}</Text>
+            </AnimatedPressable>
           </Link>
-          <Text style={styles.title}>Create account</Text>
-          <Text style={styles.subtitle}>Only verified university students can join</Text>
+          <Text style={styles.title}>{t.authSignUpTitle}</Text>
+          <Text style={styles.subtitle}>{t.authSignUpSubtitle}</Text>
         </View>
 
         {error && (
-          <View style={styles.errorBanner}>
+          <View style={[styles.errorBanner, { borderColor: Colors.borderStrong }]}>
             <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
 
         <View style={styles.form}>
           <Input
-            label="Full Name"
+            label={t.authNameLabel}
             value={name}
             onChangeText={setName}
             placeholder="Alex Papadopoulos"
@@ -108,7 +116,7 @@ export default function SignUpScreen() {
           />
           <Input
             ref={emailRef}
-            label="University Email"
+            label={t.authEmailLabel}
             value={email}
             onChangeText={setEmail}
             placeholder="you@aueb.gr"
@@ -117,35 +125,45 @@ export default function SignUpScreen() {
             autoComplete="email"
             returnKeyType="next"
             error={fieldErrors.email}
-            hint="Must be a recognised Greek university email (.gr)"
+            hint={t.authUniHint}
             onSubmitEditing={() => passwordRef.current?.focus()}
           />
           <Input
             ref={passwordRef}
-            label="Password"
+            label={t.authPasswordLabel}
             value={password}
             onChangeText={setPassword}
-            placeholder="Min. 8 characters"
+            placeholder={t.authPasswordMin}
             secureTextEntry
             autoComplete="new-password"
             returnKeyType="next"
             error={fieldErrors.password}
-            onSubmitEditing={() => uniRef.current?.focus()}
-          />
-          <Input
-            ref={uniRef}
-            label="University"
-            value={universityName}
-            onChangeText={setUniversityName}
-            placeholder="Athens University of Economics"
-            autoCapitalize="words"
-            returnKeyType="next"
-            error={fieldErrors.universityName}
             onSubmitEditing={() => deptRef.current?.focus()}
           />
+          {/* University chips */}
+          <View style={styles.pickerField}>
+            <Text style={styles.pickerLabel}>{t.authUniLabel}</Text>
+            {!!fieldErrors.universityName && (
+              <Text style={styles.pickerError}>{fieldErrors.universityName}</Text>
+            )}
+            <View style={styles.uniGrid}>
+              {GREEK_UNIVERSITIES.map((u) => {
+                const selected = universityName === u;
+                return (
+                  <AnimatedPressable
+                    key={u}
+                    onPress={() => setUniversityName(u)}
+                    style={[styles.uniChip, { borderColor: Colors.borderStrong, backgroundColor: selected ? Colors.primary : Colors.surface, marginRight: 8, marginBottom: 8 }]}
+                  >
+                    <Text style={[styles.uniChipText, { color: selected ? '#fff' : Colors.textSecondary }]}>{universityLabel(u, language)}</Text>
+                  </AnimatedPressable>
+                );
+              })}
+            </View>
+          </View>
           <Input
             ref={deptRef}
-            label="Department"
+            label={t.authDeptLabel}
             value={department}
             onChangeText={setDepartment}
             placeholder="Computer Science"
@@ -156,7 +174,7 @@ export default function SignUpScreen() {
           />
 
           <Button
-            label="Create account"
+            label={t.authCreateBtn}
             onPress={handleSignUp}
             loading={isLoading}
             fullWidth
@@ -164,11 +182,11 @@ export default function SignUpScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account? </Text>
+          <Text style={styles.footerText}>{t.authHaveAccount}</Text>
           <Link href="/(auth)/sign-in" asChild>
-            <Pressable>
-              <Text style={styles.footerLink}>Sign in</Text>
-            </Pressable>
+            <AnimatedPressable>
+              <Text style={styles.footerLink}>{t.authSignInLink}</Text>
+            </AnimatedPressable>
           </Link>
         </View>
       </ScrollView>
@@ -177,7 +195,7 @@ export default function SignUpScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: Colors.background },
+  flex: { flex: 1 },
   container: {
     flexGrow: 1,
     paddingHorizontal: Spacing.lg,
@@ -186,17 +204,17 @@ const styles = StyleSheet.create({
     gap: Spacing.xl,
   },
   header: { gap: Spacing.xs },
-  backBtn: { alignSelf: 'flex-start', marginBottom: Spacing.sm },
+  backBtn: { alignSelf: 'flex-start', marginBottom: Spacing.sm, borderWidth: 2, borderRadius: BorderRadius.full, paddingHorizontal: Spacing.md, paddingVertical: 6 },
   backText: {
     fontSize: FontSize.md,
     color: Colors.primary,
-    fontWeight: FontWeight.semibold,
+    fontWeight: FontWeight.bold,
   },
   title: {
     fontSize: 28,
     fontWeight: FontWeight.extrabold,
     color: Colors.textPrimary,
-    letterSpacing: -0.5,
+    fontFamily: DrawFont,
   },
   subtitle: { fontSize: FontSize.md, color: Colors.textSecondary },
   form: { gap: Spacing.md },
@@ -204,14 +222,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.error,
+    borderWidth: 2.5,
   },
   errorText: {
     fontSize: FontSize.sm,
     color: Colors.error,
     fontWeight: FontWeight.medium,
   },
+  pickerField: { gap: 8 },
+  pickerLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.extrabold, fontFamily: DrawFont, color: Colors.textPrimary },
+  pickerError: { fontSize: FontSize.xs, color: Colors.error, fontWeight: FontWeight.medium },
+  uniGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  uniChip: { paddingHorizontal: Spacing.md, paddingVertical: 10, borderRadius: BorderRadius.md, borderWidth: 2.5 },
+  uniChipText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: DrawFont },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -222,6 +245,7 @@ const styles = StyleSheet.create({
   footerLink: {
     fontSize: FontSize.md,
     color: Colors.primary,
-    fontWeight: FontWeight.semibold,
+    fontWeight: FontWeight.bold,
+    fontFamily: DrawFont,
   },
 });
