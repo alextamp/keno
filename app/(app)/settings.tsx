@@ -11,8 +11,8 @@ import { deleteUser } from 'firebase/auth';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 
-const PRIVACY_POLICY_URL = 'https://keno.app/privacy';
-const TERMS_URL = 'https://keno.app/terms';
+const PRIVACY_POLICY_URL = 'https://alextamp.github.io/keno/privacy/';
+const TERMS_URL = 'https://alextamp.github.io/keno/terms/';
 import { useTheme } from '@/core/theme';
 import { useThemeStore } from '@/core/theme/theme.store';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
