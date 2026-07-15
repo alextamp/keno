@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import {
-  Alert, Linking, Pressable, ScrollView, StyleSheet,
+  ActivityIndicator, Alert, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet,
   Switch, Text, TextInput, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { deleteUser } from 'firebase/auth';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { deleteUser, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { collection, doc, getDocs, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 
 const PRIVACY_POLICY_URL = 'https://alextamp.github.io/keno/privacy/';
@@ -19,6 +19,7 @@ import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { useLanguageStore, LANGUAGE_LABELS, AppLanguage, useTranslation } from '@/core/i18n';
 import { DrawFont, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@/core/constants/theme';
 import { INTERESTS } from '@/core/constants/interests';
+import { ADMIN_UID } from '@/core/constants/admin';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   const { colors } = useTheme();
@@ -105,26 +106,54 @@ export default function SettingsScreen() {
     setEditingInterests(false);
   };
 
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const handleDeleteAccount = () => {
     Alert.alert(t.settingsAlertDeleteTitle, t.settingsAlertDeleteBody, [
       { text: t.settingsBtnCancel, style: 'cancel' },
       {
         text: t.settingsAlertDeleteBtn,
         style: 'destructive',
-        onPress: async () => {
-          const fbUser = auth.currentUser;
-          if (!fbUser || !user) return;
-          try {
-            await deleteDoc(doc(db, 'users', user.id));
-            await deleteUser(fbUser);
-            // signOut clears local auth state after the Firebase user is deleted
-            await signOut();
-          } catch {
-            Alert.alert(t.settingsAlertReauthTitle, t.settingsAlertReauthBody);
-          }
+        onPress: () => {
+          setDeletePassword('');
+          setDeleteError('');
+          setDeleteModalVisible(true);
         },
       },
     ]);
+  };
+
+  const confirmDeleteWithPassword = async () => {
+    const fbUser = auth.currentUser;
+    if (!fbUser || !user || !fbUser.email) return;
+    if (!deletePassword) {
+      setDeleteError(t.settingsDeletePasswordRequired);
+      return;
+    }
+    setIsDeleting(true);
+    setDeleteError('');
+    try {
+      // Deleting the Auth account requires a *recent* sign-in — reauthenticate
+      // first so we never end up in the old broken state where the Firestore
+      // profile was deleted but the Auth account survived (or vice versa).
+      const credential = EmailAuthProvider.credential(fbUser.email, deletePassword);
+      await reauthenticateWithCredential(fbUser, credential);
+      await deleteDoc(doc(db, 'users', user.id));
+      await deleteUser(fbUser);
+      setDeleteModalVisible(false);
+      await signOut();
+    } catch (e: any) {
+      if (e?.code === 'auth/wrong-password' || e?.code === 'auth/invalid-credential') {
+        setDeleteError(t.authErrWrongCredentials);
+      } else {
+        setDeleteError(t.authErrGeneric);
+      }
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleSignOut = () => {
@@ -134,7 +163,34 @@ export default function SettingsScreen() {
     ]);
   };
 
+  const handleAwardBetaBadges = () => {
+    Alert.alert(t.settingsAdminBetaBadgesTitle, t.settingsAdminBetaBadgesBody, [
+      { text: t.settingsBtnCancel, style: 'cancel' },
+      {
+        text: t.settingsAdminBetaBadgesBtn,
+        onPress: async () => {
+          try {
+            const snap = await getDocs(collection(db, 'users'));
+            const batch = writeBatch(db);
+            let count = 0;
+            snap.docs.forEach((d) => {
+              if (!d.data().isBetaTester) {
+                batch.update(doc(db, 'users', d.id), { isBetaTester: true });
+                count++;
+              }
+            });
+            if (count > 0) await batch.commit();
+            Alert.alert(t.settingsAdminBetaBadgesTitle, t.settingsAdminBetaBadgesDone(count));
+          } catch {
+            Alert.alert(t.createAlertSaveError, t.authErrGeneric);
+          }
+        },
+      },
+    ]);
+  };
+
   return (
+    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
     <ScrollView
       style={[styles.root, { backgroundColor: colors.background }]}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 }]}
@@ -260,6 +316,17 @@ export default function SettingsScreen() {
         <SettingRow icon="📄" label={t.termsOfService} onPress={() => Linking.openURL(TERMS_URL)} />
       </Section>
 
+      {/* Admin */}
+      {user?.id === ADMIN_UID && (
+        <Section title={t.settingsSectionAdmin}>
+          <SettingRow icon="🛡️" label={t.settingsAdminReports} onPress={() => router.push('/(app)/admin-reports')} />
+          <Divider />
+          <SettingRow icon="🪪" label={t.settingsAdminVerifications} onPress={() => router.push('/(app)/admin-verifications' as any)} />
+          <Divider />
+          <SettingRow icon="🧪" label={t.settingsAdminBetaBadges} onPress={handleAwardBetaBadges} />
+        </Section>
+      )}
+
       {/* Danger zone */}
       <Section title={t.settingsSectionDanger}>
         <SettingRow icon="🚪" label={t.settingsSignOut} onPress={handleSignOut} />
@@ -268,11 +335,55 @@ export default function SettingsScreen() {
       </Section>
 
       <Text style={[styles.version, { color: colors.textHint }]}>{t.settingsTagline}</Text>
+
+      <Modal visible={deleteModalVisible} transparent animationType="fade" onRequestClose={() => setDeleteModalVisible(false)}>
+        <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={[styles.modalCard, { backgroundColor: colors.surface, borderColor: colors.borderStrong }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>{t.settingsDeletePasswordTitle}</Text>
+            <Text style={[styles.modalBody, { color: colors.textSecondary }]}>{t.settingsDeletePasswordBody}</Text>
+            <TextInput
+              style={[styles.editInput, { color: colors.textPrimary, borderColor: colors.border }]}
+              value={deletePassword}
+              onChangeText={(v) => { setDeletePassword(v); setDeleteError(''); }}
+              placeholder={t.authPasswordLabel}
+              placeholderTextColor={colors.textHint}
+              secureTextEntry
+              autoFocus
+              editable={!isDeleting}
+            />
+            {!!deleteError && <Text style={styles.modalError}>{deleteError}</Text>}
+            <View style={styles.editActions}>
+              <AnimatedPressable
+                onPress={() => setDeleteModalVisible(false)}
+                disabled={isDeleting}
+                style={[styles.editActionBtn, { borderColor: colors.border }]}
+              >
+                <Text style={[styles.editActionText, { color: colors.textSecondary }]}>{t.settingsBtnCancel}</Text>
+              </AnimatedPressable>
+              <AnimatedPressable
+                onPress={confirmDeleteWithPassword}
+                disabled={isDeleting}
+                style={[styles.editActionBtn, { backgroundColor: '#EF4444', borderColor: '#EF4444' }]}
+              >
+                {isDeleting ? <ActivityIndicator color="#fff" /> : (
+                  <Text style={[styles.editActionText, { color: '#fff' }]}>{t.settingsAlertDeleteBtn}</Text>
+                )}
+              </AnimatedPressable>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: Spacing.lg },
+  modalCard: { width: '100%', maxWidth: 380, borderWidth: 2.5, borderRadius: BorderRadius.lg, padding: Spacing.lg, gap: 10, ...Shadow.sm },
+  modalTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
+  modalBody: { fontSize: FontSize.sm, lineHeight: 20 },
+  modalError: { fontSize: FontSize.xs, color: '#EF4444', fontWeight: FontWeight.medium },
   root: { flex: 1 },
   content: { paddingHorizontal: Spacing.lg, gap: Spacing.lg },
   section: { gap: 6 },

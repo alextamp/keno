@@ -1,7 +1,7 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '@/core/theme';
-import { FontSize, FontWeight, LogoFont } from '@/core/constants/theme';
+import { FontSize, FontWeight } from '@/core/constants/theme';
 
 interface LoadingScreenProps {
   message?: string;
@@ -11,7 +11,7 @@ export function LoadingScreen({ message }: LoadingScreenProps) {
   const { colors } = useTheme();
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.logo, { color: colors.primary }]}>KeNo.</Text>
+      <Image source={require('../../../assets/images/icon.png')} style={styles.logo} />
       <ActivityIndicator size="large" color={colors.primary} style={styles.spinner} />
       {message && <Text style={[styles.message, { color: colors.textSecondary }]}>{message}</Text>}
     </View>
@@ -26,9 +26,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   logo: {
-    fontSize: 48,
-    fontWeight: FontWeight.extrabold,
-    fontFamily: LogoFont,
+    width: 80,
+    height: 80,
+    borderRadius: 20,
     marginBottom: 8,
   },
   spinner: { marginTop: 4 },

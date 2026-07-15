@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { EventCategory } from '@/features/events/domain/entities/event.entity';
 import { BorderRadius, DrawFont, FontSize, FontWeight, Spacing } from '@/core/constants/theme';
@@ -51,6 +51,29 @@ export function CategoryChip({ category, customLabel, selected = false, onPress,
   const label = customLabel?.trim() || t[CATEGORY_KEYS[category] as keyof typeof t] as string;
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation(0.93);
 
+  const labelNode = (
+    <Text style={[styles.label, size === 'sm' && styles.labelSm, { color: selected ? '#FFFFFF' : colors.textSecondary }]}>
+      {CATEGORY_EMOJIS[category]} {label}
+    </Text>
+  );
+
+  // Display-only usage (e.g. the tag shown on an event card) — no onPress
+  // means this isn't a real button, so it must not carry press-scale/haptic
+  // affordances that make it look tappable when it does nothing.
+  if (!onPress) {
+    return (
+      <View
+        style={[
+          styles.chip,
+          size === 'sm' && styles.chipSm,
+          { backgroundColor: selected ? catColor : colors.surface, borderColor: colors.borderStrong },
+        ]}
+      >
+        {labelNode}
+      </View>
+    );
+  }
+
   return (
     <AnimatedPressable
       onPress={onPress}
@@ -66,9 +89,7 @@ export function CategoryChip({ category, customLabel, selected = false, onPress,
         animatedStyle,
       ]}
     >
-      <Text style={[styles.label, size === 'sm' && styles.labelSm, { color: selected ? '#FFFFFF' : colors.textSecondary }]}>
-        {CATEGORY_EMOJIS[category]} {label}
-      </Text>
+      {labelNode}
     </AnimatedPressable>
   );
 }

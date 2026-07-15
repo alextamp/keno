@@ -10,7 +10,7 @@ import { useEventsStore } from '@/features/events/presentation/store/events.stor
 import { eventsRepository } from '@/features/events/data/repositories/events.repository.impl';
 import { fetchUserProfiles, UserProfile } from '@/core/utils/userProfiles';
 import { isLeft } from '@/core/utils/either';
-import { useLanguageStore } from '@/core/i18n';
+import { useLanguageStore, useTranslation } from '@/core/i18n';
 import { universityLabel } from '@/core/constants/universities';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
@@ -23,6 +23,7 @@ export default function LeaderboardScreen() {
   const events = useEventsStore((s) => s.events);
   const setEvents = useEventsStore((s) => s.setEvents);
   const { language } = useLanguageStore();
+  const t = useTranslation();
   const [attendeeProfiles, setAttendeeProfiles] = useState<Record<string, UserProfile>>({});
   const [loadingProfiles, setLoadingProfiles] = useState(false);
   const bs = colors.borderStrong;
@@ -69,15 +70,15 @@ export default function LeaderboardScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Header */}
-      <ScreenHeader title="🏆 Leaderboard" />
+      <ScreenHeader title={`🏆 ${t.leaderboardTitle}`} />
 
-      <Text style={[styles.subtitle, { color: colors.textHint }]}>Rankings reset every week</Text>
+      <Text style={[styles.subtitle, { color: colors.textHint }]}>{t.leaderboardSubtitle}</Text>
 
       {/* University rankings */}
       <View style={[styles.card, { backgroundColor: colors.surface, borderColor: bs }]}>
-        <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>🎓 Universities</Text>
+        <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>🎓 {t.leaderboardUniversities}</Text>
         {uniLeaderboard.length === 0 ? (
-          <Text style={[styles.empty, { color: colors.textHint }]}>No data yet this week</Text>
+          <Text style={[styles.empty, { color: colors.textHint }]}>{t.leaderboardEmpty}</Text>
         ) : (
           uniLeaderboard.map(([uni, score], i) => (
             <View key={uni} style={[styles.row, i < uniLeaderboard.length - 1 && { borderBottomWidth: 1.5, borderBottomColor: colors.border }]}>
@@ -85,7 +86,7 @@ export default function LeaderboardScreen() {
                 <Text style={styles.medal}>{i < 3 ? MEDALS[i] : `${i + 1}`}</Text>
               </View>
               <Text style={[styles.rowName, { color: colors.textPrimary }]} numberOfLines={1}>{uni}</Text>
-              <Text style={[styles.rowScore, { color: colors.textHint }]}>{score} going</Text>
+              <Text style={[styles.rowScore, { color: colors.textHint }]}>{t.leaderboardGoing(score)}</Text>
             </View>
           ))
         )}
@@ -93,11 +94,11 @@ export default function LeaderboardScreen() {
 
       {/* Top students */}
       <View style={[styles.card, { backgroundColor: colors.surface, borderColor: bs }]}>
-        <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>⭐ Top Students</Text>
+        <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>⭐ {t.leaderboardTopStudents}</Text>
         {loadingProfiles ? (
           <ActivityIndicator color={colors.primary} style={{ paddingVertical: Spacing.md }} />
         ) : topAttendees.length === 0 ? (
-          <Text style={[styles.empty, { color: colors.textHint }]}>No data yet this week</Text>
+          <Text style={[styles.empty, { color: colors.textHint }]}>{t.leaderboardEmpty}</Text>
         ) : (
           topAttendees.map(({ uid, count }, i) => {
             const profile = attendeeProfiles[uid];
@@ -127,7 +128,7 @@ export default function LeaderboardScreen() {
                     <Text style={[styles.rowUni, { color: colors.textHint }]} numberOfLines={1}>{universityLabel(profile.university, language)}</Text>
                   )}
                 </View>
-                <Text style={[styles.rowScore, { color: colors.textHint }]}>{count} events</Text>
+                <Text style={[styles.rowScore, { color: colors.textHint }]}>{t.leaderboardEvents(count)}</Text>
               </AnimatedPressable>
             );
           })

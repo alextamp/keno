@@ -8,6 +8,7 @@ export interface SignUpParams {
   password: string;
   universityName: string;
   department: string;
+  age: number;
 }
 
 export interface SignInParams {

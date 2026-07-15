@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,12 +15,13 @@ import { Link, useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Colors } from '@/core/constants/colors';
-import { BorderRadius, DrawFont, FontSize, FontWeight, LogoFont, Spacing } from '@/core/constants/theme';
+import { useTheme } from '@/core/theme';
+import { BorderRadius, DrawFont, FontSize, FontWeight, Spacing } from '@/core/constants/theme';
 import { useTranslation } from '@/core/i18n';
 
 export default function SignInScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const signIn = useAuthStore((s) => s.signIn);
   const isLoading = useAuthStore((s) => s.isLoading);
   const error = useAuthStore((s) => s.error);
@@ -36,8 +38,8 @@ export default function SignInScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.flex, { backgroundColor: Colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={[styles.flex, { backgroundColor: colors.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
         contentContainerStyle={styles.container}
@@ -46,14 +48,14 @@ export default function SignInScreen() {
         automaticallyAdjustKeyboardInsets
       >
         <View style={styles.brand}>
-          <Text style={styles.logo}>KeNo.</Text>
-          <Text style={styles.tagline}>{t.authTagline}</Text>
+          <Image source={require('../../assets/images/icon.png')} style={styles.logo} />
+          <Text style={[styles.tagline, { color: colors.textSecondary }]}>{t.authTagline}</Text>
         </View>
 
         <View style={styles.form}>
           {error && (
-            <View style={[styles.errorBanner, { borderColor: Colors.borderStrong }]}>
-              <Text style={styles.errorText}>{error}</Text>
+            <View style={[styles.errorBanner, { borderColor: colors.borderStrong }]}>
+              <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
             </View>
           )}
 
@@ -88,15 +90,15 @@ export default function SignInScreen() {
             fullWidth
           />
           <AnimatedPressable onPress={() => router.push('/(auth)/forgot-password' as any)} style={styles.forgotBtn}>
-            <Text style={styles.forgotText}>{t.authForgotLink}</Text>
+            <Text style={[styles.forgotText, { color: colors.textSecondary }]}>{t.authForgotLink}</Text>
           </AnimatedPressable>
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>{t.authNoAccount}</Text>
+          <Text style={[styles.footerText, { color: colors.textSecondary }]}>{t.authNoAccount}</Text>
           <Link href="/(auth)/sign-up" asChild>
             <AnimatedPressable>
-              <Text style={styles.footerLink}>{t.authSignUpLink}</Text>
+              <Text style={[styles.footerLink, { color: colors.primary }]}>{t.authSignUpLink}</Text>
             </AnimatedPressable>
           </Link>
         </View>
@@ -116,14 +118,12 @@ const styles = StyleSheet.create({
   },
   brand: { alignItems: 'center', gap: Spacing.sm },
   logo: {
-    fontSize: 64,
-    fontWeight: FontWeight.extrabold,
-    color: Colors.primary,
-    fontFamily: LogoFont,
+    width: 96,
+    height: 96,
+    borderRadius: 24,
   },
   tagline: {
     fontSize: FontSize.md,
-    color: Colors.textSecondary,
     textAlign: 'center',
   },
   form: { gap: Spacing.md },
@@ -135,20 +135,18 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: FontSize.sm,
-    color: Colors.error,
     fontWeight: FontWeight.medium,
   },
   forgotBtn: { alignItems: 'center', paddingVertical: 4 },
-  forgotText: { fontSize: FontSize.sm, color: Colors.textSecondary, fontWeight: FontWeight.medium },
+  forgotText: { fontSize: FontSize.sm, fontWeight: FontWeight.medium },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  footerText: { fontSize: FontSize.md, color: Colors.textSecondary },
+  footerText: { fontSize: FontSize.md },
   footerLink: {
     fontSize: FontSize.md,
-    color: Colors.primary,
     fontWeight: FontWeight.bold,
     fontFamily: DrawFont,
   },

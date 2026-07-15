@@ -12,6 +12,7 @@ import { DrawFont, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@
 import { TAB_BAR_BASE_HEIGHT } from '@/core/constants/layout';
 import { useEventsStore } from '@/features/events/presentation/store/events.store';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
+import { useTabNavigation } from '@/core/tabNavigation';
 import {
   EventEntity, EventCategory, EVENT_CATEGORY_COLORS,
 } from '@/features/events/domain/entities/event.entity';
@@ -56,6 +57,8 @@ export default function MapScreen() {
   const FILTERS = FILTER_DEFS.map((f) => ({ ...f, label: t[f.key as keyof typeof t] as string }));
 
   const mapRef = useRef<MapView>(null);
+  const focusLocation = useTabNavigation((s) => s.focusLocation);
+  const clearFocusLocation = useTabNavigation((s) => s.clearFocusLocation);
 
   const [selected, setSelected] = useState<EventCategory | null>(null);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -66,14 +69,31 @@ export default function MapScreen() {
       if (status !== 'granted') return;
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
-      mapRef.current?.animateToRegion({
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-        latitudeDelta: 0.04,
-        longitudeDelta: 0.04,
-      }, 800);
+      // Don't fight a pending "focus on this event" request from the event
+      // detail screen — that takes priority over centering on the user.
+      if (!useTabNavigation.getState().focusLocation) {
+        mapRef.current?.animateToRegion({
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+          latitudeDelta: 0.04,
+          longitudeDelta: 0.04,
+        }, 800);
+      }
     })();
   }, []);
+
+  // Center on a specific event's location when navigated here from the
+  // event detail screen (tapping the location row) — see tabNavigation.ts.
+  useEffect(() => {
+    if (!focusLocation) return;
+    mapRef.current?.animateToRegion({
+      latitude: focusLocation.latitude,
+      longitude: focusLocation.longitude,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    }, 600);
+    clearFocusLocation();
+  }, [focusLocation, clearFocusLocation]);
 
   const now = new Date();
   const eventsWithCoords = spreadCoincident(

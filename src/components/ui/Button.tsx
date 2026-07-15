@@ -88,7 +88,10 @@ export function Button({
         SIZE_STYLES[size],
         shapeStyle,
         fullWidth && styles.fullWidth,
-        variant !== 'ghost' && (Shadow.sm as ViewStyle),
+        // The offset "stamp" shadow only reads correctly against a solid
+        // fill — on outline/ghost buttons (transparent background) it just
+        // looks like a stray shadow floating behind the text.
+        variant === 'primary' && (Shadow.sm as ViewStyle),
         isDisabled && styles.pressed,
         animatedStyle,
         style,

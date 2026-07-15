@@ -144,6 +144,22 @@ export const eventsRepository: EventsRepository = {
       if (!alreadyJoined) {
         awardXP(XP_VALUES.joinEvent).catch(() => {});
         updateStreak().catch(() => {});
+
+        const eventSnap = await getDoc(doc(db, EVENTS, eventId));
+        if (eventSnap.exists() && user) {
+          const eventData = eventFromFirestore(eventSnap);
+          if (eventData.creatorId !== userId) {
+            notificationsRepository.create({
+              toUid: eventData.creatorId,
+              fromUid: userId,
+              fromName: user.name,
+              fromAvatarColor: user.avatarColor,
+              type: 'event_join',
+              eventId,
+              eventTitle: eventData.title,
+            }).catch(() => {});
+          }
+        }
       }
       return right(undefined);
     } catch (e: any) {
@@ -206,11 +222,14 @@ export const eventsRepository: EventsRepository = {
       const eventSnap = await getDoc(doc(db, EVENTS, eventId));
       const eventData = eventSnap.exists() ? eventFromFirestore(eventSnap) : null;
 
+      // The event doc itself is the authoritative deletion — do it first so a
+      // moderator (deleting someone else's event) isn't blocked by the
+      // best-effort cleanup below, which is only guaranteed for the owner.
+      await deleteDoc(doc(db, EVENTS, eventId));
       await updateDoc(doc(db, USERS, creatorId), {
         createdEvents: arrayRemove(eventId),
         joinedEvents: arrayRemove(eventId),
-      });
-      await deleteDoc(doc(db, EVENTS, eventId));
+      }).catch(() => {});
 
       if (eventData) {
         const { user } = useAuthStore.getState();

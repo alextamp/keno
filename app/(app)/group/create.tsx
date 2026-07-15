@@ -56,7 +56,7 @@ export default function CreateGroupScreen() {
   return (
     <KeyboardAvoidingView
       style={[styles.root, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12, borderBottomColor: colors.borderStrong }]}>

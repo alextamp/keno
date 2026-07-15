@@ -1,4 +1,9 @@
-import { createAudioPlayer, AudioPlayer } from 'expo-audio';
+import { createAudioPlayer, setAudioModeAsync, AudioPlayer } from 'expo-audio';
+
+// Without this, iOS silences all playback whenever the phone's physical
+// mute switch is on — sound effects would appear to "not work" for anyone
+// testing with silent mode enabled, which is the common default.
+setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' }).catch(() => {});
 
 const SOURCES = {
   success: require('../../../assets/sounds/success.mp3'),

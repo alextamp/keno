@@ -21,6 +21,11 @@ const NOTIF_EMOJIS: Record<NotifType, string> = {
   event_cancelled: '❌',
   event_reminder: '⏰',
   group_invite: '👥',
+  event_join_request: '🔒',
+  event_join_accepted: '🎉',
+  group_join_request: '🔒',
+  group_join_accepted: '🎉',
+  group_message: '💬',
 };
 
 function NotifAvatar({ name, color }: { name: string; color?: string }) {
@@ -47,7 +52,7 @@ export default function NotificationsScreen() {
   }, [user?.id]);
 
   const handleTap = (notif: NotificationEntity) => {
-    if (notif.type === 'group_invite' && notif.eventId) {
+    if ((notif.type === 'group_invite' || notif.type === 'group_join_request' || notif.type === 'group_join_accepted' || notif.type === 'group_message') && notif.eventId) {
       router.push(`/(app)/group/${notif.eventId}`);
     } else if (notif.eventId) {
       router.push(`/(app)/event/${notif.eventId}`);
@@ -90,6 +95,16 @@ export default function NotificationsScreen() {
               ? t.notifEventCancelled(notif.eventTitle ?? '')
               : notif.type === 'event_reminder'
               ? t.notifEventReminder(notif.eventTitle ?? '')
+              : notif.type === 'event_join_request'
+              ? t.notifEventJoinRequest(notif.fromName, notif.eventTitle ?? '')
+              : notif.type === 'event_join_accepted'
+              ? t.notifEventJoinAccepted(notif.eventTitle ?? '')
+              : notif.type === 'group_join_request'
+              ? t.notifGroupJoinRequest(notif.fromName, notif.eventTitle ?? '')
+              : notif.type === 'group_join_accepted'
+              ? t.notifGroupJoinAccepted(notif.eventTitle ?? '')
+              : notif.type === 'group_message'
+              ? t.notifGroupMessage(notif.fromName, notif.eventTitle ?? '')
               : t.notifGroupInvite(notif.fromName, notif.eventTitle ?? '');
             return (
               <AnimatedPressable

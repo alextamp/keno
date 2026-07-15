@@ -12,6 +12,15 @@ export interface CreateGroupParams {
   isPrivate: boolean;
 }
 
+export interface UpdateGroupParams {
+  name: string;
+  description: string;
+  emoji: string;
+  coverColor: string;
+  universityName?: string;
+  isPrivate: boolean;
+}
+
 export interface GroupsRepository {
   createGroup(params: CreateGroupParams): Promise<Either<Failure, GroupEntity>>;
   getGroup(id: string): Promise<Either<Failure, GroupEntity>>;
@@ -21,5 +30,9 @@ export interface GroupsRepository {
   leaveGroup(groupId: string, userId: string): Promise<Either<Failure, void>>;
   addEventToGroup(groupId: string, eventId: string): Promise<Either<Failure, void>>;
   inviteToGroup(groupId: string, userId: string, invitedByUid: string, invitedByName: string, groupTitle: string): Promise<Either<Failure, void>>;
+  updateGroup(groupId: string, params: UpdateGroupParams): Promise<Either<Failure, void>>;
+  deleteGroup(groupId: string, creatorId: string): Promise<Either<Failure, void>>;
+  requestToJoin(groupId: string, userId: string, message: string): Promise<Either<Failure, void>>;
+  decideJoinRequest(groupId: string, uid: string, accept: boolean): Promise<Either<Failure, void>>;
   subscribeToGroup(id: string, onUpdate: (group: GroupEntity) => void, onError?: (e: Error) => void): () => void;
 }

@@ -22,7 +22,7 @@ import { EventCard } from '@/components/ui/EventCard';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { useTranslation, useLanguageStore } from '@/core/i18n';
 import { universityLabel } from '@/core/constants/universities';
-import { getLevel } from '@/core/constants/gamification';
+import { getLevel, isBetaTesterUser } from '@/core/constants/gamification';
 import { LevelsModal } from '@/components/ui/LevelsModal';
 
 interface PublicProfile {
@@ -38,6 +38,8 @@ interface PublicProfile {
   following: string[];
   followers: string[];
   xp: number;
+  isBetaTester?: boolean;
+  createdAt?: Date;
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -89,6 +91,8 @@ export default function UserProfileScreen() {
           following: data.following ?? [],
           followers: data.followers ?? [],
           xp: data.xp ?? 0,
+          isBetaTester: data.isBetaTester ?? false,
+          createdAt: data.createdAt?.toDate?.() ?? undefined,
         });
       }
       const result = await eventsRepository.getEventsByAttendee(uid);
@@ -102,7 +106,7 @@ export default function UserProfileScreen() {
   };
 
   const handleFollow = async () => {
-    if (!currentUser || !profile) return;
+    if (!currentUser || !profile || currentUser.id === uid) return;
     haptics.medium();
     setFollowLoading(true);
     try {
@@ -164,9 +168,9 @@ export default function UserProfileScreen() {
         reason,
         createdAt: new Date(),
       });
-      Alert.alert('Report submitted', "Thanks for letting us know. We'll review this account.");
+      Alert.alert(t.userReportSubmitted, t.userReportSubmittedBody);
     } catch {
-      Alert.alert('Report failed', 'Something went wrong sending your report. Please try again.');
+      Alert.alert(t.userReportFailed, t.userReportFailedBody);
     }
   };
 
@@ -221,6 +225,11 @@ export default function UserProfileScreen() {
           </View>
         )}
         <Text style={[styles.name, { color: colors.textPrimary }]}>{profile.name}</Text>
+        {isBetaTesterUser(profile) && (
+          <View style={[styles.uniBadge, { backgroundColor: '#FCE96A', borderColor: bs }]}>
+            <Text style={[styles.uniText, { color: '#5b2a04' }]}>🌱 {t.userBetaTesterBadge}</Text>
+          </View>
+        )}
         <View style={[styles.uniBadge, { backgroundColor: colors.surfaceVariant, borderColor: bs }]}>
           <Text style={[styles.uniText, { color: colors.textSecondary }]}>🎓 {universityLabel(profile.universityName, language)}</Text>
         </View>
@@ -242,17 +251,19 @@ export default function UserProfileScreen() {
 
         {/* Action buttons */}
         <View style={styles.actionRow}>
-          <Button
-            label={isFollowing ? t.userFollowing : t.userFollow}
-            onPress={handleFollow}
-            loading={followLoading}
-            shape="pill"
-            size="sm"
-            style={{ backgroundColor: isFollowing ? colors.surfaceVariant : colors.primary, borderColor: bs }}
-            labelStyle={{ color: isFollowing ? colors.textPrimary : '#fff' }}
-          />
+          {currentUser?.id !== uid && (
+            <Button
+              label={isFollowing ? t.userFollowing : t.userFollow}
+              onPress={handleFollow}
+              loading={followLoading}
+              shape="pill"
+              size="sm"
+              style={{ backgroundColor: isFollowing ? colors.surfaceVariant : colors.primary, borderColor: bs }}
+              labelStyle={{ color: isFollowing ? colors.textPrimary : '#fff' }}
+            />
+          )}
 
-          {currentUser && (
+          {currentUser && currentUser.id !== uid && (
             <Button
               label={t.dmTitle}
               onPress={() => router.push(`/(app)/dm/${uid}` as any)}
@@ -262,7 +273,7 @@ export default function UserProfileScreen() {
               labelStyle={{ color: colors.textPrimary }}
             />
           )}
-          {myUpcomingCreated.length > 0 && (
+          {currentUser?.id !== uid && myUpcomingCreated.length > 0 && (
             <Button
               label={t.userInvite}
               onPress={() => setInviteModal(true)}
@@ -276,19 +287,23 @@ export default function UserProfileScreen() {
 
         {/* Follower counts */}
         <View style={styles.followStats}>
-          <Text style={[styles.followStat, { color: colors.textSecondary }]}>
-            <Text style={[styles.followNum, { color: colors.textPrimary }]}>
-              {profile.followers?.length ?? 0}
+          <Pressable onPress={() => router.push(`/(app)/user/connections/${uid}?type=followers` as any)}>
+            <Text style={[styles.followStat, { color: colors.textSecondary }]}>
+              <Text style={[styles.followNum, { color: colors.textPrimary }]}>
+                {profile.followers?.length ?? 0}
+              </Text>
+              {t.userFollowers}
             </Text>
-            {t.userFollowers}
-          </Text>
+          </Pressable>
           <Text style={[styles.followDot, { color: colors.textHint }]}>·</Text>
-          <Text style={[styles.followStat, { color: colors.textSecondary }]}>
-            <Text style={[styles.followNum, { color: colors.textPrimary }]}>
-              {profile.following?.length ?? 0}
+          <Pressable onPress={() => router.push(`/(app)/user/connections/${uid}?type=following` as any)}>
+            <Text style={[styles.followStat, { color: colors.textSecondary }]}>
+              <Text style={[styles.followNum, { color: colors.textPrimary }]}>
+                {profile.following?.length ?? 0}
+              </Text>
+              {t.userFollowing2}
             </Text>
-            {t.userFollowing2}
-          </Text>
+          </Pressable>
         </View>
         {mutualCount > 0 && (
           <View style={[styles.mutualChip, { backgroundColor: colors.surfaceVariant, borderColor: bs }]}>

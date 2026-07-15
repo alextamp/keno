@@ -13,12 +13,13 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Colors } from '@/core/constants/colors';
+import { useTheme } from '@/core/theme';
 import { BorderRadius, DrawFont, FontSize, FontWeight, Spacing } from '@/core/constants/theme';
 import { useTranslation } from '@/core/i18n';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const sendPasswordReset = useAuthStore((s) => s.sendPasswordReset);
   const t = useTranslation();
 
@@ -45,8 +46,8 @@ export default function ForgotPasswordScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.flex, { backgroundColor: Colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={[styles.flex, { backgroundColor: colors.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
         contentContainerStyle={styles.container}
@@ -54,15 +55,15 @@ export default function ForgotPasswordScreen() {
         showsVerticalScrollIndicator={false}
         automaticallyAdjustKeyboardInsets
       >
-        <AnimatedPressable onPress={() => router.back()} style={[styles.backBtn, { borderColor: Colors.borderStrong }]}>
-          <Text style={[styles.backText, { fontFamily: DrawFont }]}>←</Text>
+        <AnimatedPressable onPress={() => router.back()} style={[styles.backBtn, { borderColor: colors.borderStrong }]}>
+          <Text style={[styles.backText, { fontFamily: DrawFont, color: colors.primary }]}>←</Text>
         </AnimatedPressable>
 
         {sent ? (
           <View style={styles.sentContainer}>
             <Text style={styles.sentEmoji}>📬</Text>
-            <Text style={[styles.title, { color: Colors.textPrimary }]}>{t.authForgotSent}</Text>
-            <Text style={[styles.subtitle, { color: Colors.textSecondary }]}>{t.authForgotSentBody}</Text>
+            <Text style={[styles.title, { color: colors.textPrimary }]}>{t.authForgotSent}</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t.authForgotSentBody}</Text>
             <Button
               label={t.authSignInBtn}
               onPress={() => router.replace('/(auth)/sign-in')}
@@ -72,14 +73,14 @@ export default function ForgotPasswordScreen() {
         ) : (
           <>
             <View style={styles.header}>
-              <Text style={[styles.title, { color: Colors.textPrimary }]}>{t.authForgotTitle}</Text>
-              <Text style={[styles.subtitle, { color: Colors.textSecondary }]}>{t.authForgotSubtitle}</Text>
+              <Text style={[styles.title, { color: colors.textPrimary }]}>{t.authForgotTitle}</Text>
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t.authForgotSubtitle}</Text>
             </View>
 
             <View style={styles.form}>
               {!!error && (
-                <View style={[styles.errorBanner, { borderColor: Colors.borderStrong }]}>
-                  <Text style={styles.errorText}>{error}</Text>
+                <View style={[styles.errorBanner, { borderColor: colors.borderStrong }]}>
+                  <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
                 </View>
               )}
               <Input
@@ -124,7 +125,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: 6,
   },
-  backText: { fontSize: FontSize.md, color: Colors.primary, fontWeight: FontWeight.bold },
+  backText: { fontSize: FontSize.md, fontWeight: FontWeight.bold },
   header: { gap: Spacing.sm },
   title: { fontSize: 28, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
   subtitle: { fontSize: FontSize.md, lineHeight: 22 },
@@ -135,7 +136,7 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderWidth: 2.5,
   },
-  errorText: { fontSize: FontSize.sm, color: Colors.error, fontWeight: FontWeight.medium },
+  errorText: { fontSize: FontSize.sm, fontWeight: FontWeight.medium },
   sentContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.lg, paddingVertical: Spacing.xxl },
   sentEmoji: { fontSize: 64 },
 });

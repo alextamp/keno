@@ -207,7 +207,7 @@ export default function CreateEventScreen() {
   const bs = colors.borderStrong;
 
   return (
-    <KeyboardAvoidingView style={[styles.flex, { backgroundColor: colors.background }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={[styles.flex, { backgroundColor: colors.background }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top + 16, paddingBottom: TAB_BAR_BASE_HEIGHT + insets.bottom + 24 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
         {/* Header */}

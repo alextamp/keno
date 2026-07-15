@@ -1,9 +1,10 @@
 import React, { useRef, useState } from 'react';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import {
-  Animated, Dimensions, Pressable, ScrollView,
+  Alert, Animated, Dimensions, Image, Pressable, ScrollView,
   StyleSheet, Text, TextInput, View,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/core/theme';
@@ -12,6 +13,7 @@ import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { useTranslation, useLanguageStore } from '@/core/i18n';
 import { universityLabel } from '@/core/constants/universities';
 import { INTERESTS } from '@/core/constants/interests';
+import { uploadProfilePhoto } from '@/core/utils/uploadImage';
 
 const { width: SW } = Dimensions.get('window');
 
@@ -36,7 +38,20 @@ export default function OnboardingScreen() {
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [avatarColor, setAvatarColor] = useState(user?.avatarColor ?? '#C94D0A');
   const [bio, setBio] = useState(user?.bio ?? '');
+  const [draftPhoto, setDraftPhoto] = useState<string | undefined>(user?.photoUri);
   const [saving, setSaving] = useState(false);
+
+  const pickPhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') { Alert.alert(t.profileAlertPermTitle, t.profileAlertPermBody); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled) setDraftPhoto(result.assets[0].uri);
+  };
 
   const slideAnim = useRef(new Animated.Value(0)).current;
 
@@ -55,7 +70,15 @@ export default function OnboardingScreen() {
 
   const handleFinish = async () => {
     setSaving(true);
-    await completeOnboarding({ interests: selectedInterests, bio, avatarColor });
+    let finalPhotoUri = draftPhoto;
+    if (draftPhoto && !draftPhoto.startsWith('http') && user) {
+      try {
+        finalPhotoUri = await uploadProfilePhoto(user.id, draftPhoto);
+      } catch {
+        finalPhotoUri = user.photoUri;
+      }
+    }
+    await completeOnboarding({ interests: selectedInterests, bio, avatarColor, photoUri: finalPhotoUri });
     router.replace('/(app)');
   };
 
@@ -78,7 +101,7 @@ export default function OnboardingScreen() {
           ['🗺️', t.onboardingFeature3],
           ['🔔', t.onboardingFeature4],
         ].map(([emoji, text]) => (
-          <View key={text} style={[styles.featureRow, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
+          <View key={text} style={styles.featureRow}>
             <Text style={styles.featureEmoji}>{emoji}</Text>
             <Text style={[styles.featureText, { color: colors.textPrimary }]}>{text}</Text>
           </View>
@@ -132,9 +155,16 @@ export default function OnboardingScreen() {
 
       {/* Avatar preview */}
       <View style={styles.avatarPreviewRow}>
-        <View style={[styles.avatarPreview, { backgroundColor: avatarColor, borderColor: colors.borderStrong }]}>
-          <Text style={styles.avatarInitials}>{initials}</Text>
-        </View>
+        <AnimatedPressable onPress={pickPhoto} style={[styles.avatarPreview, { backgroundColor: avatarColor, borderColor: colors.borderStrong }]}>
+          {draftPhoto ? (
+            <Image source={{ uri: draftPhoto }} style={styles.avatarPreviewPhoto} />
+          ) : (
+            <Text style={styles.avatarInitials}>{initials}</Text>
+          )}
+          <View style={styles.photoOverlay}>
+            <Text style={styles.cameraIcon}>📷</Text>
+          </View>
+        </AnimatedPressable>
         <Text style={[styles.avatarName, { color: colors.textPrimary }]}>{user?.name}</Text>
       </View>
 
@@ -178,7 +208,11 @@ export default function OnboardingScreen() {
       </Text>
       <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.borderStrong }]}>
         <View style={[styles.summaryAvatar, { backgroundColor: avatarColor }]}>
-          <Text style={styles.summaryInitials}>{initials}</Text>
+          {draftPhoto ? (
+            <Image source={{ uri: draftPhoto }} style={styles.summaryAvatarPhoto} />
+          ) : (
+            <Text style={styles.summaryInitials}>{initials}</Text>
+          )}
         </View>
         <View style={styles.summaryInfo}>
           <Text style={[styles.summaryName, { color: colors.textPrimary }]}>{user?.name}</Text>
@@ -277,7 +311,7 @@ const styles = StyleSheet.create({
   welcomeTitle: { fontSize: FontSize.display, fontWeight: FontWeight.extrabold, fontFamily: DrawFont, textAlign: 'center', lineHeight: 38 },
   welcomeSub: { fontSize: FontSize.md, textAlign: 'center', lineHeight: 22 },
   featureList: { gap: Spacing.sm, marginTop: 8 },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.md, borderRadius: BorderRadius.xl, borderWidth: 1.5 },
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.sm },
   featureEmoji: { fontSize: 22 },
   featureText: { fontSize: FontSize.md, fontWeight: FontWeight.bold, fontFamily: DrawFont },
   // Interests
@@ -290,8 +324,11 @@ const styles = StyleSheet.create({
   hintText: { fontSize: FontSize.sm, textAlign: 'center', marginTop: 4 },
   // Personalise
   avatarPreviewRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginVertical: 8 },
-  avatarPreview: { width: 72, height: 72, borderRadius: 36, borderWidth: 3, alignItems: 'center', justifyContent: 'center' },
+  avatarPreview: { width: 72, height: 72, borderRadius: 36, borderWidth: 3, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  avatarPreviewPhoto: { width: '100%', height: '100%' },
   avatarInitials: { color: '#fff', fontSize: FontSize.xxl, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
+  photoOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', paddingVertical: 3 },
+  cameraIcon: { fontSize: 14 },
   avatarName: { fontSize: FontSize.lg, fontWeight: FontWeight.extrabold, fontFamily: DrawFont, flex: 1 },
   colorLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: DrawFont },
   colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
@@ -300,7 +337,8 @@ const styles = StyleSheet.create({
   charCount: { fontSize: FontSize.xs, textAlign: 'right', marginTop: -Spacing.sm },
   // Summary
   summaryCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.lg, borderRadius: BorderRadius.xl, borderWidth: 2.5, ...Shadow.sm },
-  summaryAvatar: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+  summaryAvatar: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  summaryAvatarPhoto: { width: '100%', height: '100%' },
   summaryInitials: { color: '#fff', fontSize: FontSize.xl, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
   summaryInfo: { flex: 1, gap: 3 },
   summaryName: { fontSize: FontSize.lg, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },

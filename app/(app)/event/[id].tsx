@@ -1,35 +1,25 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import {
-  Alert, Image, KeyboardAvoidingView, Linking, Modal, Platform, Pressable,
+  ActivityIndicator, Alert, Image, KeyboardAvoidingView, Linking, Modal, Platform, Pressable,
   ScrollView, Share, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadEventImage } from '@/core/utils/uploadImage';
 import QRCode from 'react-native-qrcode-svg';
 import { captureRef } from 'react-native-view-shot';
-import { addDoc, arrayRemove, arrayUnion, collection, doc, increment, onSnapshot, orderBy, query, Timestamp, updateDoc } from 'firebase/firestore';
+import { addDoc, arrayRemove, arrayUnion, collection, deleteField, doc, increment, onSnapshot, orderBy, query, Timestamp, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTabNavigation } from '@/core/tabNavigation';
 import { format } from 'date-fns';
 import { useTheme } from '@/core/theme';
-import { BorderRadius, DrawFont, FontSize, FontWeight, LogoFont, Shadow, Spacing } from '@/core/constants/theme';
+import { BorderRadius, DrawFont, FontSize, FontWeight, Shadow, Spacing } from '@/core/constants/theme';
 import {
   EventEntity, EventCategory, EVENT_CATEGORY_COLORS,
   GenderFilter, isAttending, isEventFull, isOnWaitlist, spotsLeft,
 } from '@/features/events/domain/entities/event.entity';
-
-interface PublicComment {
-  id: string;
-  userId: string;
-  userName: string;
-  userAvatarColor: string;
-  userPhotoUri?: string;
-  text: string;
-  createdAt: Date;
-}
 
 const CATEGORY_KEYS: Record<EventCategory, string> = {
   [EventCategory.Party]: 'catParty',
@@ -74,7 +64,7 @@ function Avatar({ profile, size = 44 }: { profile?: UserProfile; size?: number }
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { goToTab } = useTabNavigation();
+  const { goToTab, setFocusLocation } = useTabNavigation();
   const { colors } = useTheme();
   const user = useAuthStore((s) => s.user);
   const saveEvent = useAuthStore((s) => s.saveEvent);
@@ -100,12 +90,10 @@ export default function EventDetailScreen() {
   const [msgReactionPicker, setMsgReactionPicker] = useState<string | null>(null);
   const [inCalendar, setInCalendar] = useState(false);
   const [showQr, setShowQr] = useState(false);
-  const [comments, setComments] = useState<PublicComment[]>([]);
-  const [commentDraft, setCommentDraft] = useState('');
-  const [sendingComment, setSendingComment] = useState(false);
   const [wallPhotos, setWallPhotos] = useState<{ id: string; uri: string; uploaderName: string; uploaderAvatarColor: string }[]>([]);
   const [uploadingWallPhoto, setUploadingWallPhoto] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const chatScrollRef = useRef<ScrollView>(null);
   const isFirstMessagesSnapshot = useRef(true);
   const shareCardRef = useRef<View>(null);
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -121,24 +109,6 @@ export default function EventDetailScreen() {
     if ((globalThis as any)[sessionKey]) return;
     (globalThis as any)[sessionKey] = true;
     updateDoc(doc(db, 'events', id), { viewCount: increment(1) }).catch(() => {});
-  }, [id]);
-
-  // Subscribe to public comments
-  useEffect(() => {
-    if (!id) return;
-    const q = query(collection(db, 'events', id, 'comments'), orderBy('createdAt', 'asc'));
-    const unsub = onSnapshot(q, (snap) => {
-      setComments(snap.docs.map((d) => ({
-        id: d.id,
-        userId: d.data().userId as string,
-        userName: d.data().userName as string,
-        userAvatarColor: d.data().userAvatarColor as string,
-        userPhotoUri: d.data().userPhotoUri as string | undefined,
-        text: d.data().text as string,
-        createdAt: (d.data().createdAt as Timestamp)?.toDate() ?? new Date(),
-      })));
-    }, () => {});
-    return unsub;
   }, [id]);
 
   // Subscribe to photo wall
@@ -162,14 +132,25 @@ export default function EventDetailScreen() {
     isFirstMessagesSnapshot.current = true;
     const unsub = chatRepository.subscribeToMessages(id, (msgs) => {
       setMessages(msgs);
-      if (isFirstMessagesSnapshot.current) {
-        isFirstMessagesSnapshot.current = false;
-        return;
-      }
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 80);
+      // Scroll to the latest message every time, including the very first
+      // load — opening the chat should land at the bottom, not the top.
+      isFirstMessagesSnapshot.current = false;
+      setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: false }), 80);
     });
     return unsub;
   }, [id]);
+
+  // Chat messages can come from anyone who was ever an attendee — the
+  // `profiles` map is only seeded from *current* attendees/join-requesters,
+  // so a message sender who later left (or otherwise isn't in that set)
+  // would render with a blank/fallback avatar. Backfill any missing
+  // profiles as messages load in.
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const missing = [...new Set(messages.map((m) => m.userId))].filter((uid) => !profiles[uid]);
+    if (missing.length === 0) return;
+    fetchUserProfiles(missing).then((loaded) => setProfiles((prev) => ({ ...prev, ...loaded })));
+  }, [messages, profiles]);
 
   // Subscribe to typing indicators once attending is known
   useEffect(() => {
@@ -182,6 +163,28 @@ export default function EventDetailScreen() {
     };
   }, [id, user?.id]);
 
+  const handleOpenLocation = () => {
+    if (!event) return;
+    // If we have coordinates, jump to the in-app Map tab centered there
+    // instead of leaving the app — falls back to the native maps app when
+    // the event has no lat/lng on file.
+    if (event.latitude != null && event.longitude != null) {
+      haptics.light();
+      setFocusLocation({ latitude: event.latitude, longitude: event.longitude });
+      router.navigate('/(app)');
+      // Same PagerView-not-focused-yet caveat as the "view my own profile"
+      // tap above — give navigation a tick to land before switching pages.
+      setTimeout(() => goToTab(2), 50);
+      return;
+    }
+    const label = encodeURIComponent(event.title);
+    const query = encodeURIComponent(event.location);
+    const url = Platform.OS === 'ios'
+      ? `maps:0,0?q=${label}@${query}`
+      : `geo:0,0?q=${query}(${label})`;
+    Linking.openURL(url).catch(() => {});
+  };
+
   const loadEvent = async () => {
     setLoading(true);
     const result = await eventsRepository.getEvent(id);
@@ -190,7 +193,7 @@ export default function EventDetailScreen() {
     } else {
       const ev = result.right;
       setEvent(ev);
-      const allUids = [...new Set(ev.attendeeIds)];
+      const allUids = [...new Set([...ev.attendeeIds, ...Object.keys(ev.joinRequests ?? {})])];
       const loaded = await fetchUserProfiles(allUids);
       setProfiles(loaded);
     }
@@ -268,7 +271,7 @@ export default function EventDetailScreen() {
     chatRepository.setTyping(event.id, user.id, false);
     try {
       await chatRepository.sendMessage(event.id, user.id, text);
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+      setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
       if (event.creatorId !== user.id) {
         notificationsRepository.create({
           toUid: event.creatorId,
@@ -317,32 +320,6 @@ export default function EventDetailScreen() {
     } else {
       await chatRepository.reactToMessage(event.id, messageId, user.id, emoji);
     }
-  };
-
-  const handleSendComment = async () => {
-    if (!user || !id || !commentDraft.trim()) return;
-    if (containsBlockedContent(commentDraft)) {
-      Alert.alert(t.eventChatTitle, t.validContentBlocked);
-      return;
-    }
-    haptics.light();
-    setSendingComment(true);
-    const text = commentDraft.trim();
-    setCommentDraft('');
-    try {
-      await addDoc(collection(db, 'events', id, 'comments'), {
-        userId: user.id,
-        userName: user.name,
-        userAvatarColor: user.avatarColor ?? '#999',
-        userPhotoUri: user.photoUri ?? null,
-        text,
-        createdAt: Timestamp.now(),
-      });
-    } catch {
-      setCommentDraft(text);
-      Alert.alert(t.createAlertSaveError, t.authErrGeneric);
-    }
-    setSendingComment(false);
   };
 
   const handleUploadWallPhoto = async () => {
@@ -403,12 +380,82 @@ export default function EventDetailScreen() {
     ]);
   };
 
+  const [requestingJoin, setRequestingJoin] = useState(false);
+  const [requestModalVisible, setRequestModalVisible] = useState(false);
+  const [requestMessage, setRequestMessage] = useState('');
+
+  const handleSubmitJoinRequest = async () => {
+    if (!event || !user || !requestMessage.trim()) return;
+    setRequestingJoin(true);
+    haptics.medium();
+    try {
+      await updateDoc(doc(db, 'events', id), {
+        [`joinRequests.${user.id}`]: requestMessage.trim(),
+      });
+      notificationsRepository.create({
+        toUid: event.creatorId,
+        fromUid: user.id,
+        fromName: user.name,
+        fromAvatarColor: user.avatarColor,
+        type: 'event_join_request',
+        eventId: event.id,
+        eventTitle: event.title,
+      }).catch(() => {});
+
+      setEvent({ ...event, joinRequests: { ...(event.joinRequests ?? {}), [user.id]: requestMessage.trim() } });
+      setRequestModalVisible(false);
+      setRequestMessage('');
+    } catch {
+      Alert.alert(t.createAlertSaveError, t.authErrGeneric);
+    }
+    setRequestingJoin(false);
+  };
+
+  const handleJoinRequestDecision = async (uid: string, accept: boolean) => {
+    if (!event || !user) return;
+    haptics.light();
+    try {
+      const remainingRequests = { ...(event.joinRequests ?? {}) };
+      delete remainingRequests[uid];
+      await updateDoc(doc(db, 'events', id), {
+        [`joinRequests.${uid}`]: deleteField(),
+        ...(accept ? { invitedUserIds: arrayUnion(uid) } : {}),
+      });
+      const updated: EventEntity = {
+        ...event,
+        joinRequests: remainingRequests,
+        invitedUserIds: accept ? [...(event.invitedUserIds ?? []), uid] : event.invitedUserIds,
+      };
+      setEvent(updated);
+      upsertEvent(updated);
+      if (accept) {
+        notificationsRepository.create({
+          toUid: uid,
+          fromUid: user.id,
+          fromName: user.name,
+          fromAvatarColor: user.avatarColor,
+          type: 'event_join_accepted',
+          eventId: event.id,
+          eventTitle: event.title,
+        }).catch(() => {});
+      }
+    } catch {
+      Alert.alert(t.createAlertSaveError, t.authErrGeneric);
+    }
+  };
+
   const handleShareAsImage = async () => {
-    if (!shareCardRef.current) return;
+    if (!shareCardRef.current || !event) return;
     haptics.light();
     try {
       const uri = await captureRef(shareCardRef, { format: 'png', quality: 0.95 });
-      await Share.share({ url: uri, title: event?.title ?? '' });
+      // Include a caption with a deep link back into the app — otherwise
+      // whoever receives just the image has no way back in.
+      await Share.share({
+        url: uri,
+        title: event.title,
+        message: `🎉 ${event.title} — ${t.eventShareCta}\nkeno://event/${event.id}`,
+      });
     } catch {}
   };
 
@@ -483,7 +530,7 @@ export default function EventDetailScreen() {
     const dateStr = format(event.dateTime, 'EEE d MMM, HH:mm', { locale: dateLocale });
     await Share.share({
       title: event.title,
-      message: `🎉 ${event.title}\n📌 ${event.location}\n⏰ ${dateStr}\n\n${t.eventShareCta}`,
+      message: `🎉 ${event.title}\n📌 ${event.location}\n⏰ ${dateStr}\n\n${t.eventShareCta}\nkeno://event/${event.id}`,
     });
   };
 
@@ -513,14 +560,58 @@ export default function EventDetailScreen() {
 
   // Private event lock screen for non-invited users
   if (event.isPrivate && !isInvited) {
+    const alreadyRequested = !!user && Object.prototype.hasOwnProperty.call(event.joinRequests ?? {}, user.id);
     return (
       <View style={[{ flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 16 }]}>
         <AnimatedPressable onPress={() => router.back()} style={{ position: 'absolute', top: insets.top + 12, left: 20, width: 38, height: 38, borderRadius: 19, borderWidth: 2.5, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontSize: 18, color: colors.textPrimary }}>←</Text>
         </AnimatedPressable>
         <Text style={{ fontSize: 48 }}>🔒</Text>
-        <Text style={{ fontSize: 22, fontWeight: '900', fontFamily: DrawFont, color: colors.textPrimary, textAlign: 'center' }}>Private Event</Text>
-        <Text style={{ fontSize: 15, color: colors.textSecondary, textAlign: 'center' }}>This event is invite-only. Ask the organiser to invite you.</Text>
+        <Text style={{ fontSize: 22, fontWeight: '900', fontFamily: DrawFont, color: colors.textPrimary, textAlign: 'center' }}>{t.eventPrivateTitle}</Text>
+        <Text style={{ fontSize: 15, color: colors.textSecondary, textAlign: 'center' }}>{t.eventPrivateBody}</Text>
+        <Button
+          label={alreadyRequested ? t.eventRequestSent : t.eventRequestJoin}
+          onPress={() => setRequestModalVisible(true)}
+          disabled={alreadyRequested}
+          style={{ marginTop: 8, minWidth: 220 }}
+        />
+
+        <Modal visible={requestModalVisible} transparent animationType="fade" onRequestClose={() => setRequestModalVisible(false)}>
+          <View style={styles.requestModalBackdrop}>
+            <View style={[styles.requestModalCard, { backgroundColor: colors.surface, borderColor: colors.borderStrong }]}>
+              <Text style={[styles.requestModalTitle, { color: colors.textPrimary }]}>{t.eventRequestJoin}</Text>
+              <Text style={[styles.requestModalHint, { color: colors.textSecondary }]}>{t.eventRequestMessageHint}</Text>
+              <TextInput
+                style={[styles.requestModalInput, { color: colors.textPrimary, borderColor: colors.border }]}
+                value={requestMessage}
+                onChangeText={setRequestMessage}
+                placeholder={t.eventRequestMessagePlaceholder}
+                placeholderTextColor={colors.textHint}
+                multiline
+                numberOfLines={4}
+                maxLength={300}
+              />
+              <View style={styles.requestModalActions}>
+                <AnimatedPressable
+                  onPress={() => setRequestModalVisible(false)}
+                  disabled={requestingJoin}
+                  style={[styles.requestModalBtn, { borderColor: colors.border }]}
+                >
+                  <Text style={[styles.requestModalBtnText, { color: colors.textSecondary }]}>{t.settingsBtnCancel}</Text>
+                </AnimatedPressable>
+                <AnimatedPressable
+                  onPress={handleSubmitJoinRequest}
+                  disabled={requestingJoin || !requestMessage.trim()}
+                  style={[styles.requestModalBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                >
+                  {requestingJoin ? <ActivityIndicator color="#fff" /> : (
+                    <Text style={[styles.requestModalBtnText, { color: '#fff' }]}>{t.eventRequestSendBtn}</Text>
+                  )}
+                </AnimatedPressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     );
   }
@@ -536,10 +627,14 @@ export default function EventDetailScreen() {
 
   const hasFilters = (event.genderFilter && event.genderFilter !== 'any') || event.minAge || event.maxAge || (event.allowedUniversities?.length ?? 0) > 0;
 
+  const ageIneligible = !!user && ((event.minAge != null && user.age < event.minAge) || (event.maxAge != null && user.age > event.maxAge));
+  const universityIneligible = !!user && (event.allowedUniversities?.length ?? 0) > 0 && !event.allowedUniversities!.includes(user.universityName);
+  const isEligible = isCreator || (!ageIneligible && !universityIneligible);
+
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       {/* Top banner — always shown, same style regardless of image */}
       <View style={[styles.topBanner, { backgroundColor: categoryColor, paddingTop: insets.top + 12, borderBottomColor: bs }]}>
@@ -602,11 +697,50 @@ export default function EventDetailScreen() {
           >
             <Text style={styles.privateBannerEmoji}>🔒</Text>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.privateBannerTitle, { color: '#fff' }]}>Private Event</Text>
-              <Text style={[styles.privateBannerSub, { color: 'rgba(255,255,255,0.6)' }]}>Tap to share invite link with guests</Text>
+              <Text style={[styles.privateBannerTitle, { color: '#fff' }]}>{t.eventPrivateTitle}</Text>
+              <Text style={[styles.privateBannerSub, { color: 'rgba(255,255,255,0.6)' }]}>{t.eventPrivateBannerSub}</Text>
             </View>
             <Text style={{ color: '#6c63ff', fontWeight: '900' }}>→</Text>
           </AnimatedPressable>
+        )}
+
+        {/* Pending join requests (creator only) */}
+        {event.isPrivate && isCreator && Object.keys(event.joinRequests ?? {}).length > 0 && (
+          <View style={[styles.analyticsCard, { backgroundColor: colors.surface, borderColor: bs, gap: Spacing.sm }]}>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t.eventJoinRequestsTitle}</Text>
+            {Object.entries(event.joinRequests ?? {}).map(([uid, message]) => {
+              const profile = profiles[uid];
+              return (
+                <View key={uid} style={styles.joinRequestRow}>
+                  <AnimatedPressable onPress={() => router.push(`/(app)/user/${uid}`)} style={styles.joinRequestUser}>
+                    <Avatar profile={profile} size={36} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.joinRequestName, { color: colors.textPrimary }]} numberOfLines={1}>
+                        {profile?.name ?? 'User'}
+                      </Text>
+                      <Text style={[styles.joinRequestMessage, { color: colors.textSecondary }]} numberOfLines={2}>
+                        {message}
+                      </Text>
+                    </View>
+                  </AnimatedPressable>
+                  <View style={styles.joinRequestActions}>
+                    <AnimatedPressable
+                      onPress={() => handleJoinRequestDecision(uid, false)}
+                      style={[styles.joinRequestBtn, { borderColor: colors.border }]}
+                    >
+                      <Text style={[styles.joinRequestBtnText, { color: colors.textSecondary }]}>{t.eventRequestDecline}</Text>
+                    </AnimatedPressable>
+                    <AnimatedPressable
+                      onPress={() => handleJoinRequestDecision(uid, true)}
+                      style={[styles.joinRequestBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                    >
+                      <Text style={[styles.joinRequestBtnText, { color: '#fff' }]}>{t.eventRequestAccept}</Text>
+                    </AnimatedPressable>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
         )}
 
         {/* Cover photo — below title */}
@@ -680,19 +814,6 @@ export default function EventDetailScreen() {
               <Text style={styles.quickActionEmoji}>🖼️</Text>
               <Text style={[styles.quickActionText, { color: colors.textSecondary }]}>{t.eventShareCard}</Text>
             </AnimatedPressable>
-            <AnimatedPressable
-              onPress={() => {
-                const dateStr = format(event.dateTime, 'EEE d MMM, HH:mm', { locale: dateLocale });
-                const text = `🎉 ${event.title}\n📌 ${event.location}\n⏰ ${dateStr}\n\nFound on Keno 🔥`;
-                Linking.openURL(`whatsapp://send?text=${encodeURIComponent(text)}`).catch(() =>
-                  Share.share({ message: text }),
-                );
-              }}
-              style={[styles.quickActionBtn, { backgroundColor: colors.surface, borderColor: bs }]}
-            >
-              <Text style={styles.quickActionEmoji}>💬</Text>
-              <Text style={[styles.quickActionText, { color: colors.textSecondary }]}>{t.eventShareWhatsApp ?? 'WhatsApp'}</Text>
-            </AnimatedPressable>
           </View>
         )}
 
@@ -707,13 +828,13 @@ export default function EventDetailScreen() {
             </View>
           </View>
           <View style={[styles.metaDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.metaRow}>
+          <Pressable style={styles.metaRow} onPress={handleOpenLocation}>
             <Text style={styles.metaIcon}>📌</Text>
             <View style={styles.metaBody}>
               <Text style={[styles.metaLabel, { color: colors.textHint }]}>{t.eventMetaLocation}</Text>
-              <Text style={[styles.metaValue, { color: colors.textPrimary }]}>{event.location}</Text>
+              <Text style={[styles.metaValue, { color: colors.primary, textDecorationLine: 'underline' }]}>{event.location}</Text>
             </View>
-          </View>
+          </Pressable>
           <View style={[styles.metaDivider, { backgroundColor: colors.border }]} />
           <View style={styles.metaRow}>
             <Text style={styles.metaIcon}>👥</Text>
@@ -828,7 +949,13 @@ export default function EventDetailScreen() {
                 <Text style={[styles.chatEmptyText, { color: colors.textHint }]}>{t.eventChatEmpty}</Text>
               </View>
             ) : (
-              <View style={[styles.chatMessages, { backgroundColor: colors.surface, borderColor: bs }]}>
+              <ScrollView
+                ref={chatScrollRef}
+                style={[styles.chatMessages, { backgroundColor: colors.surface, borderColor: bs }]}
+                contentContainerStyle={styles.chatMessagesContent}
+                nestedScrollEnabled
+                showsVerticalScrollIndicator={false}
+              >
                 {messages.map((msg) => {
                   const msgProfile = profiles[msg.userId];
                   const name = msgProfile?.name ?? 'User';
@@ -841,7 +968,11 @@ export default function EventDetailScreen() {
                         onLongPress={() => setMsgReactionPicker(showPicker ? null : msg.id)}
                         style={[styles.msgRow, isMe && styles.msgRowMe]}
                       >
-                        {!isMe && <Avatar profile={msgProfile} size={28} />}
+                        {!isMe && (
+                          <Pressable onPress={() => router.push(`/(app)/user/${msg.userId}`)}>
+                            <Avatar profile={msgProfile} size={28} />
+                          </Pressable>
+                        )}
                         <View style={[
                           styles.msgBubble,
                           { backgroundColor: isMe ? colors.primary : colors.surfaceVariant, borderColor: bs },
@@ -900,7 +1031,7 @@ export default function EventDetailScreen() {
                     </View>
                   </View>
                 )}
-              </View>
+              </ScrollView>
             )}
 
             {/* Message input */}
@@ -943,67 +1074,6 @@ export default function EventDetailScreen() {
           </View>
         )}
 
-        {/* Public comments (visible to all) */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-            {t.eventCommentsTitle}{comments.length > 0 ? ` (${comments.length})` : ''}
-          </Text>
-          {comments.length === 0 ? (
-            <View style={[styles.chatEmpty, { backgroundColor: colors.surface, borderColor: bs }]}>
-              <Text style={styles.chatEmptyEmoji}>💬</Text>
-              <Text style={[styles.chatEmptyText, { color: colors.textHint }]}>{t.eventCommentsEmpty}</Text>
-            </View>
-          ) : (
-            <View style={[styles.chatMessages, { backgroundColor: colors.surface, borderColor: bs }]}>
-              {comments.map((c) => {
-                const isMe = c.userId === user?.id;
-                return (
-                  <View key={c.id} style={[styles.msgRow, isMe && styles.msgRowMe]}>
-                    <View style={[styles.commentAvatar, { backgroundColor: c.userAvatarColor }]}>
-                      {c.userPhotoUri ? (
-                        <Image source={{ uri: c.userPhotoUri }} style={styles.commentAvatarImg} />
-                      ) : (
-                        <Text style={styles.commentAvatarInitial}>{c.userName[0].toUpperCase()}</Text>
-                      )}
-                    </View>
-                    <View style={[styles.msgBubble, { backgroundColor: isMe ? colors.primary : colors.surfaceVariant, borderColor: bs }]}>
-                      {!isMe && <Text style={[styles.msgName, { color: colors.textHint }]}>{c.userName}</Text>}
-                      <Text style={[styles.msgText, { color: isMe ? '#fff' : colors.textPrimary }]}>{c.text}</Text>
-                      <Text style={[styles.msgTime, { color: isMe ? 'rgba(255,255,255,0.65)' : colors.textHint }]}>
-                        {formatMessageTime(c.createdAt, language)}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          )}
-          {user && (
-            <View style={[styles.chatInputRow, { backgroundColor: colors.surface, borderColor: bs }]}>
-              <Avatar profile={user ? { name: user.name, avatarColor: user.avatarColor, photoUri: user.photoUri } as any : undefined} size={30} />
-              <TextInput
-                style={[styles.chatInput, { color: colors.textPrimary }]}
-                value={commentDraft}
-                onChangeText={setCommentDraft}
-                placeholder={t.eventCommentsPlaceholder}
-                placeholderTextColor={colors.textHint}
-                returnKeyType="send"
-                onSubmitEditing={handleSendComment}
-                multiline={false}
-              />
-              <AnimatedPressable
-                onPress={handleSendComment}
-                disabled={!commentDraft.trim() || sendingComment}
-                style={[styles.sendBtn, {
-                  backgroundColor: commentDraft.trim() ? colors.primary : colors.surfaceVariant,
-                  borderColor: bs,
-                }]}
-              >
-                <Text style={[styles.sendBtnText, { color: commentDraft.trim() ? '#fff' : colors.textHint }]}>✈️</Text>
-              </AnimatedPressable>
-            </View>
-          )}
-        </View>
 
         {/* Photo wall */}
         {(wallPhotos.length > 0 || (attending && event.dateTime < new Date())) && (
@@ -1056,13 +1126,19 @@ export default function EventDetailScreen() {
             )}
             <View style={styles.shareCardFloatWrap}>
               <View style={styles.shareCardFloat}>
-                <Text style={styles.shareCardTime}>{format(event.dateTime, 'HH:mm')}</Text>
+                <Text style={styles.shareCardTime}>{format(event.dateTime, 'EEE d MMM, HH:mm', { locale: dateLocale })}</Text>
                 <View style={styles.shareCardDivider} />
                 <Text style={styles.shareCardTitleHighlight}>{event.title}</Text>
                 <Text style={styles.shareCardFloatMeta}>📌 {event.location}</Text>
               </View>
+              <View style={styles.shareCardQrRow}>
+                <View style={styles.shareCardQrBox}>
+                  <QRCode value={`keno://event/${event.id}`} size={56} />
+                </View>
+                <Text style={styles.shareCardQrHint}>{t.eventShareCardScanHint}</Text>
+              </View>
             </View>
-            <Text style={styles.shareCardApp}>KeNo.</Text>
+            <Image source={require('../../../assets/images/icon.png')} style={styles.shareCardApp} />
           </View>
         </View>
       </ScrollView>
@@ -1082,7 +1158,14 @@ export default function EventDetailScreen() {
 
       {!isCreator && (
         <View style={[styles.cta, { backgroundColor: colors.background, borderTopColor: bs, paddingBottom: insets.bottom + 16 }]}>
-          {attending ? (
+          {!attending && !isEligible ? (
+            <View style={styles.ctaStack}>
+              <Button label={t.eventBtnJoin} onPress={() => {}} variant="primary" disabled fullWidth />
+              <Text style={[styles.waitlistHint, { color: colors.error }]}>
+                {ageIneligible ? t.eventNotEligibleAge : t.eventNotEligibleUniversity}
+              </Text>
+            </View>
+          ) : attending ? (
             <Button label={t.eventBtnLeave} onPress={handleJoinLeave} variant="outline" loading={actionLoading} fullWidth />
           ) : full ? (
             <View style={styles.ctaStack}>
@@ -1178,7 +1261,8 @@ const styles = StyleSheet.create({
   chatEmpty: { borderRadius: BorderRadius.lg, borderWidth: 2.5, padding: Spacing.xl, alignItems: 'center', gap: Spacing.sm },
   chatEmptyEmoji: { fontSize: 32 },
   chatEmptyText: { fontSize: FontSize.sm, textAlign: 'center' },
-  chatMessages: { borderRadius: BorderRadius.lg, borderWidth: 2.5, padding: Spacing.md, gap: Spacing.md },
+  chatMessages: { maxHeight: 420, borderRadius: BorderRadius.lg, borderWidth: 2.5 },
+  chatMessagesContent: { padding: Spacing.md, gap: Spacing.md },
   msgRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'flex-end' },
   msgRowMe: { flexDirection: 'row-reverse' },
   msgBubble: { maxWidth: '75%', borderRadius: 16, borderWidth: 2, padding: Spacing.sm, gap: 2 },
@@ -1223,16 +1307,27 @@ const styles = StyleSheet.create({
   qrHint: { fontSize: FontSize.sm, textAlign: 'center' },
   // Analytics
   analyticsCard: { borderRadius: BorderRadius.lg, borderWidth: 2.5, padding: Spacing.md, ...Shadow.sm },
+  joinRequestRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.sm },
+  joinRequestUser: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, flex: 1 },
+  joinRequestName: { fontSize: FontSize.sm, fontWeight: FontWeight.medium, flexShrink: 1 },
+  joinRequestActions: { flexDirection: 'row', gap: 6 },
+  joinRequestBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: BorderRadius.full, borderWidth: 2 },
+  joinRequestBtnText: { fontSize: FontSize.xs, fontWeight: FontWeight.bold, fontFamily: DrawFont },
+  joinRequestMessage: { fontSize: FontSize.xs, marginTop: 1 },
+  requestModalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: Spacing.lg },
+  requestModalCard: { width: '100%', maxWidth: 380, borderWidth: 2.5, borderRadius: BorderRadius.lg, padding: Spacing.lg, gap: 10, ...Shadow.sm },
+  requestModalTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
+  requestModalHint: { fontSize: FontSize.sm, lineHeight: 20 },
+  requestModalInput: { borderWidth: 1.5, borderRadius: BorderRadius.md, padding: Spacing.md, fontSize: FontSize.sm, minHeight: 90, textAlignVertical: 'top' },
+  requestModalActions: { flexDirection: 'row', gap: Spacing.sm, marginTop: 4 },
+  requestModalBtn: { flex: 1, borderWidth: 2, borderRadius: BorderRadius.full, paddingVertical: 10, alignItems: 'center' },
+  requestModalBtnText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: DrawFont },
   analyticsSectionTitle: { fontSize: FontSize.xs, fontWeight: FontWeight.bold, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
   analyticsRow: { flexDirection: 'row', alignItems: 'center' },
   analyticsStat: { flex: 1, alignItems: 'center', gap: 2 },
   analyticsValue: { fontSize: 22, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
   analyticsLabel: { fontSize: FontSize.xs, textAlign: 'center' },
   analyticsDivider: { width: 1.5, height: 40, marginHorizontal: 8 },
-  // Comments
-  commentAvatar: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  commentAvatarImg: { width: 28, height: 28, borderRadius: 14 },
-  commentAvatarInitial: { color: '#fff', fontSize: 12, fontWeight: FontWeight.bold },
   // Share card
   shareCardContainer: { position: 'absolute', top: -9999, left: 0, right: 0 },
   // 360x640 @3x device pixel ratio = 1080x1920, Instagram Story's exact recommended size
@@ -1260,9 +1355,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   shareCardFloatMeta: { fontSize: 12, fontWeight: FontWeight.semibold, color: '#666' },
+  shareCardQrRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14 },
+  shareCardQrBox: { backgroundColor: '#fff', padding: 4, borderRadius: 8 },
+  shareCardQrHint: { fontSize: 11, fontWeight: FontWeight.semibold, color: '#FFFDF7', flex: 1 },
   shareCardApp: {
     position: 'absolute', top: 20, left: 20,
-    fontSize: 15, fontWeight: FontWeight.bold, fontFamily: LogoFont, color: '#fff',
-    textShadowColor: 'rgba(0,0,0,0.4)', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 },
+    width: 36, height: 36, borderRadius: 10,
   },
 });

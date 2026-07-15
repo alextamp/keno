@@ -1,10 +1,11 @@
 import {
   addDoc, arrayRemove, arrayUnion,
-  collection, doc, onSnapshot,
+  collection, doc, getDoc, onSnapshot,
   orderBy, query, Timestamp, updateDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { ChatMessage } from '../../domain/entities/event.entity';
+import { notificationsRepository } from '@/features/notifications/notifications.repository';
 
 function msgPath(eventId: string) {
   return collection(db, 'events', eventId, 'messages');
@@ -34,6 +35,29 @@ export const chatRepository = {
       timestamp: Timestamp.now(),
       reactions: {},
     });
+
+    try {
+      const [eventSnap, userSnap] = await Promise.all([
+        getDoc(doc(db, 'events', eventId)),
+        getDoc(doc(db, 'users', userId)),
+      ]);
+      if (!eventSnap.exists() || !userSnap.exists()) return;
+      const eventData = eventSnap.data();
+      const creatorId = eventData.creatorId as string;
+      if (creatorId === userId) return;
+      const userData = userSnap.data();
+      await notificationsRepository.create({
+        toUid: creatorId,
+        fromUid: userId,
+        fromName: userData.name ?? 'Someone',
+        fromAvatarColor: userData.avatarColor,
+        type: 'event_message',
+        eventId,
+        eventTitle: eventData.title,
+      });
+    } catch {
+      // Best-effort — a failed notification should never block the message send.
+    }
   },
 
   async reactToMessage(eventId: string, messageId: string, userId: string, emoji: string): Promise<void> {

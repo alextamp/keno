@@ -3,6 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Notifications from 'expo-notifications';
+import * as Sentry from '@sentry/react-native';
 import { useFonts, Comfortaa_400Regular, Comfortaa_700Bold } from '@expo-google-fonts/comfortaa';
 import { useTheme } from '@/core/theme';
 import { useThemeStore } from '@/core/theme/theme.store';
@@ -11,6 +12,17 @@ import { useLanguageStore } from '@/core/i18n';
 import { useEventsStore } from '@/features/events/presentation/store/events.store';
 import { syncEventReminders, requestNotificationPermissions } from '@/core/utils/eventReminders';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
+
+const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
+if (sentryDsn) {
+  Sentry.init({
+    dsn: sentryDsn,
+    // Full traces during early testing; worth dialing down once real
+    // traffic arrives so it doesn't burn through the free-tier quota.
+    tracesSampleRate: 1.0,
+    environment: __DEV__ ? 'development' : 'production',
+  });
+}
 
 function AuthGate() {
   const router = useRouter();
@@ -24,18 +36,22 @@ function AuthGate() {
 
     const inAuth = segments[0] === '(auth)';
     const onOnboarding = (segments as string[]).includes('onboarding');
+    const onPendingVerification = (segments as string[]).includes('pending-verification');
+    const pendingIdVerification = user?.idVerificationStatus === 'pending' || user?.idVerificationStatus === 'rejected';
 
     if (!user && !isEmailVerified && !inAuth) {
       router.replace('/(auth)/sign-in');
     } else if (!user && !isEmailVerified && inAuth) {
       // already on auth screens — do nothing
-    } else if (user && isEmailVerified && inAuth) {
+    } else if (user && isEmailVerified && pendingIdVerification && !onPendingVerification) {
+      router.replace('/(auth)/pending-verification' as any);
+    } else if (user && isEmailVerified && !pendingIdVerification && inAuth) {
       if (!user.onboardingDone) {
         router.replace('/(app)/onboarding' as any);
       } else {
         router.replace('/(app)');
       }
-    } else if (user && isEmailVerified && !user.onboardingDone && !onOnboarding) {
+    } else if (user && isEmailVerified && !pendingIdVerification && !user.onboardingDone && !onOnboarding) {
       router.replace('/(app)/onboarding' as any);
     }
   }, [user, isLoading, isEmailVerified, segments[0]]);
@@ -43,7 +59,7 @@ function AuthGate() {
   return null;
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const { isDark } = useTheme();
   const [fontsLoaded] = useFonts({ Comfortaa_400Regular, Comfortaa_700Bold });
   const isLoading = useAuthStore((s) => s.isLoading);
@@ -92,3 +108,5 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default sentryDsn ? Sentry.wrap(RootLayout) : RootLayout;

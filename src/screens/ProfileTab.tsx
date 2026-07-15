@@ -7,7 +7,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/core/theme';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
-import { useNotificationsStore } from '@/features/notifications/notifications.store';
 import { useEventsStore } from '@/features/events/presentation/store/events.store';
 import { eventsRepository } from '@/features/events/data/repositories/events.repository.impl';
 import { isLeft } from '@/core/utils/either';
@@ -18,7 +17,7 @@ import { EventEntity, isAttending } from '@/features/events/domain/entities/even
 import { EventCard } from '@/components/ui/EventCard';
 import { useTranslation, useLanguageStore } from '@/core/i18n';
 import { universityLabel } from '@/core/constants/universities';
-import { getLevel } from '@/core/constants/gamification';
+import { getLevel, isBetaTesterUser } from '@/core/constants/gamification';
 import { LevelsModal } from '@/components/ui/LevelsModal';
 import { fetchUserProfiles, UserProfile } from '@/core/utils/userProfiles';
 
@@ -32,7 +31,6 @@ export default function ProfileScreen() {
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const unsaveEvent = useAuthStore((s) => s.unsaveEvent);
   const signOut = useAuthStore((s) => s.signOut);
-  const unreadCount = useNotificationsStore((s) => s.unreadCount);
   const t = useTranslation();
   const { language } = useLanguageStore();
   const events = useEventsStore((s) => s.events);
@@ -82,13 +80,13 @@ export default function ProfileScreen() {
   if (!user) return (
     <View style={{ flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 32 }}>
       <Text style={{ fontSize: 48 }}>👤</Text>
-      <Text style={{ fontSize: 18, fontWeight: '800', fontFamily: DrawFont, color: colors.textPrimary, textAlign: 'center' }}>Something went wrong</Text>
-      <Text style={{ fontSize: 14, color: colors.textHint, textAlign: 'center' }}>Your profile data is missing. Please sign out and sign back in.</Text>
+      <Text style={{ fontSize: 18, fontWeight: '800', fontFamily: DrawFont, color: colors.textPrimary, textAlign: 'center' }}>{t.profileErrorTitle}</Text>
+      <Text style={{ fontSize: 14, color: colors.textHint, textAlign: 'center' }}>{t.profileErrorBody}</Text>
       <AnimatedPressable
         onPress={() => signOut()}
         style={{ backgroundColor: colors.primary, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 999, marginTop: 8 }}
       >
-        <Text style={{ color: '#fff', fontWeight: '800', fontFamily: DrawFont, fontSize: 16 }}>Sign Out</Text>
+        <Text style={{ color: '#fff', fontWeight: '800', fontFamily: DrawFont, fontSize: 16 }}>{t.settingsSignOut}</Text>
       </AnimatedPressable>
     </View>
   );
@@ -130,6 +128,7 @@ export default function ProfileScreen() {
     { emoji: '🌟', label: t.badgeSocial,     description: t.badgeSocialDesc,     earned: (user.following?.length ?? 0) >= 5 },
     { emoji: '🎪', label: t.badgeOrganizer,  description: t.badgeOrganizerDesc,  earned: user.createdEvents.length >= 3 },
     { emoji: '🔥', label: t.badgeOnFire,     description: t.badgeOnFireDesc,     earned: streak >= 3 },
+    { emoji: '🌱', label: t.badgeBetaTester, description: t.badgeBetaTesterDesc, earned: isBetaTesterUser(user) },
   ];
   const handleSave = async () => {
     if (!draftName.trim()) { Alert.alert(t.profileAlertNameTitle, t.profileAlertNameBody); return; }
@@ -180,17 +179,6 @@ export default function ProfileScreen() {
       <View style={styles.topRow}>
         <Text style={[styles.pageTitle,{color:colors.textPrimary}]}>{t.profileTitle}</Text>
         <View style={styles.topActions}>
-          <AnimatedPressable onPress={() => router.push('/(app)/notifications' as any)} style={[styles.topIconBtn, { backgroundColor: colors.surfaceVariant, borderColor: bs }]}>
-            <Text style={styles.topIconBtnText}>🔔</Text>
-            {unreadCount > 0 && (
-              <View style={[styles.topBadge, { backgroundColor: colors.primary }]}>
-                <Text style={styles.topBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
-              </View>
-            )}
-          </AnimatedPressable>
-          <AnimatedPressable onPress={() => router.push('/(app)/search' as any)} style={[styles.topIconBtn, { backgroundColor: colors.surfaceVariant, borderColor: bs }]}>
-            <Text style={styles.topIconBtnText}>👤</Text>
-          </AnimatedPressable>
           <AnimatedPressable onPress={() => editing ? handleSave() : setEditing(true)} disabled={isSaving} style={[styles.editBtn,{backgroundColor:editing?colors.primary:colors.surfaceVariant, borderColor: bs}]}>
             {isSaving
               ? <ActivityIndicator size="small" color="#fff" />
@@ -483,10 +471,6 @@ const styles = StyleSheet.create({
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   pageTitle: { fontSize: 28, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
   topActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  topIconBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 2.5, alignItems: 'center', justifyContent: 'center' },
-  topIconBtnText: { fontSize: 18 },
-  topBadge: { position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
-  topBadgeText: { color: '#fff', fontSize: 10, fontWeight: FontWeight.extrabold },
   editBtn: { paddingHorizontal: Spacing.md, paddingVertical: 8, borderRadius: BorderRadius.full, borderWidth: 2.5 },
   editBtnLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: DrawFont },
   // Hero

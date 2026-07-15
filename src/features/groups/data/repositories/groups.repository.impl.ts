@@ -1,13 +1,13 @@
 import {
   addDoc, arrayRemove, arrayUnion, collection,
-  doc, DocumentSnapshot, getDoc, getDocs, onSnapshot,
+  deleteDoc, deleteField, doc, DocumentSnapshot, getDoc, getDocs, onSnapshot,
   orderBy, query, Timestamp, updateDoc, where,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Failure, ServerFailure } from '@/core/errors/failures';
 import { Either, left, right } from '@/core/utils/either';
 import { GroupEntity } from '../../domain/entities/group.entity';
-import { CreateGroupParams, GroupsRepository } from '../../domain/repositories/groups.repository';
+import { CreateGroupParams, GroupsRepository, UpdateGroupParams } from '../../domain/repositories/groups.repository';
 import { notificationsRepository } from '@/features/notifications/notifications.repository';
 
 const GROUPS = 'groups';
@@ -27,6 +27,7 @@ function groupFromFirestore(snap: DocumentSnapshot): GroupEntity {
     universityName: d.universityName,
     isPrivate: d.isPrivate ?? false,
     invitedUserIds: d.invitedUserIds ?? [],
+    joinRequests: d.joinRequests ?? {},
     createdAt: d.createdAt?.toDate() ?? new Date(),
   };
 }
@@ -130,6 +131,61 @@ export const groupsRepository: GroupsRepository = {
       return right(undefined);
     } catch (e: any) {
       return left(new ServerFailure(e.message ?? 'Failed to add event to group.'));
+    }
+  },
+
+  async updateGroup(groupId: string, params: UpdateGroupParams): Promise<Either<Failure, void>> {
+    try {
+      await updateDoc(doc(db, GROUPS, groupId), {
+        name: params.name,
+        description: params.description,
+        emoji: params.emoji,
+        coverColor: params.coverColor,
+        universityName: params.universityName ?? null,
+        isPrivate: params.isPrivate,
+      });
+      return right(undefined);
+    } catch (e: any) {
+      return left(new ServerFailure(e.message ?? 'Failed to update group.'));
+    }
+  },
+
+  async deleteGroup(groupId: string, creatorId: string): Promise<Either<Failure, void>> {
+    try {
+      await deleteDoc(doc(db, GROUPS, groupId));
+      await updateDoc(doc(db, USERS, creatorId), { groups: arrayRemove(groupId) }).catch(() => {});
+      return right(undefined);
+    } catch (e: any) {
+      return left(new ServerFailure(e.message ?? 'Failed to delete group.'));
+    }
+  },
+
+  async requestToJoin(groupId: string, userId: string, message: string): Promise<Either<Failure, void>> {
+    try {
+      await updateDoc(doc(db, GROUPS, groupId), {
+        [`joinRequests.${userId}`]: message,
+      });
+      // Notification is sent by the caller (group/[id].tsx), which already
+      // has the requester's profile in scope — don't duplicate it here.
+      return right(undefined);
+    } catch (e: any) {
+      return left(new ServerFailure(e.message ?? 'Failed to send join request.'));
+    }
+  },
+
+  async decideJoinRequest(groupId: string, uid: string, accept: boolean): Promise<Either<Failure, void>> {
+    try {
+      await updateDoc(doc(db, GROUPS, groupId), {
+        [`joinRequests.${uid}`]: deleteField(),
+        ...(accept ? { memberIds: arrayUnion(uid) } : {}),
+      });
+      if (accept) {
+        await updateDoc(doc(db, USERS, uid), { groups: arrayUnion(groupId) }).catch(() => {});
+      }
+      // Notification is sent by the caller (group/[id].tsx) — don't duplicate it here.
+      return right(undefined);
+    } catch (e: any) {
+      return left(new ServerFailure(e.message ?? 'Failed to update join request.'));
     }
   },
 

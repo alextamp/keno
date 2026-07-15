@@ -10,6 +10,12 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    // Keep in sync with src/core/constants/admin.ts — the one account
+    // allowed to review reports and moderate content it didn't create.
+    function isAdmin() {
+      return signedIn() && request.auth.uid == 'Ijfcvx8cqGb1WNnOZxWgGUuGD6N2';
+    }
+
     function onlyChangedFields(allowed) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowed);
     }
@@ -21,9 +27,12 @@ service cloud.firestore {
       // Owners can edit their whole profile. Anyone else may only union an
       // event into joinedEvents — needed when a leaving attendee promotes the
       // next person off an event's waitlist into someone else's joined list.
+      // The admin may additionally strip a deleted event's id out of
+      // createdEvents/joinedEvents when removing a reported event they don't own.
       allow update: if isOwner(userId) ||
-        (signedIn() && onlyChangedFields(['joinedEvents']));
-      allow delete: if false;
+        (isAdmin() && onlyChangedFields(['joinedEvents', 'createdEvents', 'idVerificationStatus', 'isBetaTester'])) ||
+        (signedIn() && onlyChangedFields(['joinedEvents', 'followers']));
+      allow delete: if isOwner(userId);
 
       // Per-user notifications (actual storage path — not the root collection below)
       match /notifications/{notifId} {
@@ -38,20 +47,13 @@ service cloud.firestore {
     match /events/{eventId} {
       allow read: if signedIn();
       allow create: if signedIn() && request.resource.data.creatorId == request.auth.uid;
-      // Creator can edit everything; anyone else can only touch join/waitlist/reaction state.
+      // Creator can edit everything; anyone else can only touch join/waitlist/reaction
+      // state, or ask to join a private event via joinRequests.
       allow update: if signedIn() && (
         resource.data.creatorId == request.auth.uid ||
-        onlyChangedFields(['attendeeIds', 'waitlistIds', 'reactions'])
+        onlyChangedFields(['attendeeIds', 'waitlistIds', 'reactions', 'joinRequests'])
       );
-      allow delete: if signedIn() && resource.data.creatorId == request.auth.uid;
-
-      // Public comments
-      match /comments/{commentId} {
-        allow read: if signedIn();
-        allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
-        allow update: if signedIn() && resource.data.userId == request.auth.uid;
-        allow delete: if signedIn() && resource.data.userId == request.auth.uid;
-      }
+      allow delete: if signedIn() && (resource.data.creatorId == request.auth.uid || isAdmin());
 
       // Chat messages
       match /messages/{messageId} {
@@ -91,26 +93,29 @@ service cloud.firestore {
       allow read: if signedIn();
       allow create: if signedIn() && request.resource.data.creatorId == request.auth.uid;
       // Creator can edit everything; members can only join/leave or accept invites,
-      // and any signed-in user can attach an event they posted to the group.
+      // any signed-in user can attach an event they posted to the group, and
+      // anyone can ask to join a private group via joinRequests.
       allow update: if signedIn() && (
         resource.data.creatorId == request.auth.uid ||
-        onlyChangedFields(['memberIds', 'invitedUserIds', 'eventIds'])
+        onlyChangedFields(['memberIds', 'invitedUserIds', 'eventIds', 'joinRequests'])
       );
       allow delete: if signedIn() && resource.data.creatorId == request.auth.uid;
 
       match /messages/{messageId} {
         allow read: if signedIn();
         allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+        // Reactions are added/removed by users other than the author.
+        allow update: if signedIn() && onlyChangedFields(['reactions']);
         allow delete: if false;
       }
     }
 
-    // User reports — write-only from clients, no client read access.
+    // User reports — write-only from clients; only the admin can review/resolve them.
     match /reports/{reportId} {
-      allow read: if false;
+      allow read: if isAdmin();
       allow create: if signedIn() && request.resource.data.reporterUid == request.auth.uid;
-      allow update: if false;
-      allow delete: if false;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
   }
 }

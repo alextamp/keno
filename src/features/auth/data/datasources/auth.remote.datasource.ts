@@ -16,6 +16,7 @@ export interface SignUpData {
   password: string;
   universityName: string;
   department: string;
+  age: number;
 }
 
 export interface SignInData {
@@ -24,7 +25,7 @@ export interface SignInData {
 }
 
 export const authRemoteDataSource = {
-  async signUp({ name, email, password, universityName, department }: SignUpData): Promise<UserModel> {
+  async signUp({ name, email, password, universityName, department, age }: SignUpData): Promise<UserModel> {
     const credential = await createUserWithEmailAndPassword(auth, email, password);
     const firebaseUser = credential.user;
 
@@ -36,6 +37,7 @@ export const authRemoteDataSource = {
       universityEmail: email,
       universityName,
       department,
+      age,
       joinedEvents: [],
       createdEvents: [],
       following: [],

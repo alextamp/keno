@@ -21,11 +21,15 @@ export default function AppLayout() {
       <Stack.Screen name="notifications" />
       <Stack.Screen name="search" />
       <Stack.Screen name="settings" />
+      <Stack.Screen name="admin-reports" />
+      <Stack.Screen name="admin-verifications" />
       <Stack.Screen name="event/[id]" />
       <Stack.Screen name="event/edit/[id]" />
       <Stack.Screen name="user/[uid]" />
+      <Stack.Screen name="user/connections/[uid]" />
       <Stack.Screen name="group/[id]" />
       <Stack.Screen name="group/create" />
+      <Stack.Screen name="group/edit/[id]" />
       <Stack.Screen name="leaderboard" />
     </Stack>
   );

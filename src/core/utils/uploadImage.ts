@@ -63,3 +63,12 @@ export async function uploadProfilePhoto(
   const ext = localUri.split('.').pop()?.split('?')[0] ?? 'jpg';
   return uploadToStorage(`avatars/${uid}.${ext}`, localUri, onProgress);
 }
+
+export async function uploadVerificationPhoto(
+  uid: string,
+  localUri: string,
+  onProgress?: (pct: number) => void,
+): Promise<string> {
+  const ext = localUri.split('.').pop()?.split('?')[0] ?? 'jpg';
+  return uploadToStorage(`verification-photos/${uid}.${ext}`, localUri, onProgress);
+}

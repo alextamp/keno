@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { fold } from '@/core/utils/either';
 import { GroupEntity } from '../../domain/entities/group.entity';
 import { groupsRepository } from '../../data/repositories/groups.repository.impl';
-import { CreateGroupParams } from '../../domain/repositories/groups.repository';
+import { CreateGroupParams, UpdateGroupParams } from '../../domain/repositories/groups.repository';
 
 interface GroupsState {
   publicGroups: GroupEntity[];
@@ -15,6 +15,10 @@ interface GroupsState {
   joinGroup: (groupId: string, userId: string) => Promise<boolean>;
   leaveGroup: (groupId: string, userId: string) => Promise<boolean>;
   inviteToGroup: (groupId: string, userId: string, invitedByUid: string, invitedByName: string, groupTitle: string) => Promise<boolean>;
+  updateGroup: (groupId: string, params: UpdateGroupParams) => Promise<boolean>;
+  deleteGroup: (groupId: string, creatorId: string) => Promise<boolean>;
+  requestToJoinGroup: (groupId: string, userId: string, message: string) => Promise<boolean>;
+  decideGroupJoinRequest: (groupId: string, uid: string, accept: boolean) => Promise<boolean>;
   clearError: () => void;
 }
 
@@ -104,6 +108,44 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
       () => false,
       () => true,
     );
+  },
+
+  updateGroup: async (groupId, params) => {
+    const result = await groupsRepository.updateGroup(groupId, params);
+    return fold(result,
+      () => false,
+      () => {
+        set((s) => ({
+          publicGroups: s.publicGroups.map((g) => (g.id === groupId ? { ...g, ...params } : g)),
+          myGroups: s.myGroups.map((g) => (g.id === groupId ? { ...g, ...params } : g)),
+        }));
+        return true;
+      },
+    );
+  },
+
+  deleteGroup: async (groupId, creatorId) => {
+    const result = await groupsRepository.deleteGroup(groupId, creatorId);
+    return fold(result,
+      () => false,
+      () => {
+        set((s) => ({
+          publicGroups: s.publicGroups.filter((g) => g.id !== groupId),
+          myGroups: s.myGroups.filter((g) => g.id !== groupId),
+        }));
+        return true;
+      },
+    );
+  },
+
+  requestToJoinGroup: async (groupId, userId, message) => {
+    const result = await groupsRepository.requestToJoin(groupId, userId, message);
+    return fold(result, () => false, () => true);
+  },
+
+  decideGroupJoinRequest: async (groupId, uid, accept) => {
+    const result = await groupsRepository.decideJoinRequest(groupId, uid, accept);
+    return fold(result, () => false, () => true);
   },
 
   clearError: () => set({ error: null }),

@@ -9,7 +9,8 @@ import {
   signOut as firebaseSignOut,
   updateProfile as firebaseUpdateProfile,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, increment, serverTimestamp } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth, db } from '@/lib/firebase';
 import { getTranslations } from '@/core/i18n';
 import { UserEntity } from '../../domain/entities/user.entity';
@@ -17,6 +18,7 @@ import { notificationsRepository } from '@/features/notifications/notifications.
 import { getExpoPushToken } from '@/core/utils/eventReminders';
 import { getLevel } from '@/core/constants/gamification';
 import { sounds } from '@/core/utils/sounds';
+import { uploadVerificationPhoto } from '@/core/utils/uploadImage';
 
 interface AuthState {
   user: UserEntity | null;
@@ -25,13 +27,13 @@ interface AuthState {
   error: string | null;
   initializeAuth: () => () => void;
   signIn: (params: { email: string; password: string }) => Promise<void>;
-  signUp: (params: { name: string; email: string; password: string; universityName: string; department: string }) => Promise<boolean>;
+  signUp: (params: { name: string; email: string; password: string; universityName: string; department: string; age: number; idPhotoUri?: string }) => Promise<boolean>;
   sendEmailVerification: () => Promise<boolean>;
   sendPasswordReset: (email: string) => Promise<void>;
   reloadAndCheckVerification: () => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (patch: Partial<Pick<UserEntity, 'bio' | 'avatarColor' | 'name' | 'photoUri' | 'interests'>>) => Promise<void>;
-  completeOnboarding: (params: { interests: string[]; bio: string; avatarColor: string }) => Promise<void>;
+  completeOnboarding: (params: { interests: string[]; bio: string; avatarColor: string; photoUri?: string }) => Promise<void>;
   addJoinedEvent: (eventId: string) => void;
   removeJoinedEvent: (eventId: string) => void;
   followUser: (targetUid: string, targetName: string, targetAvatarColor?: string) => Promise<void>;
@@ -65,10 +67,66 @@ function mapFirebaseError(code: string): string {
   }
 }
 
-async function loadUserFromFirestore(uid: string): Promise<UserEntity | null> {
+const PENDING_PROFILE_KEY = 'pendingProfile:';
+
+interface PendingProfile {
+  name: string;
+  email: string;
+  universityName: string;
+  department: string;
+  age: number;
+  idPhotoUri?: string;
+}
+
+// The Firestore user doc is only written once the email is confirmed, so an
+// abandoned or fake signup (wrong/typo'd address that never gets verified)
+// never leaves a permanent row in the users collection.
+async function ensureUserProfileExists(uid: string): Promise<void> {
+  const ref = doc(db, 'users', uid);
+  const snap = await getDoc(ref);
+  if (snap.exists()) return;
+  const raw = await AsyncStorage.getItem(`${PENDING_PROFILE_KEY}${uid}`);
+  if (!raw) return;
+  const draft: PendingProfile = JSON.parse(raw);
+  await setDoc(ref, {
+    name: draft.name,
+    nameLower: draft.name.toLowerCase(),
+    universityEmail: draft.email,
+    universityName: draft.universityName,
+    department: draft.department,
+    age: draft.age,
+    joinedEvents: [],
+    createdEvents: [],
+    following: [],
+    followers: [],
+    bio: '',
+    avatarColor: '#C94D0A',
+    interests: [],
+    onboardingDone: false,
+    createdAt: serverTimestamp(),
+  });
+  if (draft.idPhotoUri) {
+    try {
+      const photoUrl = await uploadVerificationPhoto(uid, draft.idPhotoUri);
+      await updateDoc(ref, { idVerificationPhotoUri: photoUrl, idVerificationStatus: 'pending' });
+    } catch {}
+  }
+  await AsyncStorage.removeItem(`${PENDING_PROFILE_KEY}${uid}`);
+}
+
+async function loadUserFromFirestore(uid: string, attempt = 0): Promise<UserEntity | null> {
   try {
   const snap = await getDoc(doc(db, 'users', uid));
-  if (!snap.exists()) return null;
+  if (!snap.exists()) {
+    // Right after sign-up, the profile-creating write can still be in
+    // flight when this fires (it's a separate listener racing the signUp
+    // call) — retry briefly before concluding the profile is really gone.
+    if (attempt < 4) {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      return loadUserFromFirestore(uid, attempt + 1);
+    }
+    return null;
+  }
   const d = snap.data();
   return {
     id: uid,
@@ -76,6 +134,7 @@ async function loadUserFromFirestore(uid: string): Promise<UserEntity | null> {
     universityEmail: d.universityEmail,
     universityName: d.universityName,
     department: d.department,
+    age: d.age ?? 0,
     joinedEvents: d.joinedEvents ?? [],
     createdEvents: d.createdEvents ?? [],
     following: d.following ?? [],
@@ -90,6 +149,10 @@ async function loadUserFromFirestore(uid: string): Promise<UserEntity | null> {
     currentStreak: d.currentStreak ?? 0,
     longestStreak: d.longestStreak ?? 0,
     lastAttendedDate: d.lastAttendedDate,
+    idVerificationPhotoUri: d.idVerificationPhotoUri,
+    idVerificationStatus: d.idVerificationStatus,
+    isBetaTester: d.isBetaTester,
+    createdAt: d.createdAt?.toDate?.() ?? undefined,
   };
   } catch {
     return null;
@@ -114,6 +177,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
       try {
         await fbUser.getIdToken();
+        await ensureUserProfileExists(fbUser.uid);
         const user = await loadUserFromFirestore(fbUser.uid);
         set({ user, isLoading: false, isEmailVerified: fbUser.emailVerified });
       } catch {
@@ -137,27 +201,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  signUp: async ({ name, email, password, universityName, department }) => {
+  signUp: async ({ name, email, password, universityName, department, age, idPhotoUri }) => {
     set({ isLoading: true, error: null });
     try {
       const { user: fbUser } = await createUserWithEmailAndPassword(auth, email, password);
       await firebaseUpdateProfile(fbUser, { displayName: name });
       await firebaseSendVerification(fbUser);
-      await setDoc(doc(db, 'users', fbUser.uid), {
-        name,
-        nameLower: name.toLowerCase(),
-        universityEmail: email,
-        universityName,
-        department,
-        joinedEvents: [],
-        createdEvents: [],
-        following: [],
-        followers: [],
-        bio: '',
-        avatarColor: '#C94D0A',
-        interests: [],
-        onboardingDone: false,
-      });
+      // The Firestore profile doc isn't created yet — only once the email is
+      // verified (see ensureUserProfileExists) — so a fake/typo'd address
+      // that never gets confirmed doesn't leave a permanent row behind.
+      const draft: PendingProfile = { name, email, universityName, department, age, idPhotoUri };
+      await AsyncStorage.setItem(`${PENDING_PROFILE_KEY}${fbUser.uid}`, JSON.stringify(draft));
       set({ isLoading: false, isEmailVerified: false });
       return true;
     } catch (e: any) {
@@ -187,6 +241,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!fbUser) return;
     await reload(fbUser);
     if (fbUser.emailVerified) {
+      await ensureUserProfileExists(fbUser.uid);
       const user = await loadUserFromFirestore(fbUser.uid);
       set({ user, isEmailVerified: true });
     }
@@ -269,7 +324,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }));
   },
 
-  completeOnboarding: async ({ interests, bio, avatarColor }) => {
+  completeOnboarding: async ({ interests, bio, avatarColor, photoUri }) => {
     const { user } = get();
     if (!user) return;
     await updateDoc(doc(db, 'users', user.id), {
@@ -277,9 +332,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       bio,
       avatarColor,
       onboardingDone: true,
+      ...(photoUri ? { photoUri } : {}),
     });
     set((s) => ({
-      user: s.user ? { ...s.user, interests, bio, avatarColor, onboardingDone: true } : s.user,
+      user: s.user ? { ...s.user, interests, bio, avatarColor, onboardingDone: true, ...(photoUri ? { photoUri } : {}) } : s.user,
     }));
   },
 

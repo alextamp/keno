@@ -10,6 +10,8 @@ export interface GroupEntity {
   universityName?: string;
   isPrivate: boolean;
   invitedUserIds: string[];
+  /** uid -> message the requester wrote explaining why they should be let in. */
+  joinRequests?: Record<string, string>;
   createdAt: Date;
 }
 

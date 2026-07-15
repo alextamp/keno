@@ -19,5 +19,18 @@ service firebase.storage {
                    && request.resource.size < 5 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
     }
+
+    // Student ID photos for the no-university-email signup path — private.
+    // Only the uploader and the admin (kept in sync with
+    // src/core/constants/admin.ts) can read them.
+    match /verification-photos/{filename} {
+      allow read: if request.auth != null
+                  && (filename.matches(request.auth.uid + '[.].+')
+                      || request.auth.uid == 'Ijfcvx8cqGb1WNnOZxWgGUuGD6N2');
+      allow write: if request.auth != null
+                   && filename.matches(request.auth.uid + '[.].+')
+                   && request.resource.size < 8 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
   }
 }

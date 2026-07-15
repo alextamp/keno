@@ -108,7 +108,7 @@ export default function DmScreen() {
   return (
     <KeyboardAvoidingView
       style={[styles.root, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={0}
     >
       {/* Header */}
@@ -116,14 +116,19 @@ export default function DmScreen() {
         <AnimatedPressable onPress={() => router.back()} style={[styles.backBtn, { borderColor: bs }]}>
           <Text style={[styles.backIcon, { color: colors.textPrimary }]}>←</Text>
         </AnimatedPressable>
-        <View style={[styles.headerAvatar, { backgroundColor: otherAvatarColor }]}>
-          {otherPhotoUri ? (
-            <Image source={{ uri: otherPhotoUri }} style={styles.headerAvatarImg} />
-          ) : (
-            <Text style={styles.headerAvatarInitial}>{initials}</Text>
-          )}
-        </View>
-        <Text style={[styles.headerName, { color: colors.textPrimary }]} numberOfLines={1}>{otherName}</Text>
+        <AnimatedPressable
+          onPress={() => router.push(`/(app)/user/${otherUid}` as any)}
+          style={styles.headerProfileLink}
+        >
+          <View style={[styles.headerAvatar, { backgroundColor: otherAvatarColor }]}>
+            {otherPhotoUri ? (
+              <Image source={{ uri: otherPhotoUri }} style={styles.headerAvatarImg} />
+            ) : (
+              <Text style={styles.headerAvatarInitial}>{initials}</Text>
+            )}
+          </View>
+          <Text style={[styles.headerName, { color: colors.textPrimary }]} numberOfLines={1}>{otherName}</Text>
+        </AnimatedPressable>
       </View>
 
       {/* Messages */}
@@ -163,7 +168,7 @@ export default function DmScreen() {
           style={[styles.input, { color: colors.textPrimary, borderColor: bs }]}
           value={draft}
           onChangeText={setDraft}
-          placeholder={t.dmNewMessage}
+          placeholder={t.dmPlaceholder}
           placeholderTextColor={colors.textHint}
           returnKeyType="send"
           onSubmitEditing={handleSend}
@@ -190,6 +195,7 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 38, height: 38, borderRadius: 19, borderWidth: 2.5, alignItems: 'center', justifyContent: 'center' },
   backIcon: { fontSize: FontSize.lg, fontWeight: FontWeight.bold },
+  headerProfileLink: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   headerAvatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   headerAvatarImg: { width: 36, height: 36, borderRadius: 18 },
   headerAvatarInitial: { color: '#fff', fontSize: 15, fontWeight: FontWeight.bold },

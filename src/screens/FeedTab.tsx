@@ -149,6 +149,13 @@ export default function FeedScreen() {
         const dist = haversineKm(userLocation.lat, userLocation.lon, (e as any).latitude, (e as any).longitude);
         if (dist > NEARBY_KM) return false;
       }
+      // Age/university restrictions the event creator set — hide events the
+      // signed-in user isn't eligible for (creator always sees their own).
+      if (user && e.creatorId !== user.id) {
+        if (e.minAge != null && user.age < e.minAge) return false;
+        if (e.maxAge != null && user.age > e.maxAge) return false;
+        if ((e.allowedUniversities?.length ?? 0) > 0 && !e.allowedUniversities!.includes(user.universityName)) return false;
+      }
       if (selected && e.category !== selected) return false;
       if (selected === EventCategory.Other && otherSearch.trim()) {
         const q = otherSearch.trim().toLowerCase();
@@ -165,7 +172,7 @@ export default function FeedScreen() {
       list = [...list].sort((a, b) => interestScore(b, userInterests) - interestScore(a, userInterests));
     }
     return list;
-  }, [events, soonOnly, friendsOnly, nearbyOnly, userLocation, selected, otherSearch, searchQuery, forYouSort, userInterests]);
+  }, [events, soonOnly, friendsOnly, nearbyOnly, userLocation, selected, otherSearch, searchQuery, forYouSort, userInterests, user?.id, user?.age, user?.universityName]);
 
   const showOtherSearch = selected === EventCategory.Other;
 
@@ -230,7 +237,7 @@ export default function FeedScreen() {
       {forYouSort && !userInterests.length && (
         <View style={[styles.forYouHint, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
           <Text style={[styles.forYouHintText, { color: colors.textSecondary }]}>
-            💡 Add interests in your profile to get personalized events
+            💡 {t.feedForYouHint}
           </Text>
         </View>
       )}
@@ -346,7 +353,7 @@ export default function FeedScreen() {
               </Text>
               {friendsOnly && (
                 <AnimatedPressable onPress={() => router.push('/(app)/search' as any)} style={[styles.emptyBtn, { backgroundColor: colors.primary }]}>
-                  <Text style={styles.emptyBtnText}>Find people →</Text>
+                  <Text style={styles.emptyBtnText}>{t.feedFindPeople}</Text>
                 </AnimatedPressable>
               )}
             </View>

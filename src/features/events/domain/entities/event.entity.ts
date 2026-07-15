@@ -72,6 +72,8 @@ export interface EventEntity {
   viewCount?: number;
   isPrivate?: boolean;
   invitedUserIds?: string[];
+  /** uid -> message the requester wrote explaining why they should be let in. */
+  joinRequests?: Record<string, string>;
   creatorUniversity?: string;
   latitude?: number;
   longitude?: number;

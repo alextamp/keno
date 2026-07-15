@@ -28,7 +28,7 @@ export const Input = forwardRef<TextInput, InputProps>(
           styles.inputWrap,
           {
             backgroundColor: colors.surface,
-            borderColor: error ? colors.error : focused ? colors.primary : colors.borderStrong,
+            borderColor: error ? colors.error : focused ? colors.primary : colors.border,
           },
         ]}>
           <TextInput

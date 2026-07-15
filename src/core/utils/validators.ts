@@ -23,6 +23,16 @@ const KNOWN_UNIVERSITY_DOMAINS = new Set([
   'ionio.gr',       // Ionian University
   'hua.gr',         // Harokopio University of Athens
   'eap.gr',         // Hellenic Open University
+  'uniwa.gr',       // University of West Attica
+  'uowm.gr',        // University of Western Macedonia
+  'uop.gr',         // University of Peloponnese
+  'ihu.edu.gr',     // International Hellenic University
+  'aspete.gr',      // School of Pedagogical and Technological Education
+  'duth.gr',        // Democritus University of Thrace
+  'uoi.gr',         // University of Ioannina
+  'uom.gr',         // University of Macedonia
+  'asfa.gr',        // Athens School of Fine Arts
+  'hmu.gr',         // Hellenic Mediterranean University
   // Department sub-domains
   'di.uoa.gr',
   'ece.upatras.gr',
@@ -60,6 +70,18 @@ export function validateUniversityEmail(email: string): ValidationResult {
   return { isValid: true };
 }
 
+// Basic format check for the "sign up with student ID photo" path, which
+// doesn't require a recognised university domain.
+const EMAIL_FORMAT_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function validateGenericEmail(email: string): ValidationResult {
+  const t = getTranslations();
+  const trimmed = email.trim();
+  if (!trimmed) return { isValid: false, errorMessage: t.validEmailRequired };
+  if (!EMAIL_FORMAT_REGEX.test(trimmed)) return { isValid: false, errorMessage: t.validEmailInvalid };
+  return { isValid: true };
+}
+
 export function validatePassword(password: string): ValidationResult {
   const t = getTranslations();
   if (!password) return { isValid: false, errorMessage: t.validPasswordRequired };
@@ -75,6 +97,17 @@ export function validateName(name: string): ValidationResult {
   if (!trimmed) return { isValid: false, errorMessage: t.validNameRequired };
   if (trimmed.length < 2) {
     return { isValid: false, errorMessage: t.validNameMin };
+  }
+  return { isValid: true };
+}
+
+export function validateAge(age: string): ValidationResult {
+  const t = getTranslations();
+  const trimmed = age.trim();
+  if (!trimmed) return { isValid: false, errorMessage: t.validAgeRequired };
+  const n = Number(trimmed);
+  if (!Number.isInteger(n) || n < 16 || n > 100) {
+    return { isValid: false, errorMessage: t.validAgeRange };
   }
   return { isValid: true };
 }

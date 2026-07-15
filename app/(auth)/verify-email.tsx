@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { Button } from '@/components/ui/Button';
-import { Colors } from '@/core/constants/colors';
+import { useTheme } from '@/core/theme';
 import { BorderRadius, FontSize, FontWeight, Spacing } from '@/core/constants/theme';
 import { useTranslation } from '@/core/i18n';
 
 export default function VerifyEmailScreen() {
+  const { colors } = useTheme();
   const sendEmailVerification = useAuthStore((s) => s.sendEmailVerification);
   const reloadAndCheckVerification = useAuthStore((s) => s.reloadAndCheckVerification);
   const signOut = useAuthStore((s) => s.signOut);
@@ -31,19 +32,20 @@ export default function VerifyEmailScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.iconCircle}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.iconCircle, { backgroundColor: colors.surfaceVariant }]}>
         <Text style={styles.iconEmoji}>✉️</Text>
       </View>
 
       <View style={styles.textGroup}>
-        <Text style={styles.title}>{t.verifyTitle}</Text>
-        <Text style={styles.body}>{t.verifyBody}</Text>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>{t.verifyTitle}</Text>
+        <Text style={[styles.body, { color: colors.textSecondary }]}>{t.verifyBody}</Text>
+        <Text style={[styles.hint, { color: colors.textHint }]}>{t.verifySpamHint}</Text>
       </View>
 
       {resent && (
-        <View style={styles.successBanner}>
-          <Text style={styles.successText}>{t.verifyResent}</Text>
+        <View style={[styles.successBanner, { borderLeftColor: colors.success }]}>
+          <Text style={[styles.successText, { color: colors.success }]}>{t.verifyResent}</Text>
         </View>
       )}
 
@@ -57,7 +59,6 @@ export default function VerifyEmailScreen() {
         <Button
           label={t.verifyBtnResend}
           onPress={handleResend}
-          variant="outline"
           loading={resending}
           disabled={resent}
           fullWidth
@@ -66,7 +67,7 @@ export default function VerifyEmailScreen() {
           label={t.verifyBtnSignOut}
           onPress={signOut}
           variant="ghost"
-          labelStyle={{ color: Colors.textSecondary }}
+          labelStyle={{ color: colors.textSecondary }}
           fullWidth
         />
       </View>
@@ -77,7 +78,6 @@ export default function VerifyEmailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.xxl,
     alignItems: 'center',
@@ -88,7 +88,6 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: Colors.surfaceVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -97,27 +96,28 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: FontWeight.extrabold,
-    color: Colors.textPrimary,
     letterSpacing: -0.5,
     textAlign: 'center',
   },
   body: {
     fontSize: FontSize.md,
-    color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
+  },
+  hint: {
+    fontSize: FontSize.sm,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   successBanner: {
     backgroundColor: '#F0FDF4',
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     borderLeftWidth: 3,
-    borderLeftColor: Colors.success,
     width: '100%',
   },
   successText: {
     fontSize: FontSize.sm,
-    color: Colors.success,
     fontWeight: FontWeight.medium,
   },
   actions: { width: '100%', gap: Spacing.sm },

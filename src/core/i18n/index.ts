@@ -51,12 +51,12 @@ export function getGreeting(language: AppLanguage, _firstName: string): {
 } {
   if (language === 'el') {
     return {
-      line1: 'λιγότερο scrolling,',
+      line1: 'Λιγότερο scrolling,',
       line2: 'περισσότερη ζωή.',
     };
   }
   return {
-    line1: 'less scrolling,',
+    line1: 'Less scrolling,',
     line2: 'more living.',
   };
 }
@@ -87,6 +87,17 @@ type Translations = {
 
   // Feed
   feedFriends: string;
+  feedForYouHint: string;
+  feedFindPeople: string;
+  profileErrorTitle: string;
+  profileErrorBody: string;
+  leaderboardTitle: string;
+  leaderboardSubtitle: string;
+  leaderboardUniversities: string;
+  leaderboardTopStudents: string;
+  leaderboardEmpty: string;
+  leaderboardGoing: (count: number) => string;
+  leaderboardEvents: (count: number) => string;
   feedFilterSoon: string;
   feedFilterNearby: string;
   feedForYou: string;
@@ -175,12 +186,14 @@ type Translations = {
   badgeOrganizer: string;
   badgeOnFire: string;
   badgeMegaphone: string;
+  badgeBetaTester: string;
   badgeFirstStepDesc: string;
   badgeVeteranDesc: string;
   badgeSocialDesc: string;
   badgeOrganizerDesc: string;
   badgeOnFireDesc: string;
   badgeMegaphoneDesc: string;
+  badgeBetaTesterDesc: string;
   badgeEarned: string;
   badgeNotEarned: string;
   profileTabUpcoming: (n: number) => string;
@@ -233,6 +246,36 @@ type Translations = {
   settingsAlertDeleteBtn: string;
   settingsAlertReauthTitle: string;
   settingsAlertReauthBody: string;
+  settingsDeletePasswordTitle: string;
+  settingsDeletePasswordBody: string;
+  settingsDeletePasswordRequired: string;
+
+  // Admin (only shown to the admin account)
+  settingsSectionAdmin: string;
+  settingsAdminReports: string;
+  adminReportsTitle: string;
+  adminReportsEmpty: string;
+  adminReportsEmptyBody: string;
+  adminReportsEventLabel: string;
+  adminReportsUserLabel: string;
+  adminReportsReporterLabel: string;
+  adminReportsDeleteBtn: string;
+  adminReportsDismissBtn: string;
+  adminReportsViewBtn: string;
+  adminReportsConfirmDeleteTitle: string;
+  adminReportsConfirmDeleteBody: string;
+  adminReportsEventGone: string;
+  settingsAdminVerifications: string;
+  settingsAdminBetaBadges: string;
+  settingsAdminBetaBadgesTitle: string;
+  settingsAdminBetaBadgesBody: string;
+  settingsAdminBetaBadgesBtn: string;
+  settingsAdminBetaBadgesDone: (count: number) => string;
+  adminVerificationsTitle: string;
+  adminVerificationsEmpty: string;
+  adminVerificationsEmptyBody: string;
+  adminVerificationsApprove: string;
+  adminVerificationsReject: string;
 
   // Search
   searchPlaceholder: string;
@@ -250,6 +293,7 @@ type Translations = {
   eventReportSpam: string;
   eventReportInappropriate: string;
   eventReportMisinformation: string;
+  eventReportFake: string;
   eventReportSubmitted: string;
   eventReportSubmittedBody: string;
   eventTapToReact: string;
@@ -288,16 +332,30 @@ type Translations = {
   eventReactionInterested: string;
   eventJoined: string;
   eventFilterAge: string;
+  eventNotEligibleAge: string;
+  eventNotEligibleUniversity: string;
   eventShareCta: string;
   eventTyping1: (name: string) => string;
   eventTypingMany: (n: number) => string;
   eventWaitlistSpotOpened: (title: string) => string;
   eventFriendGoing: (n: number) => string;
+  eventPrivateTitle: string;
+  eventPrivateBody: string;
+  eventPrivateBannerSub: string;
+  eventRequestJoin: string;
+  eventRequestSent: string;
+  eventRequestMessageHint: string;
+  eventRequestMessagePlaceholder: string;
+  eventRequestSendBtn: string;
+  eventJoinRequestsTitle: string;
+  eventRequestAccept: string;
+  eventRequestDecline: string;
+  notifEventJoinRequest: (name: string, title: string) => string;
+  notifEventJoinAccepted: (title: string) => string;
+  notifGroupJoinRequest: (name: string, title: string) => string;
+  notifGroupJoinAccepted: (title: string) => string;
   eventQrTitle: string;
   eventQrShowBtn: string;
-  eventCommentsTitle: string;
-  eventCommentsEmpty: string;
-  eventCommentsPlaceholder: string;
   eventAnalyticsTitle: string;
   eventAnalyticsViews: string;
   eventAnalyticsSaves: string;
@@ -306,7 +364,7 @@ type Translations = {
   eventRemoveCoHost: string;
   eventCoHostBadge: string;
   eventShareCard: string;
-  eventShareWhatsApp: string;
+  eventShareCardScanHint: string;
   eventPhotoWall: string;
   eventPhotoWallEmpty: string;
   mutualFriends: (n: number) => string;
@@ -328,6 +386,8 @@ type Translations = {
   validPasswordRequired: string;
   validPasswordMin: string;
   validContentBlocked: string;
+  validAgeRequired: string;
+  validAgeRange: string;
 
   // Event reminder notifications
   reminderTitle: (title: string) => string;
@@ -358,6 +418,7 @@ type Translations = {
   notifEventCancelled: (title: string) => string;
   notifEventReminder: (title: string) => string;
   notifGroupInvite: (name: string, title: string) => string;
+  notifGroupMessage: (name: string, title: string) => string;
 
   // Group invite UI
   groupInviteTitle: string;
@@ -374,6 +435,14 @@ type Translations = {
   userInvite: string;
   userFollowers: string;
   userFollowing2: string;
+  userFollowersTitle: string;
+  userFollowingTitle: string;
+  userConnectionsEmpty: string;
+  userBetaTesterBadge: string;
+  userReportSubmitted: string;
+  userReportSubmittedBody: string;
+  userReportFailed: string;
+  userReportFailedBody: string;
   userAbout: string;
   userStatCreated: string;
   userStatJoined: string;
@@ -429,6 +498,20 @@ type Translations = {
   authNameLabel: string;
   authUniLabel: string;
   authDeptLabel: string;
+  authAgeLabel: string;
+  authNoUniEmailLink: string;
+  authNoUniEmailBanner: string;
+  authGenericEmailHint: string;
+  authUseUniEmailLink: string;
+  authIdPhotoLabel: string;
+  authIdPhotoHint: string;
+  authIdPhotoRequired: string;
+  authIdPhotoBtnAdd: string;
+  authIdPhotoBtnChange: string;
+  pendingVerificationTitle: string;
+  pendingVerificationBody: string;
+  pendingVerificationRejectedTitle: string;
+  pendingVerificationRejectedBody: string;
   authPasswordMin: string;
   authUniHint: string;
   authCreateBtn: string;
@@ -476,10 +559,17 @@ type Translations = {
   groupPrivateLabel: string;
   groupPrivateSub: string;
   groupCreateBtn: string;
+  groupEditTitle: string;
+  groupSaveBtn: string;
+  groupDeleteTitle: string;
+  groupDeleteBody: string;
+  groupDeleteBtn: string;
+  groupMembersTitle: string;
 
   // Verify email screen
   verifyTitle: string;
   verifyBody: string;
+  verifySpamHint: string;
   verifyResent: string;
   verifyResendError: string;
   verifyBtnCheck: string;
@@ -531,6 +621,17 @@ const en: Translations = {
   catOther: 'Other',
 
   feedFriends: 'Friends',
+  feedForYouHint: 'Add interests in your profile to get personalized events',
+  feedFindPeople: 'Find people →',
+  profileErrorTitle: 'Something went wrong',
+  profileErrorBody: 'Your profile data is missing. Please sign out and sign back in.',
+  leaderboardTitle: 'Leaderboard',
+  leaderboardSubtitle: 'Rankings reset every week',
+  leaderboardUniversities: 'Universities',
+  leaderboardTopStudents: 'Top Students',
+  leaderboardEmpty: 'No data yet this week',
+  leaderboardGoing: (count) => `${count} going`,
+  leaderboardEvents: (count) => `${count} event${count === 1 ? '' : 's'}`,
   feedFilterSoon: 'Soon',
   feedFilterNearby: 'Nearby',
   feedForYou: 'For You',
@@ -597,7 +698,7 @@ const en: Translations = {
   profileCancel: 'Cancel',
   profileLabelName: 'Name',
   profileLabelBio: 'Bio',
-  profileBioPlaceholder: 'Tell people about yourself...',
+  profileBioPlaceholder: 'So, who are you?',
   profileBioEmpty: 'Tap Edit to add a bio',
   profileLabelUniversity: 'University',
   profileLabelDepartment: 'Department',
@@ -616,12 +717,14 @@ const en: Translations = {
   badgeOrganizer: 'Organizer',
   badgeOnFire: 'On fire',
   badgeMegaphone: 'Megaphone',
+  badgeBetaTester: 'Beta Tester',
   badgeFirstStepDesc: 'Join your first event on Keno.',
   badgeVeteranDesc: 'Attend 5 or more events.',
   badgeSocialDesc: 'Follow 5 or more people.',
   badgeOrganizerDesc: 'Create 3 or more events.',
   badgeOnFireDesc: 'Attend events 3 weeks in a row.',
   badgeMegaphoneDesc: 'Create your first event.',
+  badgeBetaTesterDesc: 'One of the first people on Keno, before it left beta.',
   badgeEarned: '✓ Earned',
   badgeNotEarned: 'Not yet earned',
   profileTabUpcoming: (n) => `📅 Upcoming (${n})`,
@@ -672,6 +775,35 @@ const en: Translations = {
   settingsAlertDeleteBtn: 'Delete',
   settingsAlertReauthTitle: 'Re-authentication required',
   settingsAlertReauthBody: 'For security, please sign out and sign back in before deleting your account.',
+  settingsDeletePasswordTitle: 'Confirm your password',
+  settingsDeletePasswordBody: 'For your security, enter your password to permanently delete your account.',
+  settingsDeletePasswordRequired: 'Enter your password to continue.',
+
+  settingsSectionAdmin: 'Admin',
+  settingsAdminReports: 'Review reports',
+  adminReportsTitle: 'Reports',
+  adminReportsEmpty: 'All clear',
+  adminReportsEmptyBody: 'No open reports right now.',
+  adminReportsEventLabel: 'Reported event',
+  adminReportsUserLabel: 'Reported user',
+  adminReportsReporterLabel: 'Reported by',
+  adminReportsDeleteBtn: 'Delete event',
+  adminReportsDismissBtn: 'Dismiss',
+  adminReportsViewBtn: 'View',
+  adminReportsConfirmDeleteTitle: 'Delete event?',
+  adminReportsConfirmDeleteBody: 'This will permanently delete the reported event for all attendees.',
+  adminReportsEventGone: '(event already deleted)',
+  settingsAdminVerifications: 'Review ID verifications',
+  settingsAdminBetaBadges: 'Award beta tester badges',
+  settingsAdminBetaBadgesTitle: 'Beta tester badges',
+  settingsAdminBetaBadgesBody: 'This gives every current user account the Beta Tester badge on their profile. New signups after this point won’t get it automatically.',
+  settingsAdminBetaBadgesBtn: 'Award now',
+  settingsAdminBetaBadgesDone: (count) => `Awarded the badge to ${count} user${count === 1 ? '' : 's'}.`,
+  adminVerificationsTitle: 'ID verifications',
+  adminVerificationsEmpty: 'All clear',
+  adminVerificationsEmptyBody: 'No pending student ID verifications right now.',
+  adminVerificationsApprove: 'Approve',
+  adminVerificationsReject: 'Reject',
 
   searchPlaceholder: 'Search by name or university...',
   searchEmptyHint: 'Search for students by name, university, or department',
@@ -687,6 +819,7 @@ const en: Translations = {
   eventReportSpam: 'Spam',
   eventReportInappropriate: 'Inappropriate content',
   eventReportMisinformation: 'Misinformation',
+  eventReportFake: 'Fake account',
   eventReportSubmitted: 'Report submitted',
   eventReportSubmittedBody: "Thanks for letting us know. We'll review this event.",
   eventTapToReact: 'Tap to react',
@@ -725,16 +858,30 @@ const en: Translations = {
   eventReactionInterested: 'Interested',
   eventJoined: '✓ Joined',
   eventFilterAge: 'Age',
+  eventNotEligibleAge: "You don't meet this event's age range.",
+  eventNotEligibleUniversity: "This event is restricted to specific universities.",
   eventShareCta: 'Join on Keno!',
   eventTyping1: (name) => `${name} is typing...`,
   eventTypingMany: (n) => `${n} people are typing...`,
   eventWaitlistSpotOpened: (title) => `A spot opened in "${title}"!`,
   eventFriendGoing: (n) => `${n} friend${n !== 1 ? 's' : ''} going`,
+  eventPrivateTitle: 'Private Event',
+  eventPrivateBody: "This event is invite-only. Send a request and the organiser can let you in.",
+  eventPrivateBannerSub: 'Tap to share invite link with guests',
+  eventRequestJoin: 'Request to join',
+  eventRequestSent: 'Request sent ✓',
+  eventRequestMessageHint: 'Tell the organiser why you\'d like to join.',
+  eventRequestMessagePlaceholder: 'e.g. I\'m a friend of a friend, saw this and would love to come!',
+  eventRequestSendBtn: 'Send request',
+  eventJoinRequestsTitle: 'Join requests',
+  eventRequestAccept: 'Accept',
+  eventRequestDecline: 'Decline',
+  notifEventJoinRequest: (name, title) => `${name} asked to join "${title}"`,
+  notifEventJoinAccepted: (title) => `You're in! Your request to join "${title}" was accepted.`,
+  notifGroupJoinRequest: (name, title) => `${name} asked to join "${title}"`,
+  notifGroupJoinAccepted: (title) => `You're in! Your request to join "${title}" was accepted.`,
   eventQrTitle: 'QR Check-in',
   eventQrShowBtn: 'Show QR',
-  eventCommentsTitle: 'Comments',
-  eventCommentsEmpty: 'No comments yet — be the first!',
-  eventCommentsPlaceholder: 'Add a comment...',
   eventAnalyticsTitle: 'Your stats',
   eventAnalyticsViews: 'Views',
   eventAnalyticsSaves: 'Saves',
@@ -743,7 +890,7 @@ const en: Translations = {
   eventRemoveCoHost: 'Remove',
   eventCoHostBadge: 'Co-host',
   eventShareCard: 'Share card',
-  eventShareWhatsApp: 'WhatsApp',
+  eventShareCardScanHint: 'Scan to open in Keno',
   eventPhotoWall: 'Photo Wall',
   eventPhotoWallEmpty: 'No photos yet. Be the first to share a moment!',
   mutualFriends: (n) => `${n} mutual`,
@@ -752,7 +899,7 @@ const en: Translations = {
   dmPlaceholder: 'Message...',
   dmNewMessage: '+ New',
   searchUserMeta: (followers, events) => `${followers} followers · ${events} events`,
-  onboardingBioPlaceholder: (dept, uni) => `${dept} @ ${uni}. Tell people who you are...`,
+  onboardingBioPlaceholder: (dept, uni) => `${dept} @ ${uni}. So, who are you?`,
   groupNamePlaceholder: 'e.g. AUEB Basketball Crew',
   groupUniversityPlaceholder: 'e.g. AUEB',
 
@@ -764,6 +911,8 @@ const en: Translations = {
   validPasswordRequired: 'Password is required.',
   validPasswordMin: 'Password must be at least 8 characters.',
   validContentBlocked: 'That contains language we don\'t allow. Please rephrase.',
+  validAgeRequired: 'Age is required.',
+  validAgeRange: 'You must be between 16 and 100.',
 
   reminderTitle: (title) => `Starting soon: ${title}`,
   reminderBody: (location) => `📌 ${location} — in 1 hour`,
@@ -791,6 +940,7 @@ const en: Translations = {
   notifEventCancelled: (title) => `"${title}" has been cancelled by the organizer.`,
   notifEventReminder: (title) => `Heads up! "${title}" starts soon.`,
   notifGroupInvite: (name, title) => `${name} invited you to the "${title}" community.`,
+  notifGroupMessage: (name, title) => `${name} sent a message in "${title}"`,
 
   groupInviteTitle: 'Invite members',
   groupInviteSearch: 'Search by name…',
@@ -805,6 +955,14 @@ const en: Translations = {
   userInvite: '✉️ Invite',
   userFollowers: ' followers',
   userFollowing2: ' following',
+  userFollowersTitle: 'Followers',
+  userFollowingTitle: 'Following',
+  userConnectionsEmpty: 'Nobody here yet.',
+  userBetaTesterBadge: 'Beta Tester',
+  userReportSubmitted: 'Report submitted',
+  userReportSubmittedBody: "Thanks for letting us know. We'll review this account.",
+  userReportFailed: 'Report failed',
+  userReportFailedBody: 'Something went wrong sending your report. Please try again.',
   userAbout: 'About',
   userStatCreated: 'Created',
   userStatJoined: 'Joined',
@@ -829,7 +987,7 @@ const en: Translations = {
   onboardingFeature1: 'Discover events near you',
   onboardingFeature2: 'Meet people from your campus',
   onboardingFeature3: 'Explore on the map',
-  onboardingFeature4: 'Never miss what matters',
+  onboardingFeature4: 'Get notified about what interests you',
   onboardingInterestsTitle: 'What are you into?',
   onboardingInterestsSub: "Pick at least 3 interests and we'll show you more relevant events.",
   onboardingInterestsPick: (n) => `Pick ${n} more to continue`,
@@ -846,7 +1004,7 @@ const en: Translations = {
   onboardingBtnSaving: 'Saving...',
 
   authSignInTitle: 'Sign in',
-  authTagline: 'less scrolling, more living',
+  authTagline: 'less scrolling, more living.',
   authEmailLabel: 'University Email',
   authPasswordLabel: 'Password',
   authSignInBtn: 'Sign in',
@@ -857,6 +1015,20 @@ const en: Translations = {
   authNameLabel: 'Full Name',
   authUniLabel: 'University',
   authDeptLabel: 'Department',
+  authAgeLabel: 'Age',
+  authNoUniEmailLink: "Don't have a university email? Sign up with your student ID instead",
+  authNoUniEmailBanner: "No problem — use any email you have access to, then upload a photo of your student ID below. An admin reviews it manually, usually within a day, before you get full access.",
+  authGenericEmailHint: 'Any email you can access — you’ll need it to verify your account.',
+  authUseUniEmailLink: 'I have a university email instead',
+  authIdPhotoLabel: 'Student ID photo',
+  authIdPhotoHint: "We'll manually review this before giving you full access — usually within a day.",
+  authIdPhotoRequired: 'A photo of your student ID is required.',
+  authIdPhotoBtnAdd: 'Add photo',
+  authIdPhotoBtnChange: 'Change photo',
+  pendingVerificationTitle: 'Almost there',
+  pendingVerificationBody: "We're reviewing the photo of your student ID. This usually takes less than a day — you'll be let in automatically once it's approved, even if you close the app and come back later.",
+  pendingVerificationRejectedTitle: "We couldn't verify you",
+  pendingVerificationRejectedBody: "We couldn't confirm your student status from the photo you submitted. Contact us if you think this is a mistake.",
   authPasswordMin: 'Min. 8 characters',
   authUniHint: 'Must be a recognised Greek university email (.gr)',
   authCreateBtn: 'Create account',
@@ -902,9 +1074,16 @@ const en: Translations = {
   groupPrivateLabel: 'Private community',
   groupPrivateSub: 'Only visible to invited members',
   groupCreateBtn: 'Create community 🎉',
+  groupEditTitle: 'Edit community',
+  groupSaveBtn: 'Save changes',
+  groupDeleteTitle: 'Delete community',
+  groupDeleteBody: 'This will permanently delete the community for all members. This cannot be undone.',
+  groupDeleteBtn: 'Delete community',
+  groupMembersTitle: 'Members',
 
   verifyTitle: 'Check your inbox',
   verifyBody: "We sent a verification link to your university email. Tap it to activate your Keno account, then come back here.",
+  verifySpamHint: "Don't see it? Check your spam/junk folder — verification emails sometimes end up there.",
   verifyResent: '✓  Email resent — check your inbox.',
   verifyResendError: "Couldn't resend the email — you may be sending too many requests. Try again in a bit.",
   verifyBtnCheck: "I've verified my email",
@@ -954,6 +1133,17 @@ const el: Translations = {
   catOther: 'Άλλο',
 
   feedFriends: 'Φίλοι',
+  feedForYouHint: 'Πρόσθεσε ενδιαφέροντα στο προφίλ σου για εξατομικευμένες εκδηλώσεις',
+  feedFindPeople: 'Βρες κόσμο →',
+  profileErrorTitle: 'Κάτι πήγε στραβά',
+  profileErrorBody: 'Τα δεδομένα του προφίλ σου λείπουν. Αποσυνδέσου και συνδέσου ξανά.',
+  leaderboardTitle: 'Κατάταξη',
+  leaderboardSubtitle: 'Η κατάταξη μηδενίζεται κάθε εβδομάδα',
+  leaderboardUniversities: 'Πανεπιστήμια',
+  leaderboardTopStudents: 'Κορυφαίοι Φοιτητές',
+  leaderboardEmpty: 'Δεν υπάρχουν δεδομένα ακόμα αυτή την εβδομάδα',
+  leaderboardGoing: (count) => `${count} πάνε`,
+  leaderboardEvents: (count) => `${count} εκδηλώσ${count === 1 ? 'η' : 'εις'}`,
   feedFilterSoon: 'Σύντομα',
   feedFilterNearby: 'Κοντά',
   feedForYou: 'Για σένα',
@@ -1020,7 +1210,7 @@ const el: Translations = {
   profileCancel: 'Ακύρωση',
   profileLabelName: 'Όνομα',
   profileLabelBio: 'Βιογραφικό',
-  profileBioPlaceholder: 'Πες στον κόσμο για σένα...',
+  profileBioPlaceholder: 'Λοιπόν, ποιος είσαι;',
   profileBioEmpty: 'Πάτα Επεξεργασία για να προσθέσεις βιογραφικό',
   profileLabelUniversity: 'Πανεπιστήμιο',
   profileLabelDepartment: 'Τμήμα',
@@ -1039,12 +1229,14 @@ const el: Translations = {
   badgeOrganizer: 'Διοργανωτής',
   badgeOnFire: 'Φωτιά',
   badgeMegaphone: 'Μεγάφωνο',
+  badgeBetaTester: 'Beta Tester',
   badgeFirstStepDesc: 'Συμμετέχεις στην πρώτη σου εκδήλωση στο Keno.',
   badgeVeteranDesc: 'Παρευρίσκεσαι σε 5 ή παραπάνω εκδηλώσεις.',
   badgeSocialDesc: 'Ακολουθείς 5 ή παραπάνω άτομα.',
   badgeOrganizerDesc: 'Δημιουργείς 3 ή παραπάνω εκδηλώσεις.',
   badgeOnFireDesc: 'Πηγαίνεις σε εκδηλώσεις 3 εβδομάδες σερί.',
   badgeMegaphoneDesc: 'Δημιουργείς την πρώτη σου εκδήλωση.',
+  badgeBetaTesterDesc: 'Ήσουν από τους πρώτους στο Keno, πριν βγει από το beta.',
   badgeEarned: '✓ Απόκτηθηκε',
   badgeNotEarned: 'Δεν έχει αποκτηθεί ακόμα',
   profileTabUpcoming: (n) => `📅 Επερχόμενα (${n})`,
@@ -1095,6 +1287,35 @@ const el: Translations = {
   settingsAlertDeleteBtn: 'Διαγραφή',
   settingsAlertReauthTitle: 'Απαιτείται επαναπιστοποίηση',
   settingsAlertReauthBody: 'Για λόγους ασφαλείας, αποσυνδέσου και ξανά-συνδέσου πριν διαγράψεις τον λογαριασμό σου.',
+  settingsDeletePasswordTitle: 'Επιβεβαίωσε τον κωδικό σου',
+  settingsDeletePasswordBody: 'Για ασφάλεια, γράψε τον κωδικό σου για να διαγράψεις μόνιμα τον λογαριασμό σου.',
+  settingsDeletePasswordRequired: 'Γράψε τον κωδικό σου για να συνεχίσεις.',
+
+  settingsSectionAdmin: 'Διαχείριση',
+  settingsAdminReports: 'Έλεγχος αναφορών',
+  adminReportsTitle: 'Αναφορές',
+  adminReportsEmpty: 'Όλα καθαρά',
+  adminReportsEmptyBody: 'Δεν υπάρχουν ανοιχτές αναφορές αυτή τη στιγμή.',
+  adminReportsEventLabel: 'Αναφερθείσα εκδήλωση',
+  adminReportsUserLabel: 'Αναφερθείς χρήστης',
+  adminReportsReporterLabel: 'Αναφέρθηκε από',
+  adminReportsDeleteBtn: 'Διαγραφή εκδήλωσης',
+  adminReportsDismissBtn: 'Απόρριψη',
+  adminReportsViewBtn: 'Προβολή',
+  adminReportsConfirmDeleteTitle: 'Διαγραφή εκδήλωσης;',
+  adminReportsConfirmDeleteBody: 'Αυτό θα διαγράψει μόνιμα την αναφερθείσα εκδήλωση για όλους τους συμμετέχοντες.',
+  adminReportsEventGone: '(η εκδήλωση έχει ήδη διαγραφεί)',
+  settingsAdminVerifications: 'Έλεγχος φοιτητικών ταυτοτήτων',
+  settingsAdminBetaBadges: 'Απόδοση beta tester badge',
+  settingsAdminBetaBadgesTitle: 'Beta tester badges',
+  settingsAdminBetaBadgesBody: 'Αυτό δίνει σε όλους τους τρέχοντες λογαριασμούς το badge Beta Tester στο προφίλ τους. Νέες εγγραφές μετά από αυτό δεν θα το πάρουν αυτόματα.',
+  settingsAdminBetaBadgesBtn: 'Απόδοση τώρα',
+  settingsAdminBetaBadgesDone: (count) => `Το badge δόθηκε σε ${count} χρήστ${count === 1 ? 'η' : 'ες'}.`,
+  adminVerificationsTitle: 'Επαλήθευση ταυτότητας',
+  adminVerificationsEmpty: 'Όλα καθαρά',
+  adminVerificationsEmptyBody: 'Δεν υπάρχουν εκκρεμείς επαληθεύσεις φοιτητικής ταυτότητας.',
+  adminVerificationsApprove: 'Έγκριση',
+  adminVerificationsReject: 'Απόρριψη',
 
   searchPlaceholder: 'Αναζήτηση ονόματος ή πανεπιστημίου...',
   searchEmptyHint: 'Αναζήτηση φοιτητών βάσει ονόματος, πανεπιστημίου ή τμήματος',
@@ -1110,6 +1331,7 @@ const el: Translations = {
   eventReportSpam: 'Spam',
   eventReportInappropriate: 'Ακατάλληλο περιεχόμενο',
   eventReportMisinformation: 'Παραπληροφόρηση',
+  eventReportFake: 'Ψεύτικος λογαριασμός',
   eventReportSubmitted: 'Η αναφορά υποβλήθηκε',
   eventReportSubmittedBody: 'Ευχαριστούμε. Θα εξετάσουμε αυτή την εκδήλωση.',
   eventTapToReact: 'Αντίδρασε',
@@ -1148,16 +1370,30 @@ const el: Translations = {
   eventReactionInterested: 'Ενδιαφέρον',
   eventJoined: '✓ Εγγεγραμμένος',
   eventFilterAge: 'Ηλικία',
+  eventNotEligibleAge: 'Δεν πληροίς το ηλικιακό όριο αυτής της εκδήλωσης.',
+  eventNotEligibleUniversity: 'Αυτή η εκδήλωση είναι περιορισμένη σε συγκεκριμένα πανεπιστήμια.',
   eventShareCta: 'Βρες το στο Keno!',
   eventTyping1: (name) => `Ο/Η ${name} γράφει...`,
   eventTypingMany: (n) => `${n} άτομα γράφουν...`,
   eventWaitlistSpotOpened: (title) => `Άνοιξε θέση στο "${title}"!`,
   eventFriendGoing: (n) => `${n} φίλος${n !== 1 ? 'οι' : ''} πηγαίνει`,
+  eventPrivateTitle: 'Ιδιωτική Εκδήλωση',
+  eventPrivateBody: 'Αυτή η εκδήλωση είναι μόνο με πρόσκληση. Στείλε αίτημα και ο διοργανωτής μπορεί να σε δεχτεί.',
+  eventPrivateBannerSub: 'Πάτα για να μοιραστείς το link πρόσκλησης με καλεσμένους',
+  eventRequestJoin: 'Αίτημα συμμετοχής',
+  eventRequestSent: 'Το αίτημα στάλθηκε ✓',
+  eventRequestMessageHint: 'Πες στον διοργανωτή γιατί θέλεις να συμμετάσχεις.',
+  eventRequestMessagePlaceholder: 'π.χ. Είμαι φίλος ενός φίλου, το είδα και θα ήθελα πολύ να έρθω!',
+  eventRequestSendBtn: 'Αποστολή αιτήματος',
+  eventJoinRequestsTitle: 'Αιτήματα συμμετοχής',
+  eventRequestAccept: 'Αποδοχή',
+  eventRequestDecline: 'Απόρριψη',
+  notifEventJoinRequest: (name, title) => `Ο/Η ${name} ζήτησε να συμμετάσχει στο "${title}"`,
+  notifEventJoinAccepted: (title) => `Μπήκες! Το αίτημά σου για το "${title}" έγινε δεκτό.`,
+  notifGroupJoinRequest: (name, title) => `Ο/Η ${name} ζήτησε να συμμετάσχει στο "${title}"`,
+  notifGroupJoinAccepted: (title) => `Μπήκες! Το αίτημά σου για το "${title}" έγινε δεκτό.`,
   eventQrTitle: 'QR Είσοδος',
   eventQrShowBtn: 'Εμφάνιση QR',
-  eventCommentsTitle: 'Σχόλια',
-  eventCommentsEmpty: 'Χωρίς σχόλια ακόμα — γράψε το πρώτο!',
-  eventCommentsPlaceholder: 'Πρόσθεσε σχόλιο...',
   eventAnalyticsTitle: 'Στατιστικά',
   eventAnalyticsViews: 'Προβολές',
   eventAnalyticsSaves: 'Αποθηκεύτηκε',
@@ -1166,7 +1402,7 @@ const el: Translations = {
   eventRemoveCoHost: 'Αφαίρεση',
   eventCoHostBadge: 'Συν-δ/τής',
   eventShareCard: 'Κοινοποίηση κάρτας',
-  eventShareWhatsApp: 'WhatsApp',
+  eventShareCardScanHint: 'Σκάναρε για να ανοίξεις στο Keno',
   eventPhotoWall: 'Φωτογραφίες',
   eventPhotoWallEmpty: 'Δεν υπάρχουν φωτογραφίες ακόμα. Μοιράσου μια στιγμή!',
   mutualFriends: (n) => `${n} κοινοί`,
@@ -1175,7 +1411,7 @@ const el: Translations = {
   dmPlaceholder: 'Μήνυμα...',
   dmNewMessage: '+ Νέο',
   searchUserMeta: (followers, events) => `${followers} ακόλουθοι · ${events} εκδηλώσεις`,
-  onboardingBioPlaceholder: (dept, uni) => `${dept} @ ${uni}. Πες τι σε κάνει εσένα...`,
+  onboardingBioPlaceholder: (dept, uni) => `${dept} @ ${uni}. Λοιπόν, ποιος είσαι;`,
   groupNamePlaceholder: 'π.χ. Ομάδα ΑΣΟΕΕ',
   groupUniversityPlaceholder: 'π.χ. ΑΣΟΕΕ',
 
@@ -1187,6 +1423,8 @@ const el: Translations = {
   validPasswordRequired: 'Ο κωδικός είναι υποχρεωτικός.',
   validPasswordMin: 'Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες.',
   validContentBlocked: 'Αυτό περιέχει γλώσσα που δεν επιτρέπουμε. Παρακαλούμε διατύπωσέ το διαφορετικά.',
+  validAgeRequired: 'Η ηλικία είναι υποχρεωτική.',
+  validAgeRange: 'Πρέπει να είσαι μεταξύ 16 και 100 ετών.',
 
   reminderTitle: (title) => `Ξεκινά σύντομα: ${title}`,
   reminderBody: (location) => `📌 ${location} — σε 1 ώρα`,
@@ -1214,6 +1452,7 @@ const el: Translations = {
   notifEventCancelled: (title) => `Το "${title}" ακυρώθηκε από τον διοργανωτή.`,
   notifEventReminder: (title) => `Υπενθύμιση! Το "${title}" ξεκινά σύντομα.`,
   notifGroupInvite: (name, title) => `Ο/Η ${name} σε κάλεσε στην κοινότητα "${title}".`,
+  notifGroupMessage: (name, title) => `Ο/Η ${name} έστειλε μήνυμα στο "${title}"`,
 
   groupInviteTitle: 'Πρόσκληση μελών',
   groupInviteSearch: 'Αναζήτηση με όνομα…',
@@ -1228,6 +1467,14 @@ const el: Translations = {
   userInvite: '✉️ Πρόσκληση',
   userFollowers: ' ακόλουθοι',
   userFollowing2: ' ακολουθείς',
+  userFollowersTitle: 'Ακόλουθοι',
+  userFollowingTitle: 'Ακολουθείς',
+  userConnectionsEmpty: 'Κανείς εδώ ακόμα.',
+  userBetaTesterBadge: 'Beta Tester',
+  userReportSubmitted: 'Η αναφορά υποβλήθηκε',
+  userReportSubmittedBody: 'Ευχαριστούμε που μας ενημέρωσες. Θα ελέγξουμε αυτόν τον λογαριασμό.',
+  userReportFailed: 'Η αναφορά απέτυχε',
+  userReportFailedBody: 'Κάτι πήγε στραβά κατά την αποστολή της αναφοράς. Δοκίμασε ξανά.',
   userAbout: 'Σχετικά',
   userStatCreated: 'Δημιούργησε',
   userStatJoined: 'Συμμετείχε',
@@ -1252,7 +1499,7 @@ const el: Translations = {
   onboardingFeature1: 'Ανακάλυψε εκδηλώσεις κοντά σου',
   onboardingFeature2: 'Γνώρισε ανθρώπους από το campus σου',
   onboardingFeature3: 'Εξερεύνησε στον χάρτη',
-  onboardingFeature4: 'Μην χάσεις ό,τι σου αξίζει',
+  onboardingFeature4: 'Λάβε ειδοποιήσεις για ό,τι σε ενδιαφέρει',
   onboardingInterestsTitle: 'Τι σε ενδιαφέρει;',
   onboardingInterestsSub: 'Επίλεξε τουλάχιστον 3 ενδιαφέροντα και θα σου δείξουμε πιο σχετικές εκδηλώσεις.',
   onboardingInterestsPick: (n) => `Επίλεξε ${n} ακόμα για να συνεχίσεις`,
@@ -1269,7 +1516,7 @@ const el: Translations = {
   onboardingBtnSaving: 'Αποθήκευση...',
 
   authSignInTitle: 'Σύνδεση',
-  authTagline: 'less scrolling, more living',
+  authTagline: 'less scrolling, more living.',
   authEmailLabel: 'Πανεπιστημιακό Email',
   authPasswordLabel: 'Κωδικός',
   authSignInBtn: 'Σύνδεση',
@@ -1280,6 +1527,20 @@ const el: Translations = {
   authNameLabel: 'Πλήρες Όνομα',
   authUniLabel: 'Πανεπιστήμιο',
   authDeptLabel: 'Τμήμα',
+  authAgeLabel: 'Ηλικία',
+  authNoUniEmailLink: 'Δεν έχεις πανεπιστημιακό email; Κάνε εγγραφή με το πάσο σου',
+  authNoUniEmailBanner: 'Κανένα πρόβλημα — χρησιμοποίησε όποιο email έχεις, και ανέβασε παρακάτω μια φωτογραφία του πάσου σου. Ένας admin θα την ελέγξει χειροκίνητα, συνήθως μέσα σε μία μέρα, πριν σου δώσει πλήρη πρόσβαση.',
+  authGenericEmailHint: 'Οποιοδήποτε email έχεις πρόσβαση — θα το χρειαστείς για να επιβεβαιώσεις τον λογαριασμό σου.',
+  authUseUniEmailLink: 'Έχω πανεπιστημιακό email',
+  authIdPhotoLabel: 'Φωτογραφία φοιτητικής ταυτότητας (πάσο)',
+  authIdPhotoHint: 'Θα την ελέγξουμε χειροκίνητα πριν σου δώσουμε πλήρη πρόσβαση — συνήθως μέσα σε μία μέρα.',
+  authIdPhotoRequired: 'Χρειάζεται φωτογραφία της φοιτητικής σου ταυτότητας.',
+  authIdPhotoBtnAdd: 'Πρόσθεσε φωτογραφία',
+  authIdPhotoBtnChange: 'Άλλαξε φωτογραφία',
+  pendingVerificationTitle: 'Σχεδόν έτοιμος',
+  pendingVerificationBody: 'Ελέγχουμε τη φωτογραφία της φοιτητικής σου ταυτότητας. Συνήθως παίρνει λιγότερο από μία μέρα — θα μπεις αυτόματα μόλις εγκριθεί, ακόμα κι αν κλείσεις την εφαρμογή και επιστρέψεις αργότερα.',
+  pendingVerificationRejectedTitle: 'Δεν μπορέσαμε να σε επαληθεύσουμε',
+  pendingVerificationRejectedBody: 'Δεν μπορέσαμε να επιβεβαιώσουμε τη φοιτητική σου ιδιότητα από τη φωτογραφία. Επικοινώνησε μαζί μας αν πιστεύεις ότι είναι λάθος.',
   authPasswordMin: 'Τουλ. 8 χαρακτήρες',
   authUniHint: 'Πρέπει να είναι αναγνωρισμένο ελληνικό email (.gr)',
   authCreateBtn: 'Δημιουργία λογαριασμού',
@@ -1325,9 +1586,16 @@ const el: Translations = {
   groupPrivateLabel: 'Ιδιωτική κοινότητα',
   groupPrivateSub: 'Ορατή μόνο σε προσκεκλημένα μέλη',
   groupCreateBtn: 'Δημιουργία κοινότητας 🎉',
+  groupEditTitle: 'Επεξεργασία κοινότητας',
+  groupSaveBtn: 'Αποθήκευση αλλαγών',
+  groupDeleteTitle: 'Διαγραφή κοινότητας',
+  groupDeleteBody: 'Αυτό θα διαγράψει μόνιμα την κοινότητα για όλα τα μέλη. Δεν μπορεί να αναιρεθεί.',
+  groupDeleteBtn: 'Διαγραφή κοινότητας',
+  groupMembersTitle: 'Μέλη',
 
   verifyTitle: 'Έλεγξε το inbox σου',
   verifyBody: 'Στείλαμε σύνδεσμο επαλήθευσης στο πανεπιστημιακό σου email. Πάτησέ τον για να ενεργοποιήσεις τον λογαριασμό σου στο Keno.',
+  verifySpamHint: 'Δεν το βλέπεις; Έλεγξε τον φάκελο ανεπιθύμητης αλληλογραφίας (spam) — μερικές φορές τα emails επαλήθευσης καταλήγουν εκεί.',
   verifyResent: '✓  Email απεστάλη — έλεγξε το inbox σου.',
   verifyResendError: 'Δεν στάλθηκε το email — ίσως έστειλες πολλά αιτήματα. Δοκίμασε ξανά σε λίγο.',
   verifyBtnCheck: 'Επαλήθευσα το email μου',
