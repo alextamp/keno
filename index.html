@@ -318,6 +318,7 @@ section{padding:clamp(64px,9vw,112px) 0}
      <a href="feedback.html" data-el="Feedback" data-en="Feedback">Feedback</a>
     </div>
     <div class="nav-right">
+      <a href="feedback.html" class="btn" style="display:none;padding:8px 14px;font-size:12px;margin-right:8px" id="mobileFeedback">Feedback</a>
       <button class="icon-btn lang" id="langBtn" aria-label="Change language">EN</button>
       <button class="icon-btn" id="themeBtn" aria-label="Toggle dark mode">
         <svg class="ic-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
@@ -667,6 +668,17 @@ var io = new IntersectionObserver(function(entries){
   });
 }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
 document.querySelectorAll('.rv').forEach(function(n){ io.observe(n); });
+  // Show feedback on mobile
+if (window.innerWidth < 780) {
+  document.getElementById('mobileFeedback').style.display = 'inline-flex';
+}
+window.addEventListener('resize', function() {
+  if (window.innerWidth < 780) {
+    document.getElementById('mobileFeedback').style.display = 'inline-flex';
+  } else {
+    document.getElementById('mobileFeedback').style.display = 'none';
+  }
+});
 </script>
 </body>
 </html>
