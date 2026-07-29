@@ -50,7 +50,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Inter:wght@400;500;600;700&display=swap&subset=greek,latin" rel="stylesheet">
-<style>
+#mobileFeedback { display: none; }
+@media (max-width:780px) {
+  #mobileFeedback { display: inline-flex !important; }
+}
+  <style>
 /* ============ TOKENS (from KENO_WARM_PAPER_SPEC §2 + v3 ADDENDUM §3) ============ */
 :root{
   --paper:#FAF7F2; --paper2:#F2EBE0; --surface:#FFFFFF;
@@ -318,7 +322,7 @@ section{padding:clamp(64px,9vw,112px) 0}
      <a href="feedback.html" data-el="Feedback" data-en="Feedback">Feedback</a>
     </div>
     <div class="nav-right">
-      <a href="feedback.html" class="btn" style="display:none;padding:8px 14px;font-size:12px;margin-right:8px" id="mobileFeedback">Feedback</a>
+      <a href="feedback.html" class="btn" </a>
       <button class="icon-btn lang" id="langBtn" aria-label="Change language">EN</button>
       <button class="icon-btn" id="themeBtn" aria-label="Toggle dark mode">
         <svg class="ic-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
