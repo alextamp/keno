@@ -50,9 +50,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Inter:wght@400;500;600;700&display=swap&subset=greek,latin" rel="stylesheet">
-
-}
-  <style>
+<style>
 /* ============ TOKENS (from KENO_WARM_PAPER_SPEC §2 + v3 ADDENDUM §3) ============ */
 :root{
   --paper:#FAF7F2; --paper2:#F2EBE0; --surface:#FFFFFF;
@@ -141,12 +139,15 @@ section{padding:clamp(64px,9vw,112px) 0}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
   background:var(--acc);color:#fff;border:none;border-radius:11px;
   padding:10px 18px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;
-transition:background .2s, transform .12s ease;white-space:nowrap}
+  transition:background .2s, transform .12s ease;white-space:nowrap}
 .btn:hover{background:var(--accInk)}
 .btn:active{transform:scale(.97)}
 .btn.ghost{background:transparent;color:var(--acc);border:1px solid var(--bord)}
 .btn.ghost:hover{background:var(--accSoft);border-color:var(--acc)}
 .nav .btn{padding:9px 16px;font-size:13.5px}
+#mobileFeedback{display:none;padding:9px 14px;font-size:13px;background:transparent;
+  color:var(--acc);border:1px solid var(--bord)}
+#mobileFeedback:hover{background:var(--accSoft);border-color:var(--acc)}
 
 /* ============ HERO ============ */
 .hero{padding-top:clamp(44px,6vw,84px);padding-bottom:clamp(56px,7vw,96px)}
@@ -296,24 +297,19 @@ transition:background .2s, transform .12s ease;white-space:nowrap}
 }
 @media (max-width:780px){
   .nav-links{display:none}
-  
+  #mobileFeedback{display:inline-flex !important}
 }
 @media (max-width:430px){
   .wrap{padding:0 18px}
   .phone{width:100%;max-width:332px}
-  .nav-in{gap:12px}
-  .nav .btn{padding:9px 13px;font-size:13px}
+  .nav-in{gap:10px}
+  .nav-right{gap:6px}
+  .nav .btn{padding:8px 12px;font-size:12.5px}
+  #mobileFeedback{padding:8px 12px;font-size:12.5px}
 }
 @media (max-width:355px){
   .nav .btn span{display:none}
   .nav .btn::after{content:'↓'}
-}
-</style>
-  <style>
-.nav .btn, .nav .btn span { white-space: nowrap !important; }
-#mobileFeedback { display: none; }
-@media (max-width: 780px) {
-  #mobileFeedback { display: inline-flex !important; }
 }
 </style>
 </head>
@@ -327,10 +323,10 @@ transition:background .2s, transform .12s ease;white-space:nowrap}
       <a href="#how" data-el="Πώς δουλεύει" data-en="How it works">Πώς δουλεύει</a>
       <a href="#ticket" data-el="Το εισιτήριο" data-en="The ticket">Το εισιτήριο</a>
       <a href="#safety" data-el="Ασφάλεια" data-en="Safety">Ασφάλεια</a>
-     <a href="feedback.html" data-el="Feedback" data-en="Feedback">Feedback</a>
+      <a href="feedback.html" data-el="Feedback" data-en="Feedback">Feedback</a>
     </div>
     <div class="nav-right">
-      <a href="feedback.html" class="btn" </a>
+      <a href="feedback.html" class="btn" id="mobileFeedback"><span data-el="Feedback" data-en="Feedback">Feedback</span></a>
       <button class="icon-btn lang" id="langBtn" aria-label="Change language">EN</button>
       <button class="icon-btn" id="themeBtn" aria-label="Toggle dark mode">
         <svg class="ic-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
@@ -680,17 +676,6 @@ var io = new IntersectionObserver(function(entries){
   });
 }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
 document.querySelectorAll('.rv').forEach(function(n){ io.observe(n); });
-  // Show feedback on mobile
-if (window.innerWidth < 780) {
-  document.getElementById('mobileFeedback').style.display = 'inline-flex';
-}
-window.addEventListener('resize', function() {
-  if (window.innerWidth < 780) {
-    document.getElementById('mobileFeedback').style.display = 'inline-flex';
-  } else {
-    document.getElementById('mobileFeedback').style.display = 'none';
-  }
-});
 </script>
 </body>
 </html>
