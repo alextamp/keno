@@ -296,7 +296,7 @@ transition:background .2s, transform .12s ease;white-space:nowrap}
 }
 @media (max-width:780px){
   .nav-links{display:none}
-  #mobileFeedback{display:inline-flex !important}
+  
 }
 @media (max-width:430px){
   .wrap{padding:0 18px}
@@ -307,6 +307,13 @@ transition:background .2s, transform .12s ease;white-space:nowrap}
 @media (max-width:355px){
   .nav .btn span{display:none}
   .nav .btn::after{content:'↓'}
+}
+</style>
+  <style>
+.nav .btn, .nav .btn span { white-space: nowrap !important; }
+#mobileFeedback { display: none; }
+@media (max-width: 780px) {
+  #mobileFeedback { display: inline-flex !important; }
 }
 </style>
 </head>
