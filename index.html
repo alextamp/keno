@@ -50,9 +50,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Inter:wght@400;500;600;700&display=swap&subset=greek,latin" rel="stylesheet">
-#mobileFeedback { display: none; }
-@media (max-width:780px) {
-  #mobileFeedback { display: inline-flex !important; }
+
 }
   <style>
 /* ============ TOKENS (from KENO_WARM_PAPER_SPEC §2 + v3 ADDENDUM §3) ============ */
@@ -143,7 +141,7 @@ section{padding:clamp(64px,9vw,112px) 0}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
   background:var(--acc);color:#fff;border:none;border-radius:11px;
   padding:10px 18px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;
-  transition:background .2s, transform .12s ease}
+transition:background .2s, transform .12s ease;white-space:nowrap}
 .btn:hover{background:var(--accInk)}
 .btn:active{transform:scale(.97)}
 .btn.ghost{background:transparent;color:var(--acc);border:1px solid var(--bord)}
@@ -296,7 +294,10 @@ section{padding:clamp(64px,9vw,112px) 0}
   .steps,.safe{grid-template-columns:1fr}
   .step{border-top-width:1px}
 }
-@media (max-width:780px){ .nav-links{display:none} }
+@media (max-width:780px){
+  .nav-links{display:none}
+  #mobileFeedback{display:inline-flex !important}
+}
 @media (max-width:430px){
   .wrap{padding:0 18px}
   .phone{width:100%;max-width:332px}
