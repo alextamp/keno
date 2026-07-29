@@ -1,540 +1,523 @@
 <!DOCTYPE html>
-<html lang="el">
+<html lang="en" data-theme="day">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Keno — Roadmap & Feedback</title>
-    <style>
-        :root {
-            --paper: #FAF7F2;
-            --white: #fff;
-            --ink: #241F19;
-            --dim: #6E635A;
-            --faint: #7A6E62;
-            --decor: #A2968A;
-            --bord: #E8E0D5;
-            --acc: #B8482A;
-            --accSoft: #F7EBE5;
-            --accInk: #A03F24;
-            --deep: #5E2313;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="author" content="Alex Tampidias">
+<meta name="description" content="Send us feedback to help Keno grow. Your thoughts matter — bugs, features, general feedback welcome.">
+<title>Feedback — Keno</title>
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-        body {
-            background: var(--paper);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
-            color: var(--ink);
-            line-height: 1.5;
-        }
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --paper:#FAF7F2; --paper2:#F2EBE0; --surface:#FFFFFF;
+  --ink:#241F19; --dim:#6E635A; --faint:#7A6E62; --decor:#A2968A;
+  --bord:#E8E0D5; --acc:#B8482A; --accSoft:#F7EBE5; --accInk:#A03F24; --deep:#5E2313;
+  --device:#1A1512;
+  --shadow:0 1px 2px rgba(36,31,25,.04), 0 10px 30px rgba(36,31,25,.07);
+  --shadowLg:0 2px 4px rgba(36,31,25,.05), 0 24px 60px rgba(36,31,25,.12);
+}
 
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 24px;
-        }
+[data-theme="night"]{
+  --paper:#17120E; --paper2:#1E1813; --surface:#221B15;
+  --ink:#F4EBE1; --dim:#B7A794; --faint:#9B8B79; --decor:#7B6C5D;
+  --bord:#332A20; --acc:#E0755A; --accSoft:#3B2219; --accInk:#EE8B71; --deep:#F0C3B2;
+  --device:#0B0806;
+  --shadow:0 1px 2px rgba(0,0,0,.35), 0 10px 30px rgba(0,0,0,.4);
+  --shadowLg:0 2px 4px rgba(0,0,0,.4), 0 24px 60px rgba(0,0,0,.5);
+}
 
-        .header {
-            text-align: center;
-            margin-bottom: 48px;
-            padding: 36px 24px;
-            background: var(--white);
-            border-radius: 14px;
-            border: 1px solid var(--bord);
-        }
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.55; -webkit-font-smoothing:antialiased;
+  transition:background .34s ease, color .34s ease;
+}
 
-        .wordmark {
-            font-family: Lora, serif;
-            font-weight: 700;
-            font-size: 32px;
-            letter-spacing: -1px;
-            margin-bottom: 8px;
-        }
+a{color:inherit;text-decoration:none}
+::selection{background:var(--accSoft);color:var(--accInk)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radius:6px}
 
-        .wordmark .period {
-            color: var(--acc);
-        }
+/* TYPE */
+.lora{font-family:Lora,Georgia,serif}
+h1,h2,h3{font-family:Lora,Georgia,serif;font-weight:700;letter-spacing:-.8px;line-height:1.1}
+h1{font-size:clamp(38px,6.4vw,66px);letter-spacing:-2px;line-height:1.03}
+h2{font-size:clamp(28px,3.8vw,44px);letter-spacing:-1.2px}
+h3{font-size:21px;font-weight:600;letter-spacing:-.5px;line-height:1.25}
+.label{font-size:10.5px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--decor)}
+.lede{font-size:clamp(16px,1.5vw,18.5px);color:var(--dim);line-height:1.65;max-width:56ch}
+.meta{font-size:13px;color:var(--faint)}
 
-        .subtitle {
-            font-size: 14px;
-            color: var(--dim);
-        }
+/* LAYOUT */
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+section{padding:clamp(64px,9vw,112px) 0}
+.rule{border:none;border-top:1px solid var(--bord);margin:0}
+.head{max-width:640px;margin-bottom:clamp(36px,5vw,60px)}
+.head .label{display:block;margin-bottom:14px}
+.head h2{margin-bottom:16px}
 
-        .tabs {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 32px;
-            border-bottom: 2px solid var(--bord);
-            overflow-x: auto;
-        }
+/* MOTION */
+.press{transition:transform .12s ease}
+.press:active{transform:scale(.97)}
+.rv{opacity:0;transform:translateY(10px);
+    transition:opacity .34s ease, transform .34s cubic-bezier(.2,.7,.3,1);
+    transition-delay:var(--d,0ms)}
+.rv.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .rv{opacity:1;transform:none;transition:none}
+  .press:active{transform:none}
+}
 
-        .tab {
-            padding: 12px 16px;
-            background: none;
-            border: none;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--faint);
-            cursor: pointer;
-            border-bottom: 3px solid transparent;
-            transition: all 200ms;
-            white-space: nowrap;
-        }
+/* NAV */
+.nav{position:sticky;top:0;z-index:60;background:var(--paper);
+     border-bottom:1px solid var(--bord);transition:background .34s ease}
+@supports (backdrop-filter:blur(12px)){
+  .nav{background:color-mix(in srgb, var(--paper) 86%, transparent);backdrop-filter:blur(14px) saturate(1.2)}
+}
+.nav-in{display:flex;align-items:center;gap:20px;height:64px}
+.wm{font-family:Lora,serif;font-weight:700;font-size:23px;letter-spacing:-1.3px}
+.wm .dot{color:var(--acc)}
+.nav-links{display:flex;gap:26px;margin-left:22px;font-size:14px;font-weight:500;color:var(--dim)}
+.nav-links a{transition:color .2s}
+.nav-links a:hover{color:var(--acc)}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.icon-btn{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;
+  border:1px solid var(--bord);background:var(--surface);color:var(--dim);cursor:pointer;
+  font-family:inherit;font-size:11.5px;font-weight:700;letter-spacing:.4px;transition:all .2s}
+.icon-btn:hover{color:var(--acc);border-color:var(--acc)}
+.icon-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.6;
+  stroke-linecap:round;stroke-linejoin:round}
+[data-theme="day"] .ic-sun{display:none}
+[data-theme="night"] .ic-moon{display:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  background:var(--acc);color:#fff;border:none;border-radius:11px;
+  padding:10px 18px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;
+  transition:background .2s, transform .12s ease}
+.btn:hover{background:var(--accInk)}
+.btn:active{transform:scale(.97)}
+.nav .btn{padding:9px 16px;font-size:13.5px}
 
-        .tab.active {
-            color: var(--acc);
-            border-bottom-color: var(--acc);
-        }
+/* FORM STYLES */
+.feedback-container{
+  max-width:720px;
+  margin:0 auto;
+  padding:0 24px;
+}
 
-        .tab:hover {
-            color: var(--dim);
-        }
+.form-group{
+  margin-bottom:28px;
+}
 
-        .section {
-            display: none;
-        }
+.form-group.cols-2{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:24px;
+}
 
-        .section.active {
-            display: block;
-        }
+@media(max-width:640px){
+  .form-group.cols-2{
+    grid-template-columns:1fr;
+  }
+}
 
-        .card {
-            background: var(--white);
-            border: 1px solid var(--bord);
-            border-radius: 14px;
-            padding: 24px;
-            margin-bottom: 16px;
-            transition: all 200ms;
-        }
+label{
+  display:block;
+  font-size:14px;
+  font-weight:600;
+  margin-bottom:10px;
+  color:var(--ink);
+}
 
-        .card:hover {
-            border-color: var(--acc);
-            box-shadow: 0 4px 12px rgba(184, 72, 42, 0.08);
-        }
+input[type="text"],
+input[type="email"],
+textarea,
+select{
+  width:100%;
+  padding:12px 16px;
+  border:1px solid var(--bord);
+  border-radius:11px;
+  background:var(--surface);
+  color:var(--ink);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px;
+  line-height:1.5;
+  transition:border-color .2s, box-shadow .2s;
+}
 
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 12px;
-            gap: 12px;
-        }
+input[type="text"]:focus,
+input[type="email"]:focus,
+textarea:focus,
+select:focus{
+  outline:none;
+  border-color:var(--acc);
+  box-shadow:0 0 0 3px var(--accSoft);
+}
 
-        .card-title {
-            font-weight: 600;
-            font-size: 16px;
-            flex: 1;
-        }
+textarea{
+  resize:vertical;
+  min-height:140px;
+  font-family:inherit;
+}
 
-        .badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 999px;
-            font-size: 12px;
-            font-weight: 600;
-            white-space: nowrap;
-        }
+/* Radio/Checkbox Group */
+.radio-group,
+.checkbox-group{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
 
-        .badge.bug {
-            background: #FFE5E0;
-            color: #C41E3A;
-        }
+.radio-item,
+.checkbox-item{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
+}
 
-        .badge.feature {
-            background: #E0F0FF;
-            color: #0055CC;
-        }
+input[type="radio"],
+input[type="checkbox"]{
+  width:18px;
+  height:18px;
+  cursor:pointer;
+  accent-color:var(--acc);
+}
 
-        .badge.suggestion {
-            background: #E8F5E9;
-            color: #2E7D32;
-        }
+.radio-item label,
+.checkbox-item label{
+  margin:0;
+  font-weight:500;
+  cursor:pointer;
+  flex:1;
+}
 
-        .badge.done {
-            background: #E8F5E9;
-            color: #2E7D32;
-        }
+/* Rating */
+.rating-group{
+  display:flex;
+  gap:8px;
+}
 
-        .badge.inprogress {
-            background: #FFF3CD;
-            color: #856404;
-        }
+.rating-btn{
+  width:44px;
+  height:44px;
+  border:2px solid var(--bord);
+  border-radius:11px;
+  background:var(--surface);
+  color:var(--ink);
+  font-size:18px;
+  cursor:pointer;
+  transition:all .2s;
+}
 
-        .badge.planned {
-            background: #E0E0E0;
-            color: #424242;
-        }
+.rating-btn:hover{
+  border-color:var(--acc);
+  background:var(--accSoft);
+}
 
-        .card-desc {
-            font-size: 14px;
-            color: var(--dim);
-            margin-bottom: 8px;
-            line-height: 1.6;
-        }
+.rating-btn.active{
+  background:var(--acc);
+  color:white;
+  border-color:var(--acc);
+}
 
-        .card-meta {
-            font-size: 12px;
-            color: var(--faint);
-            display: flex;
-            gap: 16px;
-            margin-top: 12px;
-        }
+/* Submit Button */
+.form-actions{
+  display:flex;
+  gap:12px;
+  margin-top:32px;
+}
 
-        .form-section {
-            background: var(--white);
-            border: 1px solid var(--bord);
-            border-radius: 14px;
-            padding: 32px 24px;
-        }
+.btn-submit{
+  flex:1;
+  padding:14px 24px;
+  background:var(--acc);
+  color:white;
+  border:none;
+  border-radius:11px;
+  font-size:15px;
+  font-weight:600;
+  cursor:pointer;
+  transition:background .2s, transform .12s ease;
+  font-family:inherit;
+}
 
-        .form-group {
-            margin-bottom: 20px;
-        }
+.btn-submit:hover{
+  background:var(--accInk);
+}
 
-        label {
-            display: block;
-            font-weight: 600;
-            font-size: 14px;
-            margin-bottom: 8px;
-            color: var(--ink);
-        }
+.btn-submit:active{
+  transform:scale(.97);
+}
 
-        input, textarea, select {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--bord);
-            border-radius: 9px;
-            font-family: inherit;
-            font-size: 14px;
-            color: var(--ink);
-            background: var(--paper);
-        }
+.btn-submit:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
 
-        textarea {
-            resize: vertical;
-            min-height: 100px;
-        }
+/* Success Message */
+.success-message{
+  display:none;
+  background:var(--accSoft);
+  border:1px solid var(--acc);
+  border-radius:14px;
+  padding:20px 24px;
+  margin-bottom:28px;
+  color:var(--accInk);
+  text-align:center;
+}
 
-        input:focus, textarea:focus, select:focus {
-            outline: none;
-            border-color: var(--acc);
-            box-shadow: 0 0 0 3px var(--accSoft);
-        }
+.success-message.show{
+  display:block;
+  animation:slideUp .34s cubic-bezier(.2,.7,.3,1);
+}
 
-        .button {
-            background: var(--acc);
-            color: var(--white);
-            border: none;
-            padding: 12px 24px;
-            border-radius: 11px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 200ms;
-        }
+@keyframes slideUp{
+  from{
+    opacity:0;
+    transform:translateY(10px);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0);
+  }
+}
 
-        .button:hover {
-            background: var(--accInk);
-            transform: scale(0.97);
-        }
+/* Footer */
+.footer{
+  border-top:1px solid var(--bord);
+  padding:48px 0 32px;
+  text-align:center;
+}
 
-        .button.secondary {
-            background: var(--paper);
-            color: var(--acc);
-            border: 1px solid var(--bord);
-        }
+.footer-text{
+  font-size:13px;
+  color:var(--dim);
+  margin-bottom:16px;
+}
 
-        .button.secondary:hover {
-            background: var(--accSoft);
-        }
+.footer-links{
+  display:flex;
+  justify-content:center;
+  gap:24px;
+  font-size:13px;
+  color:var(--dim);
+}
 
-        .success-message {
-            display: none;
-            padding: 16px;
-            background: #E8F5E9;
-            border: 1px solid #81C784;
-            border-radius: 9px;
-            color: #2E7D32;
-            margin-bottom: 16px;
-            text-align: center;
-        }
+.footer-links a{
+  transition:color .2s;
+}
 
-        .empty-state {
-            text-align: center;
-            padding: 48px 24px;
-            color: var(--faint);
-        }
-
-        .empty-state-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-        }
-
-        @media (max-width: 640px) {
-            .container {
-                padding: 16px;
-            }
-
-            .header {
-                padding: 24px 16px;
-                margin-bottom: 32px;
-            }
-
-            .wordmark {
-                font-size: 24px;
-            }
-
-            .card {
-                padding: 16px;
-            }
-
-            .tabs {
-                gap: 8px;
-            }
-
-            .tab {
-                padding: 10px 12px;
-                font-size: 13px;
-            }
-        }
-    </style>
+.footer-links a:hover{
+  color:var(--acc);
+}
+</style>
 </head>
+
 <body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <div class="wordmark">keno<span class="period">.</span></div>
-            <div class="subtitle">Roadmap & Feature Requests</div>
-        </div>
+<!-- NAV -->
+<nav class="nav">
+  <div class="wrap">
+    <div class="nav-in">
+      <a href="/" class="wm">keno<span class="dot">.</span></a>
+      <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="#feedback">Feedback</a>
+      </div>
+      <div class="nav-right">
+        <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">
+          <svg class="ic-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="ic-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
 
-        <!-- Tabs -->
-        <div class="tabs">
-            <button class="tab active" onclick="switchTab('bugs')">🐛 Bugs</button>
-            <button class="tab" onclick="switchTab('features')">✨ Features</button>
-            <button class="tab" onclick="switchTab('suggestions')">💡 Suggestions</button>
-            <button class="tab" onclick="switchTab('feedback')">📝 Send Feedback</button>
-        </div>
+<!-- HEADER -->
+<section class="hero">
+  <div class="wrap">
+    <div class="head">
+      <span class="label">Feedback</span>
+      <h1>Help us build Keno</h1>
+      <p class="lede">Found a bug? Have a feature idea? Just want to say hi? We'd love to hear from you. Every piece of feedback helps us make Keno better.</p>
+    </div>
+  </div>
+</section>
 
-        <!-- Bugs Section -->
-        <div id="bugs" class="section active">
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">Check-in button not responding</div>
-                    <span class="badge inprogress">In Progress</span>
-                </div>
-                <div class="card-desc">Button sometimes doesn't register taps on slow phones. Working on a fix.</div>
-                <div class="card-meta">
-                    <span>Found: 24 Jul</span>
-                    <span>Priority: High</span>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">Map markers disappear on zoom</div>
-                    <span class="badge inprogress">In Progress</span>
-                </div>
-                <div class="card-desc">When zooming in on the map, event pins briefly disappear. Visual polish fix.</div>
-                <div class="card-meta">
-                    <span>Found: 20 Jul</span>
-                    <span>Priority: Medium</span>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">Dark mode text contrast in chat</div>
-                    <span class="badge planned">Planned</span>
-                </div>
-                <div class="card-desc">Some message text is hard to read in dark mode. Need to adjust colors.</div>
-                <div class="card-meta">
-                    <span>Found: 18 Jul</span>
-                    <span>Priority: Low</span>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">Profile photo upload fails on slow connection</div>
-                    <span class="badge done">Fixed</span>
-                </div>
-                <div class="card-desc">Photos now upload properly with retry logic. Shipped in v1.2.</div>
-                <div class="card-meta">
-                    <span>Found: 15 Jul</span>
-                    <span>Fixed: 22 Jul</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Features Section -->
-        <div id="features" class="section">
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">Memory Loop — Shareable recap cards</div>
-                    <span class="badge feature">Planned</span>
-                </div>
-                <div class="card-desc">After an event, share a memory recap card to Instagram stories. Shows photos, attendees, XP earned.</div>
-                <div class="card-meta">
-                    <span>Planned: 30 Aug</span>
-                    <span>Phase 1</span>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">Solo buddy matching</div>
-                    <span class="badge feature">Planned</span>
-                </div>
-                <div class="card-desc">Suggest going to events with friends who are also going solo. Reduce FOMO, build friendships.</div>
-                <div class="card-meta">
-                    <span>Planned: 30 Aug</span>
-                    <span>Phase 1</span>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">Study παρέες (study groups)</div>
-                    <span class="badge feature">Planned</span>
-                </div>
-                <div class="card-desc">Join organized study groups for exams. Perfect for September εξεταστική.</div>
-                <div class="card-meta">
-                    <span>Planned: 31 Aug</span>
-                    <span>Phase 2</span>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">Coffee beacon — ephemeral status</div>
-                    <span class="badge feature">Planned</span>
-                </div>
-                <div class="card-desc">"I'm at café X right now" status that expires in 2 hours. Invite friends to join spontaneously.</div>
-                <div class="card-meta">
-                    <span>Planned: 20 Sept</span>
-                    <span>Phase 2</span>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">Reliability badges</div>
-                    <span class="badge feature">Planned</span>
-                </div>
-                <div class="card-desc">Show up to events and earn a badge. Encourages people to RSVP seriously.</div>
-                <div class="card-meta">
-                    <span>Planned: 30 Aug</span>
-                    <span>Phase 1</span>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">Zero-state rescue</div>
-                    <span class="badge inprogress">In Progress</span>
-                </div>
-                <div class="card-desc">New users join an event in under 60 seconds. Onboarding → event discovery → join → done.</div>
-                <div class="card-meta">
-                    <span>Due: 9 Aug</span>
-                    <span>Phase 0</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Suggestions Section -->
-        <div id="suggestions" class="section">
-            <div class="empty-state">
-                <div class="empty-state-icon">💡</div>
-                <p>No suggestions yet. Be the first to share one below!</p>
-            </div>
-        </div>
-
-        <!-- Feedback Form Section -->
-        <div id="feedback" class="section">
-            <div class="form-section">
-                <h3 style="margin-bottom: 24px; font-size: 18px;">Share Your Idea</h3>
-                <div class="success-message" id="successMsg">✓ Thanks for the suggestion! We've added it to our list.</div>
-
-                <form onsubmit="handleSubmit(event)">
-                    <div class="form-group">
-                        <label>Type of feedback</label>
-                        <select id="feedbackType" required>
-                            <option value="">— Choose —</option>
-                            <option value="bug">🐛 Bug Report</option>
-                            <option value="feature">✨ Feature Request</option>
-                            <option value="improvement">💡 Improvement Idea</option>
-                            <option value="other">📝 Other</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Your name (optional)</label>
-                        <input type="text" id="userName" placeholder="Alex">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Email (optional)</label>
-                        <input type="email" id="userEmail" placeholder="you@example.com">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Title</label>
-                        <input type="text" id="feedbackTitle" placeholder="What's your idea?" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Description</label>
-                        <textarea id="feedbackDesc" placeholder="Tell us more..." required></textarea>
-                    </div>
-
-                    <button type="submit" class="button">Send Feedback</button>
-                </form>
-            </div>
-        </div>
+<!-- FORM -->
+<section style="padding-top:0">
+  <div class="wrap feedback-container">
+    <div class="success-message" id="successMessage">
+      ✓ Thank you! Your feedback has been sent. We really appreciate it.
     </div>
 
-    <script>
-        function switchTab(tabName) {
-            // Hide all sections
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            // Show selected section
-            document.getElementById(tabName).classList.add('active');
+    <form id="feedbackForm" onsubmit="handleSubmit(event)">
+      <!-- Name & Email -->
+      <div class="form-group cols-2">
+        <div>
+          <label for="name">Your Name</label>
+          <input type="text" id="name" name="name" placeholder="Alex" required>
+        </div>
+        <div>
+          <label for="email">Email Address</label>
+          <input type="email" id="email" name="email" placeholder="alex@university.edu" required>
+        </div>
+      </div>
 
-            // Update tab buttons
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
-        }
+      <!-- Feedback Type -->
+      <div class="form-group">
+        <label>What type of feedback?</label>
+        <div class="radio-group">
+          <div class="radio-item">
+            <input type="radio" id="type-bug" name="feedback-type" value="bug" required>
+            <label for="type-bug">🐛 Bug Report — Something isn't working</label>
+          </div>
+          <div class="radio-item">
+            <input type="radio" id="type-feature" name="feedback-type" value="feature">
+            <label for="type-feature">✨ Feature Request — An idea to improve Keno</label>
+          </div>
+          <div class="radio-item">
+            <input type="radio" id="type-general" name="feedback-type" value="general">
+            <label for="type-general">💬 General Feedback — Thoughts and suggestions</label>
+          </div>
+        </div>
+      </div>
 
-        function handleSubmit(e) {
-            e.preventDefault();
+      <!-- Rating -->
+      <div class="form-group">
+        <label>How happy are you with Keno?</label>
+        <div class="rating-group">
+          <button type="button" class="rating-btn" data-rating="1" onclick="setRating(1)" title="Very Unhappy">😞</button>
+          <button type="button" class="rating-btn" data-rating="2" onclick="setRating(2)" title="Unhappy">😐</button>
+          <button type="button" class="rating-btn" data-rating="3" onclick="setRating(3)" title="Neutral">🤷</button>
+          <button type="button" class="rating-btn" data-rating="4" onclick="setRating(4)" title="Happy">😊</button>
+          <button type="button" class="rating-btn" data-rating="5" onclick="setRating(5)" title="Very Happy">😍</button>
+        </div>
+        <input type="hidden" id="rating" name="rating" value="">
+      </div>
 
-            const feedback = {
-                type: document.getElementById('feedbackType').value,
-                name: document.getElementById('userName').value || 'Anonymous',
-                email: document.getElementById('userEmail').value,
-                title: document.getElementById('feedbackTitle').value,
-                description: document.getElementById('feedbackDesc').value,
-                timestamp: new Date().toLocaleString()
-            };
+      <!-- Message -->
+      <div class="form-group">
+        <label for="message">Your Message</label>
+        <textarea id="message" name="message" placeholder="Tell us what's on your mind..." required></textarea>
+      </div>
 
-            // Log to console (in real app, send to server)
-            console.log('Feedback received:', feedback);
+      <!-- Checkbox -->
+      <div class="form-group">
+        <div class="checkbox-item">
+          <input type="checkbox" id="follow-up" name="follow-up" value="yes">
+          <label for="follow-up">Feel free to follow up with me about this feedback</label>
+        </div>
+      </div>
 
-            // Show success message
-            document.getElementById('successMsg').style.display = 'block';
+      <!-- Submit -->
+      <div class="form-actions">
+        <button type="submit" class="btn-submit press">Send Feedback</button>
+      </div>
+    </form>
+  </div>
+</section>
 
-            // Reset form
-            e.target.reset();
+<!-- FOOTER -->
+<section style="padding-top:32px;padding-bottom:48px">
+  <div class="wrap footer">
+    <p class="footer-text">Questions? Email us at <a href="mailto:feedback@keno.app" style="color:var(--acc);font-weight:600">feedback@keno.app</a></p>
+    <div class="footer-links">
+      <a href="/">Home</a>
+      <a href="https://apps.apple.com/us/app/keno/id6789332791" target="_blank">App Store</a>
+      <a href="https://play.google.com/store/apps/details?id=com.KeNo.app" target="_blank">Google Play</a>
+    </div>
+  </div>
+</section>
 
-            // Hide success message after 3 seconds
-            setTimeout(() => {
-                document.getElementById('successMsg').style.display = 'none';
-            }, 3000);
-        }
-    </script>
+<script>
+  // Rating buttons
+  function setRating(value) {
+    document.getElementById('rating').value = value;
+    document.querySelectorAll('.rating-btn').forEach(btn => {
+      btn.classList.remove('active');
+    });
+    document.querySelector(`[data-rating="${value}"]`).classList.add('active');
+  }
+
+  // Theme toggle
+  function toggleTheme() {
+    const html = document.documentElement;
+    const current = html.getAttribute('data-theme');
+    const next = current === 'day' ? 'night' : 'day';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+  }
+
+  // Load saved theme
+  const savedTheme = localStorage.getItem('theme') || 'day';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+
+  // Form submission
+  function handleSubmit(event) {
+    event.preventDefault();
+
+    // Get form data
+    const formData = new FormData(document.getElementById('feedbackForm'));
+    const data = {
+      name: formData.get('name'),
+      email: formData.get('email'),
+      type: formData.get('feedback-type'),
+      rating: formData.get('rating'),
+      message: formData.get('message'),
+      followUp: formData.get('follow-up'),
+      timestamp: new Date().toISOString()
+    };
+
+    // Log to console (in production, send to backend)
+    console.log('Feedback submission:', data);
+
+    // Show success message
+    const successMsg = document.getElementById('successMessage');
+    successMsg.classList.add('show');
+
+    // Reset form
+    document.getElementById('feedbackForm').reset();
+    document.querySelectorAll('.rating-btn').forEach(btn => {
+      btn.classList.remove('active');
+    });
+
+    // Hide success after 5 seconds
+    setTimeout(() => {
+      successMsg.classList.remove('show');
+    }, 5000);
+
+    // Optional: Send to API (uncomment when backend is ready)
+    /*
+    fetch('/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(result => console.log('Success:', result))
+    .catch(err => console.error('Error:', err));
+    */
+  }
+
+  // Scroll reveal
+  const observerOptions = { threshold: 0.1 };
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('in');
+      }
+    });
+  }, observerOptions);
+
+  document.querySelectorAll('.rv').forEach(el => observer.observe(el));
+</script>
 </body>
 </html>
