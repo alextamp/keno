@@ -3,8 +3,9 @@ import { Pressable, StyleSheet, Text, TextStyle, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/core/theme';
-import { DrawFont, FontSize, FontWeight } from '@/core/constants/theme';
+import { TitleFont, FontSize, FontWeight } from '@/core/constants/theme';
 import { usePressAnimation } from '@/core/hooks/usePressAnimation';
+import { Icon } from './Icon';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -17,8 +18,8 @@ interface ScreenHeaderProps {
   titleStyle?: TextStyle;
 }
 
-// Standard "back circle + title" row used across most secondary screens —
-// extracted so the back button and title no longer drift screen-to-screen.
+// Warm Paper header (mockup .circbtn): flat 32px circular back button, 1px
+// border, line-icon chevron — used across most secondary/detail screens.
 export function ScreenHeader({ title, onBack, right, titleStyle }: ScreenHeaderProps) {
   const { colors } = useTheme();
   const router = useRouter();
@@ -30,9 +31,9 @@ export function ScreenHeader({ title, onBack, right, titleStyle }: ScreenHeaderP
         onPress={onBack ?? (() => router.back())}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
-        style={[styles.backBtn, { borderColor: colors.borderStrong }, animatedStyle]}
+        style={[styles.backBtn, { backgroundColor: colors.surface, borderColor: colors.border }, animatedStyle]}
       >
-        <Text style={[styles.backIcon, { color: colors.textPrimary }]}>←</Text>
+        <Icon name="back" size={17} color={colors.textPrimary} />
       </AnimatedPressable>
       <Text style={[styles.title, { color: colors.textPrimary }, titleStyle]} numberOfLines={1}>
         {title}
@@ -44,8 +45,7 @@ export function ScreenHeader({ title, onBack, right, titleStyle }: ScreenHeaderP
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  backBtn: { width: 38, height: 38, borderRadius: 19, borderWidth: 2.5, alignItems: 'center', justifyContent: 'center' },
-  backIcon: { fontSize: FontSize.lg, fontWeight: FontWeight.bold },
-  title: { flex: 1, fontSize: FontSize.xxl, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
-  spacer: { width: 38 },
+  backBtn: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  title: { flex: 1, fontSize: FontSize.xxl, fontWeight: FontWeight.bold, fontFamily: TitleFont, letterSpacing: -0.4 },
+  spacer: { width: 32 },
 });

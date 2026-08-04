@@ -1,27 +1,32 @@
 import { useThemeStore } from './theme.store';
 
+// Warm Paper design system (design/KENO_WARM_PAPER_SPEC.md + KENO_v3_ADDENDUM.md).
+// Terracotta is the only action color; categories are used at dot/tint size only.
 export const LightColors = {
-  primary: '#C94D0A',
-  primaryLight: '#E05D18',
-  primaryDark: '#A33D07',
+  primary: '#B8482A',
+  primaryLight: '#CC5B3A',
+  primaryDark: '#96371F',
+  accentSoft: '#F7EBE5',
+  accentInk: '#A03F24',
 
-  background: '#F7F3ED',
-  surface: '#FFFEF9',
-  surfaceVariant: '#EDE8DF',
-  surfaceElevated: '#FFFEF9',
-  border: '#D6CCBE',
-  borderStrong: '#1A1208',
+  background: '#FAF7F2',
+  surface: '#FFFFFF',
+  surfaceVariant: '#EDE5D9',
+  surfaceElevated: '#FFFFFF',
+  border: '#E8E0D5',
+  borderStrong: '#241F19',
 
-  textPrimary: '#1A1208',
-  textSecondary: '#5C4A38',
-  textHint: '#A08878',
+  textPrimary: '#241F19',
+  textSecondary: '#6E635A',
+  textHint: '#7A6E62',
+  textDecor: '#9A8E82',
 
-  categoryParty: '#8B3FCC',
-  categorySports: '#0A8A52',
-  categoryStudy: '#2952CC',
-  categoryChill: '#CC1F6E',
-  categoryCoffee: '#CC6B00',
-  categoryOther: '#504540',
+  categoryParty: '#7E52A8',
+  categorySports: '#3F7A55',
+  categoryStudy: '#3A6494',
+  categoryChill: '#B2537A',
+  categoryCoffee: '#A0702C',
+  categoryOther: '#7A6E62',
 
   error: '#DC2626',
   success: '#16A34A',
@@ -31,27 +36,33 @@ export const LightColors = {
 } as const;
 
 export const DarkColors = {
-  primary: '#E05D18',
-  primaryLight: '#F07030',
-  primaryDark: '#C94D0A',
+  primary: '#D9603C',
+  primaryLight: '#E27A55',
+  primaryDark: '#B8482A',
+  accentSoft: '#2C1C15',
+  accentInk: '#E27A55',
 
-  background: '#1A1510',
-  surface: '#251E18',
-  surfaceVariant: '#2E2520',
-  surfaceElevated: '#332A22',
-  border: '#3A2E26',
-  borderStrong: '#F0E8DF',
+  background: '#17130F',
+  surface: '#1F1A15',
+  surfaceVariant: '#2A231C',
+  surfaceElevated: '#1F1A15',
+  border: '#2E2721',
+  borderStrong: '#F2EDE5',
 
-  textPrimary: '#F5F0E8',
-  textSecondary: '#C4B5A8',
-  textHint: '#8B7870',
+  textPrimary: '#F2EDE5',
+  textSecondary: '#B4A796',
+  textHint: '#9D8F7E',
+  textDecor: '#6B5F53',
 
-  categoryParty: '#A878EE',
-  categorySports: '#34D399',
-  categoryStudy: '#60A5FA',
-  categoryChill: '#F472B6',
-  categoryCoffee: '#FBBF24',
-  categoryOther: '#9CA3AF',
+  // Category dots/tints stay constant across themes per spec — they're small
+  // (7px dot / 18% tint) so vibrancy loss on dark bg is an accepted tradeoff
+  // for keeping category meaning/color consistent everywhere.
+  categoryParty: '#7E52A8',
+  categorySports: '#3F7A55',
+  categoryStudy: '#3A6494',
+  categoryChill: '#B2537A',
+  categoryCoffee: '#A0702C',
+  categoryOther: '#9D8F7E',
 
   error: '#F87171',
   success: '#4ADE80',

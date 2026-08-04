@@ -7,7 +7,7 @@ const CAL_EVENT_KEY = 'cal_event_';
 
 async function getOrCreateKenoCalendarId(): Promise<string> {
   const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
-  const existing = calendars.find((c) => c.title === 'Keno');
+  const existing = calendars.find((c) => c.title === 'keno.' || c.title === 'Keno');
   if (existing) return existing.id;
 
   const defaultCalendar =
@@ -16,11 +16,11 @@ async function getOrCreateKenoCalendarId(): Promise<string> {
       : calendars.find((c) => c.isPrimary) ?? calendars[0];
 
   const id = await Calendar.createCalendarAsync({
-    title: 'Keno',
-    color: '#C94D0A',
+    title: 'keno.',
+    color: '#B8482A',
     entityType: Calendar.EntityTypes.EVENT,
     sourceId: (defaultCalendar as any)?.source?.id,
-    source: (defaultCalendar as any)?.source ?? { isLocalAccount: true, name: 'Keno', type: 'local' },
+    source: (defaultCalendar as any)?.source ?? { isLocalAccount: true, name: 'keno.', type: 'local' },
     name: 'kenoCalendar',
     ownerAccount: 'keno',
     accessLevel: Calendar.CalendarAccessLevel.OWNER,

@@ -3,7 +3,6 @@ import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import {
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,8 +12,9 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Icon } from '@/components/ui/Icon';
 import { useTheme } from '@/core/theme';
-import { BorderRadius, DrawFont, FontSize, FontWeight, Spacing } from '@/core/constants/theme';
+import { BorderRadius, UIFont, UIFontLight, TitleFont, FontSize, FontWeight, Spacing } from '@/core/constants/theme';
 import { useTranslation } from '@/core/i18n';
 
 export default function ForgotPasswordScreen() {
@@ -55,15 +55,17 @@ export default function ForgotPasswordScreen() {
         showsVerticalScrollIndicator={false}
         automaticallyAdjustKeyboardInsets
       >
-        <AnimatedPressable onPress={() => router.back()} style={[styles.backBtn, { borderColor: colors.borderStrong }]}>
-          <Text style={[styles.backText, { fontFamily: DrawFont, color: colors.primary }]}>←</Text>
+        <AnimatedPressable onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Icon name="back" size={16} color={colors.textPrimary} />
         </AnimatedPressable>
 
         {sent ? (
           <View style={styles.sentContainer}>
-            <Text style={styles.sentEmoji}>📬</Text>
+            <View style={[styles.iconCircle, { backgroundColor: colors.accentSoft }]}>
+              <Icon name="mail" size={34} color={colors.primary} />
+            </View>
             <Text style={[styles.title, { color: colors.textPrimary }]}>{t.authForgotSent}</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t.authForgotSentBody}</Text>
+            <Text style={[styles.subtitle, { color: colors.textHint }]}>{t.authForgotSentBody}</Text>
             <Button
               label={t.authSignInBtn}
               onPress={() => router.replace('/(auth)/sign-in')}
@@ -74,12 +76,12 @@ export default function ForgotPasswordScreen() {
           <>
             <View style={styles.header}>
               <Text style={[styles.title, { color: colors.textPrimary }]}>{t.authForgotTitle}</Text>
-              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t.authForgotSubtitle}</Text>
+              <Text style={[styles.subtitle, { color: colors.textHint }]}>{t.authForgotSubtitle}</Text>
             </View>
 
             <View style={styles.form}>
               {!!error && (
-                <View style={[styles.errorBanner, { borderColor: colors.borderStrong }]}>
+                <View style={[styles.errorBanner, { borderColor: colors.error }]}>
                   <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
                 </View>
               )}
@@ -120,23 +122,20 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     alignSelf: 'flex-start',
-    borderWidth: 2,
-    borderRadius: BorderRadius.full,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
+    width: 32, height: 32, borderRadius: 16, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center',
   },
-  backText: { fontSize: FontSize.md, fontWeight: FontWeight.bold },
   header: { gap: Spacing.sm },
-  title: { fontSize: 28, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
-  subtitle: { fontSize: FontSize.md, lineHeight: 22 },
+  title: { fontSize: FontSize.display, fontWeight: FontWeight.bold, fontFamily: TitleFont, letterSpacing: -0.5 },
+  subtitle: { fontSize: FontSize.base, fontFamily: UIFontLight, lineHeight: 21 },
   form: { gap: Spacing.md },
   errorBanner: {
     backgroundColor: '#FEF2F2',
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
-    borderWidth: 2.5,
+    borderWidth: 1,
   },
   errorText: { fontSize: FontSize.sm, fontWeight: FontWeight.medium },
   sentContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.lg, paddingVertical: Spacing.xxl },
-  sentEmoji: { fontSize: 64 },
+  iconCircle: { width: 84, height: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center' },
 });

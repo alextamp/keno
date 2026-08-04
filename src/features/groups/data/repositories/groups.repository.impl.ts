@@ -20,7 +20,8 @@ function groupFromFirestore(snap: DocumentSnapshot): GroupEntity {
     name: d.name,
     description: d.description,
     emoji: d.emoji ?? '🎓',
-    coverColor: d.coverColor ?? '#C94D0A',
+    coverColor: d.coverColor ?? '#B8482A',
+    coverPhotoUri: d.coverPhotoUri ?? undefined,
     creatorId: d.creatorId,
     memberIds: d.memberIds ?? [],
     eventIds: d.eventIds ?? [],
@@ -29,6 +30,7 @@ function groupFromFirestore(snap: DocumentSnapshot): GroupEntity {
     invitedUserIds: d.invitedUserIds ?? [],
     joinRequests: d.joinRequests ?? {},
     createdAt: d.createdAt?.toDate() ?? new Date(),
+    isVerifiedOrganiser: d.isVerifiedOrganiser ?? false,
   };
 }
 
@@ -40,6 +42,7 @@ export const groupsRepository: GroupsRepository = {
         description: params.description,
         emoji: params.emoji,
         coverColor: params.coverColor,
+        coverPhotoUri: params.coverPhotoUri ?? null,
         creatorId: params.creatorId,
         memberIds: [params.creatorId],
         eventIds: [],
@@ -108,13 +111,15 @@ export const groupsRepository: GroupsRepository = {
     }
   },
 
-  async inviteToGroup(groupId: string, userId: string, invitedByUid: string, invitedByName: string, groupTitle: string): Promise<Either<Failure, void>> {
+  async inviteToGroup(groupId: string, userId: string, invitedByUid: string, invitedByName: string, groupTitle: string, invitedByAvatarColor?: string, invitedByPhotoUri?: string): Promise<Either<Failure, void>> {
     try {
       await updateDoc(doc(db, GROUPS, groupId), { invitedUserIds: arrayUnion(userId) });
       notificationsRepository.create({
         toUid: userId,
         fromUid: invitedByUid,
         fromName: invitedByName,
+        fromAvatarColor: invitedByAvatarColor,
+        fromPhotoUri: invitedByPhotoUri,
         type: 'group_invite',
         eventId: groupId,
         eventTitle: groupTitle,
@@ -141,6 +146,7 @@ export const groupsRepository: GroupsRepository = {
         description: params.description,
         emoji: params.emoji,
         coverColor: params.coverColor,
+        coverPhotoUri: params.coverPhotoUri ?? null,
         universityName: params.universityName ?? null,
         isPrivate: params.isPrivate,
       });
@@ -157,6 +163,15 @@ export const groupsRepository: GroupsRepository = {
       return right(undefined);
     } catch (e: any) {
       return left(new ServerFailure(e.message ?? 'Failed to delete group.'));
+    }
+  },
+
+  async setVerifiedOrganiser(groupId: string, verified: boolean): Promise<Either<Failure, void>> {
+    try {
+      await updateDoc(doc(db, GROUPS, groupId), { isVerifiedOrganiser: verified });
+      return right(undefined);
+    } catch (e: any) {
+      return left(new ServerFailure(e.message ?? 'Failed to update verification.'));
     }
   },
 

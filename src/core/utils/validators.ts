@@ -3,6 +3,11 @@ import { getTranslations } from '@/core/i18n';
 export interface ValidationResult {
   isValid: boolean;
   errorMessage?: string;
+  /** Set only for validateUniversityEmail's "well-formed .gr email, domain
+   *  just isn't on our whitelist" case — lets callers offer the ID-photo
+   *  fallback instead of just showing a dead-end error, without them having
+   *  to string-match errorMessage. */
+  code?: 'unrecognized_domain';
 }
 
 // Whitelist of recognised Greek university domains.
@@ -33,7 +38,19 @@ const KNOWN_UNIVERSITY_DOMAINS = new Set([
   'uom.gr',         // University of Macedonia
   'asfa.gr',        // Athens School of Fine Arts
   'hmu.gr',         // Hellenic Mediterranean University
-  // Department sub-domains
+  'ihu.gr',         // International Hellenic University (alias of ihu.edu.gr above)
+  // Pre-2019-merger ΤΕΙ domains — the 2019 reform folded these institutions
+  // into the universities above, but continuing students and alumni can
+  // still hold an email on the old domain for years afterward, so these
+  // need to keep working alongside the successor institution's domain.
+  'teiath.gr',      // ΤΕΙ Αθήνας — now part of Πανεπιστήμιο Δυτικής Αττικής (uniwa.gr)
+  'teipir.gr',      // ΤΕΙ Πειραιά — now part of Πανεπιστήμιο Δυτικής Αττικής (uniwa.gr)
+  'teithe.gr',      // ΤΕΙ Θεσσαλονίκης — now part of Διεθνές Πανεπιστήμιο Ελλάδος (ihu.gr)
+  'teiser.gr',      // ΤΕΙ Σερρών — now part of Διεθνές Πανεπιστήμιο Ελλάδος (ihu.gr)
+  'teikav.edu.gr',  // ΤΕΙ Καβάλας — now part of Διεθνές Πανεπιστήμιο Ελλάδος (ihu.gr)
+  // Department sub-domains — technically redundant (any subdomain of a
+  // listed domain already matches via the endsWith check below, e.g.
+  // anything@*.uoa.gr), kept as explicit examples for future readers.
   'di.uoa.gr',
   'ece.upatras.gr',
   'cs.unipi.gr',
@@ -64,7 +81,7 @@ export function validateUniversityEmail(email: string): ValidationResult {
     [...KNOWN_UNIVERSITY_DOMAINS].some((d) => domain.endsWith(`.${d}`));
 
   if (!isRecognised) {
-    return { isValid: false, errorMessage: t.validEmailUnrecognised(domain) };
+    return { isValid: false, errorMessage: t.validEmailUnrecognised(domain), code: 'unrecognized_domain' };
   }
 
   return { isValid: true };

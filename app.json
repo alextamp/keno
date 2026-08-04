@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Keno",
+    "name": "keno.",
     "slug": "keno",
-    "version": "1.0.0",
+    "version": "1.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "keno",
@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/images/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FAF9F6"
+      "backgroundColor": "#FAF7F2"
     },
     "ios": {
       "supportsTablet": false,
@@ -22,7 +22,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#FAF9F6"
+        "backgroundColor": "#FAF7F2"
       },
       "package": "com.KeNo.app",
       "permissions": [
@@ -34,7 +34,7 @@
           "apiKey": "AIzaSyBivBgxEI5WZweR4Lv9ERELbRRL6b1IYlg"
         }
       },
-      "versionCode": 20
+      "versionCode": 31
     },
     "plugins": [
       "expo-router",
@@ -42,8 +42,8 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/icon.png",
-          "color": "#C94D0A"
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#B8482A"
         }
       ],
       [
@@ -62,6 +62,20 @@
         "expo-calendar",
         {
           "calendarPermission": "Keno uses your calendar to add events you've joined."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Keno needs your camera to scan check-in QR codes and take photos."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Keno needs access to your photos to save photos from an event's photo wall.",
+          "savePhotosPermission": "Keno needs permission to save photos to your library.",
+          "isAccessMediaLocationEnabled": false
         }
       ],
       "expo-font",

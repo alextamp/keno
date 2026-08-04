@@ -1,20 +1,20 @@
 import React, { useState } from 'react';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import {
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable,
+  ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, Pressable,
   ScrollView, StyleSheet, Switch, Text, TextInput, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/core/theme';
-import { DrawFont, FontSize, FontWeight, Spacing, BorderRadius } from '@/core/constants/theme';
+import { UIFont, TitleFont, FontSize, FontWeight, Spacing, BorderRadius } from '@/core/constants/theme';
 import { useGroupsStore } from '@/features/groups/presentation/store/groups.store';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
-import { GROUP_COVER_COLORS } from '@/features/groups/domain/entities/group.entity';
+import { GROUP_COVER_COLORS, GROUP_EMOJI_OPTIONS } from '@/features/groups/domain/entities/group.entity';
 import { containsBlockedContent } from '@/core/utils/contentModeration';
+import { uploadGroupCoverPhoto } from '@/core/utils/uploadImage';
+import { pickImage } from '@/core/utils/imagePicker';
 import { useTranslation } from '@/core/i18n';
-
-const EMOJI_OPTIONS = ['🎓', '⚽', '☕', '🎨', '🎸', '📚', '🎮', '🏃', '🎭', '🌿', '🤝', '🧪'];
 
 export default function CreateGroupScreen() {
   const router = useRouter();
@@ -30,10 +30,17 @@ export default function CreateGroupScreen() {
   const [description, setDescription] = useState('');
   const [emoji, setEmoji] = useState('🎓');
   const [coverColor, setCoverColor] = useState(GROUP_COVER_COLORS[0]);
+  const [coverPhoto, setCoverPhoto] = useState<string | undefined>(undefined);
   const [universityName, setUniversityName] = useState(user?.universityName ?? '');
   const [isPrivate, setIsPrivate] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   const canSubmit = name.trim().length >= 3 && description.trim().length >= 10 && !isLoading;
+
+  const pickPhoto = async () => {
+    const uri = await pickImage({ aspect: [16, 9] });
+    if (uri) setCoverPhoto(uri);
+  };
 
   const handleCreate = async () => {
     if (!user || !canSubmit) return;
@@ -41,11 +48,23 @@ export default function CreateGroupScreen() {
       Alert.alert(t.groupLabelName, t.validContentBlocked);
       return;
     }
+    let finalCoverPhoto = coverPhoto;
+    if (coverPhoto && !coverPhoto.startsWith('http')) {
+      setIsUploadingPhoto(true);
+      try {
+        finalCoverPhoto = await uploadGroupCoverPhoto(coverPhoto);
+      } catch {
+        Alert.alert(t.profileAlertPhotoTitle, t.profileAlertPhotoBody);
+        finalCoverPhoto = undefined;
+      }
+      setIsUploadingPhoto(false);
+    }
     const group = await createGroup({
       name: name.trim(),
       description: description.trim(),
       emoji,
       coverColor,
+      coverPhotoUri: finalCoverPhoto,
       creatorId: user.id,
       universityName: universityName.trim() || undefined,
       isPrivate,
@@ -59,7 +78,7 @@ export default function CreateGroupScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12, borderBottomColor: colors.borderStrong }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 12, borderBottomColor: colors.border }]}>
         <AnimatedPressable onPress={() => router.back()} style={styles.backBtn}>
           <Text style={[styles.backText, { color: colors.textSecondary }]}>{t.editEventBack}</Text>
         </AnimatedPressable>
@@ -69,15 +88,33 @@ export default function CreateGroupScreen() {
 
       <ScrollView contentContainerStyle={[styles.form, { paddingBottom: insets.bottom + 24 }]} showsVerticalScrollIndicator={false}>
         {/* Preview banner */}
-        <View style={[styles.preview, { backgroundColor: coverColor, borderColor: colors.borderStrong }]}>
-          <Text style={styles.previewEmoji}>{emoji}</Text>
+        <View style={[styles.preview, { backgroundColor: coverColor, borderColor: colors.border }]}>
+          {coverPhoto && <Image source={{ uri: coverPhoto }} style={styles.previewPhoto} />}
+          {coverPhoto && <View style={styles.previewOverlay} />}
+          {!coverPhoto && <Text style={styles.previewEmoji}>{emoji}</Text>}
           <Text style={styles.previewName}>{name || t.groupPreviewName}</Text>
+        </View>
+
+        {/* Cover photo picker */}
+        <Text style={[styles.label, { color: colors.textPrimary }]}>{t.groupLabelPhoto}</Text>
+        <View style={styles.photoRow}>
+          <AnimatedPressable
+            onPress={pickPhoto}
+            style={[styles.photoBtn, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}
+          >
+            <Text style={[styles.photoBtnText, { color: colors.textPrimary }]}>{t.groupAddPhoto}</Text>
+          </AnimatedPressable>
+          {coverPhoto && (
+            <AnimatedPressable onPress={() => setCoverPhoto(undefined)} style={styles.photoRemoveBtn}>
+              <Text style={[styles.photoRemoveText, { color: colors.textHint }]}>{t.groupRemovePhoto}</Text>
+            </AnimatedPressable>
+          )}
         </View>
 
         {/* Emoji picker */}
         <Text style={[styles.label, { color: colors.textPrimary }]}>{t.groupLabelIcon}</Text>
         <View style={styles.emojiRow}>
-          {EMOJI_OPTIONS.map((e) => (
+          {GROUP_EMOJI_OPTIONS.map((e) => (
             <AnimatedPressable
               key={e}
               onPress={() => setEmoji(e)}
@@ -154,13 +191,13 @@ export default function CreateGroupScreen() {
 
         <AnimatedPressable
           onPress={handleCreate}
-          disabled={!canSubmit}
+          disabled={!canSubmit || isUploadingPhoto}
           style={[
             styles.submitBtn,
-            { backgroundColor: canSubmit ? colors.primary : colors.border, borderColor: colors.borderStrong },
+            { backgroundColor: canSubmit ? colors.primary : colors.border, borderColor: colors.border },
           ]}
         >
-          {isLoading ? (
+          {isLoading || isUploadingPhoto ? (
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.submitText}>{t.groupCreateBtn}</Text>
@@ -179,36 +216,46 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
   },
   backBtn: { width: 60 },
-  backText: { fontSize: FontSize.sm, fontFamily: DrawFont },
-  headerTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
+  backText: { fontSize: FontSize.sm, fontFamily: UIFont },
+  headerTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.extrabold, fontFamily: TitleFont },
   form: { padding: Spacing.lg, gap: Spacing.md },
   preview: {
-    height: 90, borderRadius: BorderRadius.xl, borderWidth: 2.5,
+    height: 90, borderRadius: BorderRadius.xl, borderWidth: 1,
     alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 4,
+    overflow: 'hidden',
   },
+  previewPhoto: { ...StyleSheet.absoluteFillObject },
+  previewOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.32)' },
   previewEmoji: { fontSize: 32 },
-  previewName: { color: '#fff', fontSize: FontSize.md, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
-  label: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: DrawFont, marginBottom: -4 },
+  previewName: { color: '#fff', fontSize: FontSize.md, fontWeight: FontWeight.extrabold, fontFamily: UIFont },
+  label: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont, marginBottom: -4 },
+  photoRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  photoBtn: {
+    paddingHorizontal: Spacing.md, paddingVertical: 10, borderRadius: BorderRadius.md, borderWidth: 1,
+  },
+  photoBtnText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
+  photoRemoveBtn: { paddingVertical: 10 },
+  photoRemoveText: { fontSize: FontSize.sm, fontFamily: UIFont },
   emojiRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  emojiBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'transparent' },
+  emojiBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'transparent' },
   emojiOpt: { fontSize: 22 },
   colorRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
   colorDot: { width: 32, height: 32, borderRadius: 16 },
   input: {
     height: 46, borderRadius: BorderRadius.lg, borderWidth: 1.5,
-    paddingHorizontal: Spacing.md, fontSize: FontSize.sm, fontFamily: DrawFont,
+    paddingHorizontal: Spacing.md, fontSize: FontSize.sm, fontFamily: UIFont,
   },
   textArea: { height: 90, paddingTop: 12, textAlignVertical: 'top' },
   toggleRow: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
     paddingVertical: Spacing.sm, borderBottomWidth: 1,
   },
-  toggleLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: DrawFont },
+  toggleLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
   toggleSub: { fontSize: FontSize.xs },
   error: { fontSize: FontSize.sm, textAlign: 'center' },
   submitBtn: {
-    height: 52, borderRadius: BorderRadius.full, borderWidth: 2.5,
+    height: 52, borderRadius: BorderRadius.full, borderWidth: 1,
     alignItems: 'center', justifyContent: 'center', marginTop: 4,
   },
-  submitText: { color: '#fff', fontSize: FontSize.md, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
+  submitText: { color: '#fff', fontSize: FontSize.md, fontWeight: FontWeight.extrabold, fontFamily: UIFont },
 });

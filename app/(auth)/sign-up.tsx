@@ -4,21 +4,22 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
+import { pickImage } from '@/core/utils/imagePicker';
 import { Link, useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Icon } from '@/components/ui/Icon';
 import { useTheme } from '@/core/theme';
-import { BorderRadius, DrawFont, FontSize, FontWeight, Spacing } from '@/core/constants/theme';
+import { BorderRadius, UIFont, UIFontLight, TitleFont, FontSize, FontWeight, Spacing } from '@/core/constants/theme';
 import {
   validateAge,
   validateGenericEmail,
@@ -28,6 +29,9 @@ import {
 } from '@/core/utils/validators';
 import { useTranslation, useLanguageStore } from '@/core/i18n';
 import { GREEK_UNIVERSITIES, universityLabel } from '@/core/constants/universities';
+
+const PRIVACY_POLICY_URL = 'https://alextamp.github.io/keno/docs/privacy/';
+const TERMS_URL = 'https://alextamp.github.io/keno/docs/terms/';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -47,7 +51,13 @@ export default function SignUpScreen() {
   const [age, setAge] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [noUniEmail, setNoUniEmail] = useState(false);
+  // True only when we auto-switched them here because their university
+  // email got declined (as opposed to them manually choosing "I don't have
+  // one") — drives which banner copy shows and whether a "try again" link
+  // to go back is offered.
+  const [emailDeclined, setEmailDeclined] = useState(false);
   const [idPhoto, setIdPhoto] = useState<string | undefined>();
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
@@ -55,14 +65,8 @@ export default function SignUpScreen() {
   const ageRef = useRef<TextInput>(null);
 
   const pickIdPhoto = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { Alert.alert(t.profileAlertPermTitle, t.profileAlertPermBody); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.8,
-    });
-    if (!result.canceled) setIdPhoto(result.assets[0].uri);
+    const uri = await pickImage();
+    if (uri) setIdPhoto(uri);
   };
 
   const validate = () => {
@@ -70,31 +74,47 @@ export default function SignUpScreen() {
     const nameCheck = validateName(name);
     const emailCheck = noUniEmail ? validateGenericEmail(email) : validateUniversityEmail(email);
     const passCheck = validatePassword(password);
-    const ageCheck = validateAge(age);
+    const ageCheck = age.trim() ? validateAge(age) : { isValid: true };
 
     if (!nameCheck.isValid) errors.name = nameCheck.errorMessage!;
     if (!emailCheck.isValid) errors.email = emailCheck.errorMessage!;
     if (!passCheck.isValid) errors.password = passCheck.errorMessage!;
-    if (!universityName.trim()) errors.universityName = t.authUniRequired;
-    if (!department.trim()) errors.department = t.authDeptRequired;
-    if (!ageCheck.isValid) errors.age = ageCheck.errorMessage!;
+    if (age.trim() && !ageCheck.isValid) errors.age = ageCheck.errorMessage!;
     if (noUniEmail && !idPhoto) errors.idPhoto = t.authIdPhotoRequired;
+    if (!agreedToTerms) errors.terms = t.authTermsRequired;
 
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
+  // If they're still on the university-email path and it just failed
+  // (unrecognized domain, or not a .gr address at all), don't dead-end them
+  // on a red error — switch them to the ID-photo fallback automatically so
+  // "declined" always has a next step. An empty field isn't a decline,
+  // it's just an incomplete form, so that still falls through to validate()
+  // and shows the normal "required" error instead.
   const handleSignUp = async () => {
     clearError();
+
+    if (!noUniEmail && email.trim() && !validateUniversityEmail(email).isValid) {
+      setNoUniEmail(true);
+      setEmailDeclined(true);
+      setFieldErrors((prev) => {
+        const { email: _omit, ...rest } = prev;
+        return rest;
+      });
+      return;
+    }
+
     if (!validate()) return;
 
     const success = await signUp({
       name: name.trim(),
       email: email.trim().toLowerCase(),
       password,
-      universityName: universityName.trim(),
-      department: department.trim(),
-      age: Number(age.trim()),
+      universityName: universityName.trim() || undefined,
+      department: department.trim() || undefined,
+      age: age.trim() ? Number(age.trim()) : undefined,
       idPhotoUri: noUniEmail ? idPhoto : undefined,
     });
 
@@ -114,16 +134,16 @@ export default function SignUpScreen() {
       >
         <View style={styles.header}>
           <Link href="/(auth)/sign-in" asChild>
-            <AnimatedPressable style={[styles.backBtn, { borderColor: colors.borderStrong }]}>
-              <Text style={[styles.backText, { fontFamily: DrawFont, color: colors.primary }]}>{t.editEventBack}</Text>
+            <AnimatedPressable style={[styles.backBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Icon name="back" size={16} color={colors.textPrimary} />
             </AnimatedPressable>
           </Link>
           <Text style={[styles.title, { color: colors.textPrimary }]}>{t.authSignUpTitle}</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t.authSignUpSubtitle}</Text>
+          <Text style={[styles.subtitle, { color: colors.textHint }]}>{t.authSignUpSubtitle}</Text>
         </View>
 
         {error && (
-          <View style={[styles.errorBanner, { borderColor: colors.borderStrong }]}>
+          <View style={[styles.errorBanner, { borderColor: colors.error }]}>
             <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
           </View>
         )}
@@ -154,15 +174,29 @@ export default function SignUpScreen() {
             hint={noUniEmail ? t.authGenericEmailHint : t.authUniHint}
             onSubmitEditing={() => passwordRef.current?.focus()}
           />
-          <AnimatedPressable onPress={() => setNoUniEmail((v) => !v)} style={styles.toggleLink}>
+          <AnimatedPressable
+            onPress={() => { setNoUniEmail((v) => !v); setEmailDeclined(false); }}
+            style={styles.toggleLink}
+          >
             <Text style={[styles.toggleLinkText, { color: colors.primary }]}>
               {noUniEmail ? t.authUseUniEmailLink : t.authNoUniEmailLink}
             </Text>
           </AnimatedPressable>
           {noUniEmail && (
-            <View style={[styles.noUniBanner, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
-              <Text style={[styles.noUniBannerText, { color: colors.textSecondary }]}>{t.authNoUniEmailBanner}</Text>
+            <View style={[styles.noUniBanner, { backgroundColor: emailDeclined ? colors.error + '15' : colors.accentSoft }]}>
+              <Icon name={emailDeclined ? 'alert' : 'shield'} size={15} color={emailDeclined ? colors.error : colors.accentInk} />
+              <Text style={[styles.noUniBannerText, { color: emailDeclined ? colors.error : colors.accentInk }]}>
+                {emailDeclined ? t.authEmailDeclinedBanner : t.authNoUniEmailBanner}
+              </Text>
             </View>
+          )}
+          {emailDeclined && (
+            <AnimatedPressable
+              onPress={() => { setNoUniEmail(false); setEmailDeclined(false); }}
+              style={styles.toggleLink}
+            >
+              <Text style={[styles.toggleLinkText, { color: colors.primary }]}>{t.authEmailDeclinedTryAgain}</Text>
+            </AnimatedPressable>
           )}
           <Input
             ref={passwordRef}
@@ -176,9 +210,14 @@ export default function SignUpScreen() {
             error={fieldErrors.password}
             onSubmitEditing={() => deptRef.current?.focus()}
           />
-          {/* University chips */}
+          {/* University chips — a small fixed list of Greek universities reads
+              better as tappable chips than mockup 02's free-text search
+              field; keeping that, just fixing the label to the spec's
+              uppercase "ΠΑΝΕΠΙΣΤΗΜΙΟ" micro-label treatment. */}
           <View style={styles.pickerField}>
-            <Text style={[styles.pickerLabel, { color: colors.textPrimary }]}>{t.authUniLabel}</Text>
+            <Text style={[styles.pickerLabel, { color: colors.textDecor }]}>
+              {t.authUniLabel.toUpperCase()} <Text style={{ color: colors.textHint, textTransform: 'none' }}>(optional)</Text>
+            </Text>
             {!!fieldErrors.universityName && (
               <Text style={[styles.pickerError, { color: colors.error }]}>{fieldErrors.universityName}</Text>
             )}
@@ -189,9 +228,13 @@ export default function SignUpScreen() {
                   <AnimatedPressable
                     key={u}
                     onPress={() => setUniversityName(u)}
-                    style={[styles.uniChip, { borderColor: colors.borderStrong, backgroundColor: selected ? colors.primary : colors.surface, marginRight: 8, marginBottom: 8 }]}
+                    style={[styles.uniChip, {
+                      borderColor: selected ? colors.primary : colors.border,
+                      backgroundColor: selected ? colors.accentSoft : colors.surface,
+                      marginRight: 8, marginBottom: 8,
+                    }]}
                   >
-                    <Text style={[styles.uniChipText, { color: selected ? '#fff' : colors.textSecondary }]}>{universityLabel(u, language)}</Text>
+                    <Text style={[styles.uniChipText, { color: selected ? colors.accentInk : colors.textSecondary }]}>{universityLabel(u, language)}</Text>
                   </AnimatedPressable>
                 );
               })}
@@ -199,7 +242,7 @@ export default function SignUpScreen() {
           </View>
           <Input
             ref={deptRef}
-            label={t.authDeptLabel}
+            label={`${t.authDeptLabel} (optional)`}
             value={department}
             onChangeText={setDepartment}
             placeholder="Computer Science"
@@ -210,7 +253,7 @@ export default function SignUpScreen() {
           />
           <Input
             ref={ageRef}
-            label={t.authAgeLabel}
+            label={`${t.authAgeLabel} (optional)`}
             value={age}
             onChangeText={(v) => setAge(v.replace(/[^0-9]/g, ''))}
             placeholder="20"
@@ -222,7 +265,7 @@ export default function SignUpScreen() {
 
           {noUniEmail && (
             <View style={styles.pickerField}>
-              <Text style={[styles.pickerLabel, { color: colors.textPrimary }]}>{t.authIdPhotoLabel}</Text>
+              <Text style={[styles.pickerLabel, { color: colors.textDecor }]}>{t.authIdPhotoLabel.toUpperCase()}</Text>
               <Text style={[styles.idPhotoHint, { color: colors.textSecondary }]}>{t.authIdPhotoHint}</Text>
               {!!fieldErrors.idPhoto && (
                 <Text style={[styles.pickerError, { color: colors.error }]}>{fieldErrors.idPhoto}</Text>
@@ -232,13 +275,38 @@ export default function SignUpScreen() {
               )}
               <AnimatedPressable
                 onPress={pickIdPhoto}
-                style={[styles.idPhotoBtn, { borderColor: colors.borderStrong, backgroundColor: colors.surface }]}
+                style={[styles.idPhotoBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
               >
                 <Text style={[styles.idPhotoBtnText, { color: colors.primary }]}>
                   {idPhoto ? t.authIdPhotoBtnChange : t.authIdPhotoBtnAdd}
                 </Text>
               </AnimatedPressable>
             </View>
+          )}
+
+          <View style={styles.termsRow}>
+            <AnimatedPressable
+              onPress={() => setAgreedToTerms((v) => !v)}
+              style={[
+                styles.checkbox,
+                { borderColor: agreedToTerms ? colors.primary : colors.border, backgroundColor: agreedToTerms ? colors.primary : 'transparent' },
+              ]}
+            >
+              {agreedToTerms && <Icon name="check" size={13} color="#fff" />}
+            </AnimatedPressable>
+            <Text style={[styles.termsText, { color: colors.textSecondary }]}>
+              {t.authTermsPrefix}{' '}
+              <Text style={[styles.termsLink, { color: colors.primary }]} onPress={() => Linking.openURL(TERMS_URL)}>
+                {t.termsOfService}
+              </Text>
+              {' '}{t.authTermsAnd}{' '}
+              <Text style={[styles.termsLink, { color: colors.primary }]} onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}>
+                {t.privacyPolicy}
+              </Text>
+            </Text>
+          </View>
+          {!!fieldErrors.terms && (
+            <Text style={[styles.pickerError, { color: colors.error }]}>{fieldErrors.terms}</Text>
           )}
 
           <Button
@@ -272,42 +340,45 @@ const styles = StyleSheet.create({
     gap: Spacing.xl,
   },
   header: { gap: Spacing.xs },
-  backBtn: { alignSelf: 'flex-start', marginBottom: Spacing.sm, borderWidth: 2, borderRadius: BorderRadius.full, paddingHorizontal: Spacing.md, paddingVertical: 6 },
-  backText: {
-    fontSize: FontSize.md,
-    fontWeight: FontWeight.bold,
-  },
+  backBtn: { alignSelf: 'flex-start', marginBottom: Spacing.sm, width: 32, height: 32, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   title: {
-    fontSize: 28,
-    fontWeight: FontWeight.extrabold,
-    fontFamily: DrawFont,
+    fontSize: FontSize.display,
+    fontWeight: FontWeight.bold,
+    fontFamily: TitleFont,
+    letterSpacing: -0.5,
   },
-  subtitle: { fontSize: FontSize.md },
+  subtitle: { fontSize: FontSize.base, fontFamily: UIFontLight },
   form: { gap: Spacing.md },
   errorBanner: {
     backgroundColor: '#FEF2F2',
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
-    borderWidth: 2.5,
+    borderWidth: 1,
   },
   errorText: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.medium,
   },
   pickerField: { gap: 8 },
-  pickerLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
+  pickerLabel: { fontSize: FontSize.xs, fontWeight: FontWeight.bold, fontFamily: UIFont, letterSpacing: 1.4 },
   pickerError: { fontSize: FontSize.xs, fontWeight: FontWeight.medium },
   toggleLink: { alignSelf: 'flex-start', paddingVertical: 2 },
-  toggleLinkText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: DrawFont },
-  noUniBanner: { borderRadius: BorderRadius.md, borderWidth: 1.5, padding: Spacing.sm, marginTop: 4 },
-  noUniBannerText: { fontSize: FontSize.xs, lineHeight: 17 },
+  toggleLinkText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
+  // Warm Paper "note" box (spec §4 / mockup 02's ID-verification-fallback
+  // note): accent.soft bg, shield icon, accent.ink text — no border.
+  noUniBanner: { flexDirection: 'row', gap: 9, alignItems: 'flex-start', borderRadius: BorderRadius.md, padding: Spacing.md, marginTop: 4 },
+  noUniBannerText: { flex: 1, fontSize: FontSize.xs, lineHeight: 17 },
   idPhotoHint: { fontSize: FontSize.xs, lineHeight: 16 },
   idPhotoPreview: { width: '100%', height: 160, borderRadius: BorderRadius.md },
-  idPhotoBtn: { alignSelf: 'flex-start', borderWidth: 2, borderRadius: BorderRadius.full, paddingHorizontal: Spacing.md, paddingVertical: 8 },
-  idPhotoBtnText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: DrawFont },
+  idPhotoBtn: { alignSelf: 'flex-start', borderWidth: 1, borderRadius: BorderRadius.md, paddingHorizontal: Spacing.md, paddingVertical: 8 },
+  idPhotoBtnText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
   uniGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  uniChip: { paddingHorizontal: Spacing.md, paddingVertical: 10, borderRadius: BorderRadius.md, borderWidth: 2.5 },
-  uniChipText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: DrawFont },
+  termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm, marginTop: 4 },
+  checkbox: { width: 20, height: 20, borderRadius: 5, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  termsText: { flex: 1, fontSize: FontSize.sm, fontFamily: UIFontLight, lineHeight: 19 },
+  termsLink: { fontWeight: FontWeight.bold },
+  uniChip: { paddingHorizontal: Spacing.md, paddingVertical: 10, borderRadius: BorderRadius.md, borderWidth: 1 },
+  uniChipText: { fontSize: FontSize.sm, fontWeight: FontWeight.medium, fontFamily: UIFont },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -318,6 +389,6 @@ const styles = StyleSheet.create({
   footerLink: {
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
-    fontFamily: DrawFont,
+    fontFamily: UIFont,
   },
 });

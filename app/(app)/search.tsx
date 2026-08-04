@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import {
-  ActivityIndicator, FlatList, Image, Pressable,
+  ActivityIndicator, FlatList, Image,
   StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import {
@@ -13,11 +13,14 @@ import { useRouter } from 'expo-router';
 import { useTabNavigation } from '@/core/tabNavigation';
 import { db } from '@/lib/firebase';
 import { useTheme } from '@/core/theme';
-import { DrawFont, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@/core/constants/theme';
+import { UIFont, UIFontLight, FontSize, FontWeight, Spacing, BorderRadius } from '@/core/constants/theme';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { haptics } from '@/core/utils/haptics';
 import { useTranslation, useLanguageStore } from '@/core/i18n';
 import { universityLabel } from '@/core/constants/universities';
+import { Icon } from '@/components/ui/Icon';
+import { Button } from '@/components/ui/Button';
+import { SectionLabel } from '@/components/ui/SectionLabel';
 
 interface UserResult {
   uid: string;
@@ -29,6 +32,18 @@ interface UserResult {
   bio?: string;
   followersCount: number;
   eventsCount: number;
+  profileVisibility?: 'students' | 'connections';
+  followers: string[];
+  following: string[];
+}
+
+// "Ποιοι με βλέπουν" (Settings → who can see me): 'connections' restricts a
+// profile to people it has a *mutual* follow with — one-way followers don't
+// count, matching how Connections is defined on the profile screen.
+function isVisibleTo(result: UserResult, viewerUid: string | undefined): boolean {
+  if (!viewerUid || result.uid === viewerUid) return true;
+  if (result.profileVisibility !== 'connections') return true;
+  return result.followers.includes(viewerUid) && result.following.includes(viewerUid);
 }
 
 async function searchUsers(q: string): Promise<UserResult[]> {
@@ -52,11 +67,14 @@ async function searchUsers(q: string): Promise<UserResult[]> {
           name: data.name ?? '',
           universityName: data.universityName ?? '',
           department: data.department ?? '',
-          avatarColor: data.avatarColor ?? '#C94D0A',
+          avatarColor: data.avatarColor ?? '#B8482A',
           photoUri: data.photoUri,
           bio: data.bio,
           followersCount: (data.followers ?? []).length,
           eventsCount: (data.joinedEvents ?? []).length,
+          profileVisibility: data.profileVisibility,
+          followers: data.followers ?? [],
+          following: data.following ?? [],
         };
       });
     }
@@ -73,11 +91,14 @@ async function searchUsers(q: string): Promise<UserResult[]> {
         name: data.name ?? '',
         universityName: data.universityName ?? '',
         department: data.department ?? '',
-        avatarColor: data.avatarColor ?? '#C94D0A',
+        avatarColor: data.avatarColor ?? '#B8482A',
         photoUri: data.photoUri,
         bio: data.bio,
         followersCount: (data.followers ?? []).length,
         eventsCount: (data.joinedEvents ?? []).length,
+        profileVisibility: data.profileVisibility,
+        followers: data.followers ?? [],
+        following: data.following ?? [],
       };
     })
     .filter((u) =>
@@ -88,7 +109,7 @@ async function searchUsers(q: string): Promise<UserResult[]> {
     .slice(0, 30);
 }
 
-function UserCard({ result, isMe, isFollowing, onPress, onFollow, followLabel, followingLabel, userMetaLabel }: {
+function UserCard({ result, isMe, isFollowing, onPress, onFollow, followLabel, followingLabel }: {
   result: UserResult;
   isMe: boolean;
   isFollowing: boolean;
@@ -96,44 +117,36 @@ function UserCard({ result, isMe, isFollowing, onPress, onFollow, followLabel, f
   onFollow: () => void;
   followLabel: string;
   followingLabel: string;
-  userMetaLabel: string;
 }) {
   const { colors } = useTheme();
   const { language } = useLanguageStore();
   const initials = result.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 
   return (
-    <AnimatedPressable onPress={onPress} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderStrong }]}>
+    <AnimatedPressable onPress={onPress} style={styles.card}>
       <View style={styles.cardLeft}>
         {result.photoUri ? (
-          <Image source={{ uri: result.photoUri }} style={[styles.avatar, { borderColor: colors.border }]} />
+          <Image source={{ uri: result.photoUri }} style={styles.avatar} />
         ) : (
-          <View style={[styles.avatar, { backgroundColor: result.avatarColor, borderColor: colors.border }]}>
+          <View style={[styles.avatar, { backgroundColor: result.avatarColor }]}>
             <Text style={styles.avatarInitials}>{initials}</Text>
           </View>
         )}
         <View style={styles.cardInfo}>
           <Text style={[styles.cardName, { color: colors.textPrimary }]} numberOfLines={1}>{result.name}</Text>
-          <Text style={[styles.cardUni, { color: colors.textSecondary }]} numberOfLines={1}>
-            🎓 {universityLabel(result.universityName, language)}
-          </Text>
-          <Text style={[styles.cardMeta, { color: colors.textHint }]}>
-            {userMetaLabel}
+          <Text style={[styles.cardUni, { color: colors.textHint }]} numberOfLines={1}>
+            {universityLabel(result.universityName, language)}
           </Text>
         </View>
       </View>
       {!isMe && (
-        <AnimatedPressable
-          onPress={(e) => { e.stopPropagation?.(); onFollow(); }}
-          style={[styles.followBtn, {
-            backgroundColor: isFollowing ? colors.surfaceVariant : colors.primary,
-            borderColor: colors.borderStrong,
-          }]}
-        >
-          <Text style={[styles.followBtnText, { color: isFollowing ? colors.textPrimary : '#fff' }]}>
-            {isFollowing ? followingLabel : followLabel}
-          </Text>
-        </AnimatedPressable>
+        <Button
+          label={isFollowing ? followingLabel : followLabel}
+          variant={isFollowing ? 'outline' : 'primary'}
+          size="sm"
+          shape="pill"
+          onPress={onFollow}
+        />
       )}
     </AnimatedPressable>
   );
@@ -160,10 +173,10 @@ export default function SearchScreen() {
     debounceRef.current = setTimeout(async () => {
       setIsSearching(true);
       const found = await searchUsers(query_);
-      setResults(found);
+      setResults(found.filter((r) => isVisibleTo(r, user?.id)));
       setIsSearching(false);
     }, 350);
-  }, [query_]);
+  }, [query_, user?.id]);
 
   const handleFollow = async (result: UserResult) => {
     if (!user) return;
@@ -179,12 +192,12 @@ export default function SearchScreen() {
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12, borderBottomColor: colors.borderStrong }]}>
-        <AnimatedPressable onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={[styles.backText, { color: colors.textSecondary }]}>←</Text>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <AnimatedPressable onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Icon name="back" size={16} color={colors.textPrimary} />
         </AnimatedPressable>
-        <View style={[styles.searchBox, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
-          <Text style={styles.searchIcon}>🔍</Text>
+        <View style={[styles.searchBox, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
+          <Icon name="search" size={15} color={colors.textHint} />
           <TextInput
             style={[styles.searchInput, { color: colors.textPrimary }]}
             placeholder={t.searchPlaceholder}
@@ -196,8 +209,8 @@ export default function SearchScreen() {
             returnKeyType="search"
           />
           {query_.length > 0 && (
-            <AnimatedPressable onPress={() => setQuery_('')}>
-              <Text style={[styles.clearIcon, { color: colors.textHint }]}>✕</Text>
+            <AnimatedPressable onPress={() => setQuery_('')} hitSlop={8}>
+              <Icon name="x" size={14} color={colors.textHint} />
             </AnimatedPressable>
           )}
         </View>
@@ -211,12 +224,12 @@ export default function SearchScreen() {
         <View style={styles.empty}>
           {query_.trim().length < 2 ? (
             <>
-              <Text style={styles.emptyEmoji}>👥</Text>
+              <Icon name="users" size={40} color={colors.textDecor} />
               <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{t.searchEmptyHint}</Text>
             </>
           ) : (
             <>
-              <Text style={styles.emptyEmoji}>🤷</Text>
+              <Icon name="search" size={40} color={colors.textDecor} />
               <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{t.searchNotFound(query_)}</Text>
             </>
           )}
@@ -226,6 +239,7 @@ export default function SearchScreen() {
           data={results}
           keyExtractor={(item) => item.uid}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 48 }]}
+          ListHeaderComponent={<SectionLabel label={t.searchPeopleLabel} style={styles.sectionLabel} />}
           renderItem={({ item }) => (
             <UserCard
               result={item}
@@ -242,7 +256,6 @@ export default function SearchScreen() {
               onFollow={() => handleFollow(item)}
               followLabel={t.searchFollow}
               followingLabel={t.searchFollowing}
-              userMetaLabel={t.searchUserMeta(item.followersCount, item.eventsCount)}
             />
           )}
         />
@@ -253,27 +266,21 @@ export default function SearchScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  header: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md, borderBottomWidth: 2, flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  backBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  backText: { fontSize: 22, fontWeight: FontWeight.bold },
-  searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', borderRadius: BorderRadius.full, borderWidth: 1.5, paddingHorizontal: Spacing.md, height: 42, gap: 8 },
-  searchIcon: { fontSize: 14 },
-  searchInput: { flex: 1, fontSize: FontSize.sm },
-  clearIcon: { fontSize: 14, paddingLeft: 4 },
-  list: { padding: Spacing.lg, gap: Spacing.sm },
+  header: { paddingHorizontal: Spacing.gutter, paddingBottom: Spacing.md, flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  backBtn: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', borderRadius: BorderRadius.md, borderWidth: 1, paddingHorizontal: Spacing.md, height: 42, gap: 8 },
+  searchInput: { flex: 1, fontSize: FontSize.base, fontFamily: UIFontLight },
+  list: { padding: Spacing.gutter, gap: Spacing.sm },
+  sectionLabel: { marginBottom: Spacing.xs },
   loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: Spacing.xl },
-  emptyEmoji: { fontSize: 48 },
-  emptyText: { fontSize: FontSize.md, textAlign: 'center', lineHeight: 22 },
+  emptyText: { fontSize: FontSize.base, fontFamily: UIFontLight, textAlign: 'center', lineHeight: 21 },
   // Card
-  card: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md, borderRadius: BorderRadius.xl, borderWidth: 2.5, ...Shadow.sm },
+  card: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 11 },
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, flex: 1, overflow: 'hidden' },
-  avatar: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 },
-  avatarInitials: { color: '#fff', fontSize: FontSize.md, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
+  avatar: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 },
+  avatarInitials: { color: '#fff', fontSize: FontSize.base, fontWeight: FontWeight.bold, fontFamily: UIFont },
   cardInfo: { flex: 1 },
-  cardName: { fontSize: FontSize.md, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
-  cardUni: { fontSize: FontSize.xs },
-  cardMeta: { fontSize: FontSize.xs, marginTop: 2 },
-  followBtn: { paddingHorizontal: Spacing.md, paddingVertical: 8, borderRadius: BorderRadius.full, borderWidth: 2, flexShrink: 0 },
-  followBtnText: { fontSize: FontSize.xs, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
+  cardName: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, fontFamily: UIFont },
+  cardUni: { fontSize: FontSize.sm, fontFamily: UIFontLight, marginTop: 1 },
 });

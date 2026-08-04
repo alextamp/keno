@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useTheme } from '@/core/theme';
-import { BorderRadius, DrawFont, FontSize, FontWeight, Shadow, Spacing } from '@/core/constants/theme';
+import { BorderRadius, UIFont, FontSize, FontWeight, Spacing } from '@/core/constants/theme';
 import { usePressAnimation } from '@/core/hooks/usePressAnimation';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -17,7 +17,9 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 interface ButtonProps {
   label: string;
   onPress: () => void;
-  variant?: 'primary' | 'outline' | 'ghost';
+  /** primary = accent fill; outline/ghost = 1px border, transparent;
+   *  soft = accent.soft fill + accent.ink text (mockup .btn.gh2). */
+  variant?: 'primary' | 'outline' | 'ghost' | 'soft';
   size?: 'sm' | 'md' | 'lg';
   /** 'rounded' (default) for standard CTAs, 'pill' for fully-rounded action
    *  chips (Follow, Join/Leave), 'circle' for a fixed-size icon-only button
@@ -31,17 +33,17 @@ interface ButtonProps {
 }
 
 const SIZE_STYLES: Record<string, ViewStyle> = {
-  sm: { paddingHorizontal: Spacing.md, paddingVertical: 6, minHeight: 36 },
-  md: { paddingHorizontal: Spacing.lg, paddingVertical: 12, minHeight: 50 },
-  lg: { paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, minHeight: 58 },
+  sm: { paddingHorizontal: Spacing.base, paddingVertical: 8, minHeight: 36 },
+  md: { paddingHorizontal: Spacing.lg, paddingVertical: 13, minHeight: 46 },
+  lg: { paddingHorizontal: Spacing.gutter, paddingVertical: 15, minHeight: 52 },
 };
 
-const CIRCLE_DIAMETERS: Record<string, number> = { sm: 36, md: 44, lg: 52 };
+const CIRCLE_DIAMETERS: Record<string, number> = { sm: 34, md: 42, lg: 50 };
 
 const LABEL_SIZES: Record<string, TextStyle> = {
-  sm: { fontSize: FontSize.sm },
-  md: { fontSize: FontSize.base },
-  lg: { fontSize: FontSize.lg },
+  sm: { fontSize: 12.5 },
+  md: { fontSize: FontSize.lg },
+  lg: { fontSize: FontSize.xl },
 };
 
 export function Button({
@@ -58,16 +60,19 @@ export function Button({
 }: ButtonProps) {
   const { colors } = useTheme();
   const isDisabled = disabled || loading;
-  const { animatedStyle, onPressIn, onPressOut } = usePressAnimation(0.95);
+  const { animatedStyle, onPressIn, onPressOut } = usePressAnimation(0.97);
 
   const variantStyle: ViewStyle =
     variant === 'primary'
-      ? { backgroundColor: colors.primary, borderColor: colors.borderStrong, borderWidth: 2.5 }
+      ? { backgroundColor: colors.primary }
+      : variant === 'soft'
+      ? { backgroundColor: colors.accentSoft }
       : variant === 'outline'
-      ? { backgroundColor: 'transparent', borderColor: colors.borderStrong, borderWidth: 2.5 }
+      ? { backgroundColor: 'transparent', borderColor: colors.border, borderWidth: 1 }
       : { backgroundColor: 'transparent' };
 
-  const labelColor = variant === 'primary' ? '#FFFFFF' : colors.primary;
+  const labelColor =
+    variant === 'primary' ? '#FFFFFF' : variant === 'soft' ? colors.accentInk : colors.primary;
 
   const shapeStyle: ViewStyle =
     shape === 'pill'
@@ -88,11 +93,7 @@ export function Button({
         SIZE_STYLES[size],
         shapeStyle,
         fullWidth && styles.fullWidth,
-        // The offset "stamp" shadow only reads correctly against a solid
-        // fill — on outline/ghost buttons (transparent background) it just
-        // looks like a stray shadow floating behind the text.
-        variant === 'primary' && (Shadow.sm as ViewStyle),
-        isDisabled && styles.pressed,
+        isDisabled && styles.disabled,
         animatedStyle,
         style,
       ]}
@@ -100,7 +101,7 @@ export function Button({
       {loading ? (
         <ActivityIndicator size="small" color={labelColor} />
       ) : (
-        <Text style={[styles.label, { color: labelColor }, LABEL_SIZES[size], labelStyle]}>
+        <Text numberOfLines={1} style={[styles.label, { color: labelColor }, LABEL_SIZES[size], labelStyle]}>
           {label}
         </Text>
       )}
@@ -115,6 +116,6 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
   },
   fullWidth: { width: '100%' },
-  pressed: { opacity: 0.72, transform: [{ scale: 0.97 }] },
-  label: { fontWeight: FontWeight.bold, fontFamily: DrawFont },
+  disabled: { opacity: 0.5 },
+  label: { fontWeight: FontWeight.bold, fontFamily: UIFont },
 });

@@ -1,6 +1,6 @@
 import {
   addDoc, arrayRemove, arrayUnion,
-  collection, doc, getDoc, onSnapshot,
+  collection, deleteField, doc, getDoc, onSnapshot,
   orderBy, query, Timestamp, updateDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -17,9 +17,38 @@ function fromDoc(snap: { id: string; data(): Record<string, any> }): ChatMessage
     id: snap.id,
     userId: d.userId,
     text: d.text,
+    imageUri: d.imageUri,
     timestamp: d.timestamp?.toDate() ?? new Date(),
     reactions: d.reactions ?? {},
+    editedAt: d.editedAt?.toDate(),
+    isDeleted: d.isDeleted ?? false,
   };
+}
+
+async function notifyEventMessage(eventId: string, userId: string): Promise<void> {
+  try {
+    const [eventSnap, userSnap] = await Promise.all([
+      getDoc(doc(db, 'events', eventId)),
+      getDoc(doc(db, 'users', userId)),
+    ]);
+    if (!eventSnap.exists() || !userSnap.exists()) return;
+    const eventData = eventSnap.data();
+    const creatorId = eventData.creatorId as string;
+    if (creatorId === userId) return;
+    const userData = userSnap.data();
+    await notificationsRepository.create({
+      toUid: creatorId,
+      fromUid: userId,
+      fromName: userData.name ?? 'Someone',
+      fromAvatarColor: userData.avatarColor,
+      fromPhotoUri: userData.photoUri,
+      type: 'event_message',
+      eventId,
+      eventTitle: eventData.title,
+    });
+  } catch {
+    // Best-effort — a failed notification should never block the message send.
+  }
 }
 
 export const chatRepository = {
@@ -35,29 +64,18 @@ export const chatRepository = {
       timestamp: Timestamp.now(),
       reactions: {},
     });
+    await notifyEventMessage(eventId, userId);
+  },
 
-    try {
-      const [eventSnap, userSnap] = await Promise.all([
-        getDoc(doc(db, 'events', eventId)),
-        getDoc(doc(db, 'users', userId)),
-      ]);
-      if (!eventSnap.exists() || !userSnap.exists()) return;
-      const eventData = eventSnap.data();
-      const creatorId = eventData.creatorId as string;
-      if (creatorId === userId) return;
-      const userData = userSnap.data();
-      await notificationsRepository.create({
-        toUid: creatorId,
-        fromUid: userId,
-        fromName: userData.name ?? 'Someone',
-        fromAvatarColor: userData.avatarColor,
-        type: 'event_message',
-        eventId,
-        eventTitle: eventData.title,
-      });
-    } catch {
-      // Best-effort — a failed notification should never block the message send.
-    }
+  async sendImageMessage(eventId: string, userId: string, imageUri: string): Promise<void> {
+    await addDoc(msgPath(eventId), {
+      userId,
+      text: '',
+      imageUri,
+      timestamp: Timestamp.now(),
+      reactions: {},
+    });
+    await notifyEventMessage(eventId, userId);
   },
 
   async reactToMessage(eventId: string, messageId: string, userId: string, emoji: string): Promise<void> {
@@ -75,6 +93,16 @@ export const chatRepository = {
     await updateDoc(ref, {
       [`reactions.${emoji}`]: arrayRemove(userId),
     });
+  },
+
+  async editMessage(eventId: string, messageId: string, text: string): Promise<void> {
+    const ref = doc(db, 'events', eventId, 'messages', messageId);
+    await updateDoc(ref, { text: text.trim(), editedAt: Timestamp.now() });
+  },
+
+  async deleteMessage(eventId: string, messageId: string): Promise<void> {
+    const ref = doc(db, 'events', eventId, 'messages', messageId);
+    await updateDoc(ref, { isDeleted: true, text: deleteField(), imageUri: deleteField() });
   },
 
   setTyping(eventId: string, userId: string, isTyping: boolean): void {

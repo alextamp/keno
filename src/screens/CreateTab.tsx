@@ -1,19 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import {
-  Alert, Image, KeyboardAvoidingView, Platform, Pressable,
+  Alert, Image, KeyboardAvoidingView, Platform,
   ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import { useTabNavigation } from '@/core/tabNavigation';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import * as ImagePicker from 'expo-image-picker';
+import { pickImage as pickPhoto } from '@/core/utils/imagePicker';
 import { format } from 'date-fns';
 import { useTheme } from '@/core/theme';
-import { BorderRadius, DrawFont, FontSize, FontWeight, Shadow, Spacing } from '@/core/constants/theme';
+import { BorderRadius, UIFont, UIFontLight, TitleFont, FontSize, FontWeight, Spacing } from '@/core/constants/theme';
 import { TAB_BAR_BASE_HEIGHT } from '@/core/constants/layout';
 import { EventCategory, GenderFilter } from '@/features/events/domain/entities/event.entity';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
@@ -25,9 +24,14 @@ import { uploadEventImage } from '@/core/utils/uploadImage';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { CategoryChip } from '@/components/ui/CategoryChip';
+import { Icon } from '@/components/ui/Icon';
+import { Card } from '@/components/ui/Card';
+import { DuotoneScene } from '@/components/ui/DuotoneScene';
+import { ProgressTrack } from '@/components/ui/ProgressTrack';
 import { useGroupsStore } from '@/features/groups/presentation/store/groups.store';
 import { groupsRepository } from '@/features/groups/data/repositories/groups.repository.impl';
 import { useTranslation, useLanguageStore, getDateLocale } from '@/core/i18n';
+import { analytics } from '@/core/utils/analytics';
 import { GREEK_UNIVERSITIES, universityLabel } from '@/core/constants/universities';
 
 const UNIVERSITIES = ['Any', ...GREEK_UNIVERSITIES];
@@ -39,8 +43,36 @@ function nextHour(): Date {
   return d;
 }
 
+// `plain` drops the row's own border/background so it can sit as one of
+// several dividered rows inside a parent Card (spec §6 "restriction rows in
+// a bordered card", mockup 15's ΠΕΡΙΟΡΙΣΜΟΙ card).
+function ToggleRow({
+  icon, label, hint, on, onPress, plain = false,
+}: { icon: 'lock' | 'zap' | 'users'; label: string; hint: string; on: boolean; onPress: () => void; plain?: boolean }) {
+  const { colors } = useTheme();
+  return (
+    <AnimatedPressable
+      onPress={onPress}
+      style={[
+        styles.toggleRow,
+        plain
+          ? styles.toggleRowPlain
+          : { borderWidth: 1, borderRadius: BorderRadius.lg, padding: Spacing.md, backgroundColor: on ? colors.accentSoft : colors.surface, borderColor: on ? colors.primary : colors.border },
+      ]}
+    >
+      <Icon name={icon} size={17} color={on ? colors.primary : colors.textSecondary} />
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.toggleLabel, { color: on ? colors.accentInk : colors.textPrimary }]}>{label}</Text>
+        <Text style={[styles.toggleHint, { color: on ? colors.accentInk : colors.textHint }]}>{hint}</Text>
+      </View>
+      <View style={[styles.toggleSwitch, { backgroundColor: on ? colors.primary : colors.surfaceVariant }]}>
+        <View style={[styles.toggleKnob, { alignSelf: on ? 'flex-end' : 'flex-start' }]} />
+      </View>
+    </AnimatedPressable>
+  );
+}
+
 export default function CreateEventScreen() {
-  const router = useRouter();
   const { goToTab } = useTabNavigation();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -57,6 +89,7 @@ export default function CreateEventScreen() {
   ];
 
   const [step, setStep] = useState<1 | 2>(1);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   // Step 1 fields
   const [title, setTitle] = useState('');
@@ -72,10 +105,14 @@ export default function CreateEventScreen() {
   const [imageUri, setImageUri] = useState<string | null>(null);
 
   // Step 2 fields
+  const [noFilters, setNoFilters] = useState(false);
   const [minAge, setMinAge] = useState<number>(18);
   const [maxAge, setMaxAge] = useState<number>(26);
   const [genderFilter, setGenderFilter] = useState<GenderFilter>('any');
   const [selectedUniversities, setSelectedUniversities] = useState<string[]>(['Any']);
+  const [soloFriendly, setSoloFriendly] = useState(false);
+  const [checkInInfoText, setCheckInInfoText] = useState('');
+  const [checkInInfoPhotoUri, setCheckInInfoPhotoUri] = useState<string | null>(null);
 
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
@@ -83,19 +120,17 @@ export default function CreateEventScreen() {
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert(t.profileAlertPermTitle, t.profileAlertPermBody);
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [16, 9],
-      quality: 0.8,
-    });
-    if (!result.canceled) setImageUri(result.assets[0].uri);
+    const uri = await pickPhoto({ aspect: [16, 9] });
+    if (uri) setImageUri(uri);
   };
+
+  const pickCheckInPhoto = async () => {
+    const uri = await pickPhoto({ aspect: [4, 3] });
+    if (uri) setCheckInInfoPhotoUri(uri);
+  };
+
+  const capacity = Math.max(2, Math.min(100, parseInt(maxAttendees, 10) || 10));
+  const adjustCapacity = (delta: number) => setMaxAttendees(String(Math.max(2, Math.min(100, capacity + delta))));
 
   const toggleUniversity = (u: string) => {
     if (u === 'Any') { setSelectedUniversities(['Any']); return; }
@@ -149,6 +184,36 @@ export default function CreateEventScreen() {
       return;
     }
     setStep(2);
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
+  // This screen stays mounted the whole time it's in the tab pager (it's
+  // only hidden, never unmounted, when you swipe away) — so without this,
+  // every field from the event you just created would still be sitting
+  // there filled in the next time you open Create.
+  const resetForm = () => {
+    setStep(1);
+    setTitle('');
+    setDescription('');
+    setCategory(EventCategory.Chill);
+    setCustomCategory('');
+    setDateTime(nextHour());
+    setLocation('');
+    setLocationMode('text');
+    setPinCoords(null);
+    setMaxAttendees('10');
+    setImageUri(null);
+    setNoFilters(false);
+    setMinAge(18);
+    setMaxAge(26);
+    setGenderFilter('any');
+    setSelectedUniversities(['Any']);
+    setSelectedGroupId(null);
+    setIsPrivate(false);
+    setSoloFriendly(false);
+    setCheckInInfoText('');
+    setCheckInInfoPhotoUri(null);
+    scrollViewRef.current?.scrollTo({ y: 0, animated: false });
   };
 
   const handleCreate = async () => {
@@ -158,7 +223,7 @@ export default function CreateEventScreen() {
       Alert.alert(t.createAlertBadMaxTitle, t.createAlertBadMaxBody);
       return;
     }
-    if (containsBlockedContent(title) || containsBlockedContent(description) || containsBlockedContent(customCategory)) {
+    if (containsBlockedContent(title) || containsBlockedContent(description) || containsBlockedContent(customCategory) || containsBlockedContent(checkInInfoText)) {
       Alert.alert(t.createAlertMissingTitle, t.validContentBlocked);
       return;
     }
@@ -173,6 +238,35 @@ export default function CreateEventScreen() {
         return;
       }
     }
+
+    let checkInInfoPhoto: string | undefined;
+    if (checkInInfoPhotoUri) {
+      try {
+        checkInInfoPhoto = await uploadEventImage(checkInInfoPhotoUri);
+      } catch {
+        // Non-fatal — the event still gets created without the optional
+        // find-your-group photo; the text hint (if any) still goes through.
+      }
+    }
+
+    // Geocode text location to coordinates if provided
+    let finalLat: number | undefined;
+    let finalLng: number | undefined;
+    if (locationMode === 'map') {
+      finalLat = pinCoords?.latitude;
+      finalLng = pinCoords?.longitude;
+    } else if (location.trim()) {
+      try {
+        const results = await Location.geocodeAsync(location.trim());
+        if (results.length > 0) {
+          finalLat = results[0].latitude;
+          finalLng = results[0].longitude;
+        }
+      } catch {
+        // Geocoding failed, event will still be created without coordinates
+      }
+    }
+
     const result = await eventsRepository.createEvent({
       title: title.trim(),
       description: description.trim(),
@@ -181,16 +275,20 @@ export default function CreateEventScreen() {
       dateTime,
       location: location.trim() || 'Pinned location',
       creatorId: user.id,
-      latitude: locationMode === 'map' ? pinCoords?.latitude : undefined,
-      longitude: locationMode === 'map' ? pinCoords?.longitude : undefined,
+      latitude: finalLat,
+      longitude: finalLng,
       maxAttendees: max,
       imageUri: finalImageUri,
-      minAge,
-      maxAge,
-      allowedUniversities: selectedUniversities.includes('Any') ? undefined : selectedUniversities,
+      minAge: noFilters ? undefined : minAge,
+      maxAge: noFilters ? undefined : maxAge,
+      allowedUniversities: noFilters ? undefined : (selectedUniversities.includes('Any') ? undefined : selectedUniversities),
       genderFilter,
       isPrivate,
       creatorUniversity: user.universityName,
+      soloFriendly,
+      checkInInfo: (checkInInfoText.trim() || checkInInfoPhoto)
+        ? { text: checkInInfoText.trim() || undefined, photoUri: checkInInfoPhoto }
+        : undefined,
     });
     if (isLeft(result)) Alert.alert(t.createAlertSaveError, result.left.message);
     else {
@@ -198,55 +296,64 @@ export default function CreateEventScreen() {
       if (selectedGroupId) {
         groupsRepository.addEventToGroup(selectedGroupId, result.right.id).catch(() => {});
       }
+      analytics.track('event_created', {
+        eventId: result.right.id,
+        category,
+        isPrivate,
+        hasImage: !!finalImageUri,
+      });
+      resetForm();
       goToTab(0); // go back to Feed tab
     }
     setLoading(false);
     setUploadProgress(0);
   };
 
-  const bs = colors.borderStrong;
-
   return (
     <KeyboardAvoidingView style={[styles.flex, { backgroundColor: colors.background }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top + 16, paddingBottom: TAB_BAR_BASE_HEIGHT + insets.bottom + 24 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollViewRef} contentContainerStyle={[styles.container, { paddingTop: insets.top + 16, paddingBottom: TAB_BAR_BASE_HEIGHT + insets.bottom + 24 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
         {/* Header */}
         <View style={styles.header}>
           {step === 2 && (
-            <AnimatedPressable onPress={() => setStep(1)} style={[styles.backBtn, { backgroundColor: colors.surfaceVariant, borderColor: bs }]}>
+            <AnimatedPressable onPress={() => { setStep(1); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }} style={[styles.backBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Icon name="back" size={14} color={colors.textSecondary} />
               <Text style={[styles.backBtnText, { color: colors.textSecondary }]}>{t.createBack}</Text>
             </AnimatedPressable>
           )}
           <Text style={[styles.title, { color: colors.textPrimary }]}>
             {step === 1 ? t.createTitle : t.createWhoTitle}
           </Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          <Text style={[styles.subtitle, { color: colors.textHint }]}>
             {step === 1 ? t.createStep1 : t.createStep2}
           </Text>
-          <View style={[styles.stepBar, { backgroundColor: colors.surfaceVariant, borderColor: bs }]}>
-            <View style={[styles.stepFill, { backgroundColor: colors.primary, width: step === 1 ? '50%' : '100%' }]} />
-          </View>
+          <ProgressTrack progress={step === 1 ? 0.5 : 1} />
         </View>
 
         {step === 1 ? (
           <View style={styles.form}>
             {/* Photo */}
             {imageUri ? (
-              <View style={[styles.photoBtn, { backgroundColor: colors.surface, borderColor: bs }]}>
+              <View style={[styles.photoBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <Image source={{ uri: imageUri }} style={styles.photoPreview} />
                 <AnimatedPressable onPress={() => setImageUri(null)} style={styles.photoRemove} hitSlop={8}>
-                  <Text style={styles.photoRemoveText}>✕</Text>
+                  <Icon name="x" size={13} color="#fff" />
                 </AnimatedPressable>
                 <AnimatedPressable onPress={pickImage} style={styles.photoChange}>
-                  <Text style={[styles.photoChangeText, { fontFamily: DrawFont }]}>📷 {t.editEventChangeCover}</Text>
+                  <Icon name="camera" size={13} color="#fff" />
+                  <Text style={[styles.photoChangeText, { fontFamily: UIFont }]}>{t.editEventChangeCover}</Text>
                 </AnimatedPressable>
               </View>
             ) : (
-              <AnimatedPressable onPress={pickImage} style={[styles.photoBtn, { backgroundColor: colors.surface, borderColor: bs, borderStyle: 'dashed' }]}>
+              <AnimatedPressable onPress={pickImage} style={[styles.photoBtn, { borderColor: colors.border }]}>
+                {/* No cover yet — preview the category's duotone scene (addendum
+                    §3) instead of a flat placeholder, so the creator sees what
+                    their card will look like without a real photo. */}
+                <DuotoneScene category={category} height={160} />
                 <View style={styles.photoPlaceholder}>
-                  <Text style={styles.photoIcon}>📷</Text>
-                  <Text style={[styles.photoLabel, { color: colors.textHint, fontFamily: DrawFont }]}>{t.createPhotoBtnLabel}</Text>
-                  <Text style={[styles.photoSub, { color: colors.textHint }]}>{t.createPhotoOptional}</Text>
+                  <Icon name="camera" size={24} color="#fff" />
+                  <Text style={[styles.photoLabel, { color: '#fff', fontFamily: UIFont }]}>{t.createPhotoBtnLabel}</Text>
+                  <Text style={[styles.photoSub, { color: 'rgba(255,255,255,0.8)' }]}>{t.createPhotoOptional}</Text>
                 </View>
               </AnimatedPressable>
             )}
@@ -255,12 +362,10 @@ export default function CreateEventScreen() {
             <Input label={t.createLabelDescription} value={description} onChangeText={setDescription} placeholder={t.createDescriptionPlaceholder} multiline numberOfLines={3} style={styles.textarea} textAlignVertical="top" maxLength={600} />
 
             <View style={styles.field}>
-              <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>{t.createLabelCategory}</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textDecor }]}>{t.createLabelCategory}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-                {Object.values(EventCategory).map((cat, i, arr) => (
-                  <View key={cat} style={{ marginRight: i < arr.length - 1 ? 10 : 0 }}>
-                    <CategoryChip category={cat} selected={category === cat} onPress={() => setCategory(cat)} />
-                  </View>
+                {Object.values(EventCategory).map((cat) => (
+                  <CategoryChip key={cat} category={cat} selected={category === cat} onPress={() => setCategory(cat)} />
                 ))}
               </ScrollView>
               {category === EventCategory.Other && (
@@ -277,13 +382,15 @@ export default function CreateEventScreen() {
             </View>
 
             <View style={styles.field}>
-              <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>{t.createLabelDateTime}</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textDecor }]}>{t.createLabelDateTime}</Text>
               <View style={styles.dateRow}>
-                <AnimatedPressable style={[styles.dateBtn, { backgroundColor: colors.surface, borderColor: bs }]} onPress={() => setPickerMode('date')}>
-                  <Text style={[styles.dateBtnText, { color: colors.textPrimary }]}>📅 {format(dateTime, 'EEE, d MMM yyyy', { locale: getDateLocale(language) })}</Text>
+                <AnimatedPressable style={[styles.dateBtn, { backgroundColor: colors.surface, borderColor: colors.primary }]} onPress={() => setPickerMode('date')}>
+                  <Icon name="cal" size={14} color={colors.textSecondary} />
+                  <Text style={[styles.dateBtnText, { color: colors.textPrimary }]}>{format(dateTime, 'EEE, d MMM yyyy', { locale: getDateLocale(language) })}</Text>
                 </AnimatedPressable>
-                <AnimatedPressable style={[styles.dateBtn, styles.timeBtnWidth, { backgroundColor: colors.surface, borderColor: bs }]} onPress={() => setPickerMode('time')}>
-                  <Text style={[styles.dateBtnText, { color: colors.textPrimary }]}>🕐 {format(dateTime, 'HH:mm')}</Text>
+                <AnimatedPressable style={[styles.dateBtn, styles.timeBtnWidth, { backgroundColor: colors.surface, borderColor: colors.primary }]} onPress={() => setPickerMode('time')}>
+                  <Icon name="clock" size={14} color={colors.textSecondary} />
+                  <Text style={[styles.dateBtnText, { color: colors.textPrimary }]}>{format(dateTime, 'HH:mm')}</Text>
                 </AnimatedPressable>
               </View>
             </View>
@@ -294,19 +401,19 @@ export default function CreateEventScreen() {
 
             {/* Location */}
             <View style={styles.field}>
-              <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>{t.createLabelLocation}</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textDecor }]}>{t.createLabelLocation}</Text>
               <View style={styles.locationModeRow}>
                 <AnimatedPressable
                   onPress={() => { setLocationMode('text'); setPinCoords(null); }}
-                  style={[styles.locationModeBtn, { backgroundColor: locationMode === 'text' ? colors.primary : colors.surface, borderColor: bs }]}
+                  style={[styles.locationModeBtn, { backgroundColor: locationMode === 'text' ? colors.accentSoft : colors.surface, borderColor: locationMode === 'text' ? colors.primary : colors.border }]}
                 >
-                  <Text style={[styles.locationModeTxt, { color: locationMode === 'text' ? '#fff' : colors.textSecondary }]}>📝 General</Text>
+                  <Text style={[styles.locationModeTxt, { color: locationMode === 'text' ? colors.accentInk : colors.textSecondary }]}>{t.createLocationGeneral ?? 'General'}</Text>
                 </AnimatedPressable>
                 <AnimatedPressable
                   onPress={() => setLocationMode('map')}
-                  style={[styles.locationModeBtn, { backgroundColor: locationMode === 'map' ? colors.primary : colors.surface, borderColor: bs }]}
+                  style={[styles.locationModeBtn, { backgroundColor: locationMode === 'map' ? colors.accentSoft : colors.surface, borderColor: locationMode === 'map' ? colors.primary : colors.border }]}
                 >
-                  <Text style={[styles.locationModeTxt, { color: locationMode === 'map' ? '#fff' : colors.textSecondary }]}>📍 Exact spot</Text>
+                  <Text style={[styles.locationModeTxt, { color: locationMode === 'map' ? colors.accentInk : colors.textSecondary }]}>{t.createLocationExact ?? 'Exact spot'}</Text>
                 </AnimatedPressable>
               </View>
 
@@ -314,7 +421,7 @@ export default function CreateEventScreen() {
                 <Input value={location} onChangeText={setLocation} placeholder={t.createLocationPlaceholder} autoCapitalize="words" returnKeyType="next" maxLength={100} />
               ) : (
                 <>
-                  <View style={[styles.mapWrap, { borderColor: bs }]}>
+                  <View style={[styles.mapWrap, { borderColor: colors.border }]}>
                     <MapView
                       style={StyleSheet.absoluteFillObject}
                       initialRegion={{ latitude: 37.98, longitude: 23.73, latitudeDelta: 0.15, longitudeDelta: 0.15 }}
@@ -324,10 +431,10 @@ export default function CreateEventScreen() {
                     </MapView>
                   </View>
                   <Text style={[styles.pinStatus, { color: pinCoords ? colors.primary : colors.textHint }]}>
-                    {pinCoords ? '📍 Pin placed — tap to move it' : 'Tap the map to drop a pin'}
+                    {pinCoords ? (t.createPinPlaced ?? 'Pin placed — tap to move it') : (t.createPinTap ?? 'Tap the map to drop a pin')}
                   </Text>
                   <Input
-                    label="Location name"
+                    label={t.createLocationNameLabel ?? 'Location name'}
                     value={location}
                     onChangeText={setLocation}
                     placeholder="e.g. Campus square, AUEB"
@@ -339,8 +446,6 @@ export default function CreateEventScreen() {
               )}
             </View>
 
-            <Input label={t.createLabelMaxAttendees} value={maxAttendees} onChangeText={(v) => setMaxAttendees(v.replace(/[^0-9]/g, ''))} keyboardType="number-pad" returnKeyType="done" hint={t.createMaxAttendeesHint} />
-
             <Button
               label={t.createBtnNext}
               onPress={goToStep2}
@@ -350,30 +455,75 @@ export default function CreateEventScreen() {
           </View>
         ) : (
           <View style={styles.form}>
+            {/* Capacity stepper (mockup 15 ΧΩΡΗΤΙΚΟΤΗΤΑ) */}
+            <View style={styles.field}>
+              <Text style={[styles.fieldLabel, { color: colors.textDecor }]}>{t.createLabelMaxAttendees}</Text>
+              <Card padded style={styles.capacityCard}>
+                <Text style={[styles.capacityValue, { color: colors.textPrimary }]}>{capacity}</Text>
+                <View style={styles.capacityBtns}>
+                  <Button label="−" variant="outline" shape="pill" size="sm" style={styles.stepperBtn} onPress={() => adjustCapacity(-1)} />
+                  <Button label="+" variant="outline" shape="pill" size="sm" style={styles.stepperBtn} onPress={() => adjustCapacity(1)} />
+                </View>
+              </Card>
+            </View>
+
+            {/* Restriction toggles, grouped in one bordered card (mockup 15 ΠΕΡΙΟΡΙΣΜΟΙ) */}
+            <View style={styles.field}>
+              <Text style={[styles.fieldLabel, { color: colors.textDecor }]}>{t.createLabelEventOptions}</Text>
+              <Card padded style={styles.restrictionsCard}>
+                <ToggleRow
+                  icon="lock"
+                  label={t.createNoFiltersLabel ?? 'No Filters'}
+                  hint={t.createNoFiltersHint ?? 'Anyone can join without providing age or university'}
+                  on={noFilters}
+                  onPress={() => setNoFilters((v) => !v)}
+                  plain
+                />
+                <View style={[styles.rowDivider, { borderColor: colors.border }]} />
+                <ToggleRow
+                  icon="lock"
+                  label={t.createPrivateLabel ?? 'Private Event'}
+                  hint={t.createPrivateHint ?? 'Only invited people can join'}
+                  on={isPrivate}
+                  onPress={() => setIsPrivate((v) => !v)}
+                  plain
+                />
+                <View style={[styles.rowDivider, { borderColor: colors.border }]} />
+                <ToggleRow
+                  icon="users"
+                  label={t.createSoloFriendlyLabel}
+                  hint={t.createSoloFriendlyHint}
+                  on={soloFriendly}
+                  onPress={() => setSoloFriendly((v) => !v)}
+                  plain
+                />
+              </Card>
+            </View>
+
             {/* Gender */}
             <View style={styles.field}>
-              <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>{t.createLabelGender}</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textDecor }]}>{t.createLabelGender}</Text>
               <View style={styles.optionRow}>
                 {GENDER_OPTIONS.map((g) => (
                   <AnimatedPressable key={g.value} onPress={() => setGenderFilter(g.value)}
-                    style={[styles.optionChip, { borderColor: bs, backgroundColor: genderFilter === g.value ? colors.primary : colors.surface }]}>
-                    <Text style={[styles.optionLabel, { color: genderFilter === g.value ? '#fff' : colors.textSecondary, fontFamily: DrawFont }]}>{g.label}</Text>
+                    style={[styles.optionChip, { borderColor: genderFilter === g.value ? colors.primary : colors.border, backgroundColor: genderFilter === g.value ? colors.accentSoft : colors.surface }]}>
+                    <Text style={[styles.optionLabel, { color: genderFilter === g.value ? colors.accentInk : colors.textSecondary, fontFamily: UIFont }]}>{g.label}</Text>
                   </AnimatedPressable>
                 ))}
               </View>
             </View>
 
             {/* Age range */}
-            <View style={styles.field}>
-              <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>{t.createLabelAgeRange}</Text>
+            {!noFilters && (<View style={styles.field}>
+              <Text style={[styles.fieldLabel, { color: colors.textDecor }]}>{t.createLabelAgeRange}</Text>
               <View style={styles.ageRow}>
                 <View style={styles.ageGroup}>
                   <Text style={[styles.ageGroupLabel, { color: colors.textHint }]}>{t.createAgeFrom}</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ageScroll}>
                     {AGE_OPTIONS.filter((a) => a < maxAge).map((a, i, arr) => (
                       <AnimatedPressable key={a} onPress={() => setMinAge(a)}
-                        style={[styles.ageChip, { borderColor: bs, backgroundColor: minAge === a ? colors.primary : colors.surface, marginRight: i < arr.length - 1 ? 8 : 0 }]}>
-                        <Text style={[styles.ageLabel, { color: minAge === a ? '#fff' : colors.textSecondary, fontFamily: DrawFont }]}>{a}</Text>
+                        style={[styles.ageChip, { borderColor: minAge === a ? colors.primary : colors.border, backgroundColor: minAge === a ? colors.accentSoft : colors.surface, marginRight: i < arr.length - 1 ? 8 : 0 }]}>
+                        <Text style={[styles.ageLabel, { color: minAge === a ? colors.accentInk : colors.textSecondary, fontFamily: UIFont }]}>{a}</Text>
                       </AnimatedPressable>
                     ))}
                   </ScrollView>
@@ -383,68 +533,82 @@ export default function CreateEventScreen() {
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ageScroll}>
                     {AGE_OPTIONS.filter((a) => a > minAge).map((a, i, arr) => (
                       <AnimatedPressable key={a} onPress={() => setMaxAge(a)}
-                        style={[styles.ageChip, { borderColor: bs, backgroundColor: maxAge === a ? colors.primary : colors.surface, marginRight: i < arr.length - 1 ? 8 : 0 }]}>
-                        <Text style={[styles.ageLabel, { color: maxAge === a ? '#fff' : colors.textSecondary, fontFamily: DrawFont }]}>{a}</Text>
+                        style={[styles.ageChip, { borderColor: maxAge === a ? colors.primary : colors.border, backgroundColor: maxAge === a ? colors.accentSoft : colors.surface, marginRight: i < arr.length - 1 ? 8 : 0 }]}>
+                        <Text style={[styles.ageLabel, { color: maxAge === a ? colors.accentInk : colors.textSecondary, fontFamily: UIFont }]}>{a}</Text>
                       </AnimatedPressable>
                     ))}
                   </ScrollView>
                 </View>
               </View>
             </View>
+            )}
 
             {/* University */}
-            <View style={styles.field}>
-              <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>{t.createLabelUniversity}</Text>
+            {!noFilters && (<View style={styles.field}>
+              <Text style={[styles.fieldLabel, { color: colors.textDecor }]}>{t.createLabelUniversity}</Text>
               <View style={styles.uniGrid}>
                 {UNIVERSITIES.map((u) => {
                   const sel = selectedUniversities.includes(u);
                   return (
                     <AnimatedPressable key={u} onPress={() => toggleUniversity(u)}
-                      style={[styles.uniChip, { borderColor: bs, backgroundColor: sel ? colors.primary : colors.surface, marginRight: 8, marginBottom: 8 }, sel && (Shadow.sm as any)]}>
-                      <Text style={[styles.uniLabel, { color: sel ? '#fff' : colors.textSecondary, fontFamily: DrawFont }]}>{u === 'Any' ? t.createGenderAny : universityLabel(u, language)}</Text>
+                      style={[styles.uniChip, { borderColor: sel ? colors.primary : colors.border, backgroundColor: sel ? colors.accentSoft : colors.surface, marginRight: 8, marginBottom: 8 }]}>
+                      <Text style={[styles.uniLabel, { color: sel ? colors.accentInk : colors.textSecondary, fontFamily: UIFont }]}>{u === 'Any' ? t.createGenderAny : universityLabel(u, language)}</Text>
                     </AnimatedPressable>
                   );
                 })}
               </View>
             </View>
+            )}
 
-            {/* Private event toggle */}
-            <AnimatedPressable
-              onPress={() => setIsPrivate((v) => !v)}
-              style={[styles.recurringRow, { backgroundColor: isPrivate ? '#1a1a2e' : colors.surface, borderColor: isPrivate ? '#6c63ff' : bs }]}
-            >
-              <Text style={styles.recurringIcon}>{isPrivate ? '🔒' : '🔓'}</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.recurringLabel, { color: isPrivate ? '#fff' : colors.textPrimary }]}>
-                  {t.createPrivateLabel ?? 'Private Event'}
-                </Text>
-                <Text style={{ fontSize: 11, color: isPrivate ? 'rgba(255,255,255,0.6)' : colors.textHint }}>
-                  {t.createPrivateHint ?? 'Only invited people can join'}
-                </Text>
-              </View>
-              <View style={[styles.recurringToggle, { backgroundColor: isPrivate ? '#6c63ff' : colors.surfaceVariant, borderColor: bs }]}>
-                <Text style={[styles.recurringToggleText, { color: '#fff' }]}>{isPrivate ? 'ON' : 'OFF'}</Text>
-              </View>
-            </AnimatedPressable>
+            {/* Find-your-group info (research doc #9) — entirely optional;
+                shown to attendees the moment they check in. Leave both
+                blank and QR check-in behaves exactly as before. */}
+            <View style={styles.field}>
+              <Text style={[styles.fieldLabel, { color: colors.textDecor }]}>{t.createCheckInInfoLabel}</Text>
+              <Text style={[styles.checkInInfoHint, { color: colors.textHint }]}>{t.createCheckInInfoHint}</Text>
+              <Input
+                value={checkInInfoText}
+                onChangeText={setCheckInInfoText}
+                placeholder={t.createCheckInInfoPlaceholder}
+                multiline
+                numberOfLines={2}
+                style={styles.textarea}
+                textAlignVertical="top"
+                maxLength={200}
+              />
+              {checkInInfoPhotoUri ? (
+                <View style={[styles.checkInPhotoPreviewWrap, { borderColor: colors.border }]}>
+                  <Image source={{ uri: checkInInfoPhotoUri }} style={styles.checkInPhotoPreview} />
+                  <AnimatedPressable onPress={() => setCheckInInfoPhotoUri(null)} style={styles.photoRemove} hitSlop={8}>
+                    <Icon name="x" size={13} color="#fff" />
+                  </AnimatedPressable>
+                </View>
+              ) : (
+                <AnimatedPressable onPress={pickCheckInPhoto} style={[styles.checkInPhotoBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <Icon name="camera" size={15} color={colors.textSecondary} />
+                  <Text style={[styles.checkInPhotoBtnText, { color: colors.textSecondary }]}>{t.createCheckInInfoPhotoBtn}</Text>
+                </AnimatedPressable>
+              )}
+            </View>
 
             {/* Post to community (optional) */}
             {myGroups.length > 0 && (
               <View style={styles.field}>
-                <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>{t.createLabelCommunity}</Text>
+                <Text style={[styles.fieldLabel, { color: colors.textDecor }]}>{t.createLabelCommunity}</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
                   <AnimatedPressable
                     onPress={() => setSelectedGroupId(null)}
-                    style={[styles.uniChip, { borderColor: bs, backgroundColor: selectedGroupId === null ? colors.primary : colors.surface }]}
+                    style={[styles.uniChip, { borderColor: selectedGroupId === null ? colors.primary : colors.border, backgroundColor: selectedGroupId === null ? colors.accentSoft : colors.surface }]}
                   >
-                    <Text style={[styles.uniLabel, { color: selectedGroupId === null ? '#fff' : colors.textSecondary, fontFamily: DrawFont }]}>{t.createCommunityNone}</Text>
+                    <Text style={[styles.uniLabel, { color: selectedGroupId === null ? colors.accentInk : colors.textSecondary, fontFamily: UIFont }]}>{t.createCommunityNone}</Text>
                   </AnimatedPressable>
                   {myGroups.map((g) => (
                     <AnimatedPressable
                       key={g.id}
                       onPress={() => setSelectedGroupId(g.id)}
-                      style={[styles.uniChip, { borderColor: bs, backgroundColor: selectedGroupId === g.id ? colors.primary : colors.surface }]}
+                      style={[styles.uniChip, { borderColor: selectedGroupId === g.id ? colors.primary : colors.border, backgroundColor: selectedGroupId === g.id ? colors.accentSoft : colors.surface }]}
                     >
-                      <Text style={[styles.uniLabel, { color: selectedGroupId === g.id ? '#fff' : colors.textSecondary, fontFamily: DrawFont }]}>
+                      <Text style={[styles.uniLabel, { color: selectedGroupId === g.id ? colors.accentInk : colors.textSecondary, fontFamily: UIFont }]}>
                         {g.emoji} {g.name}
                       </Text>
                     </AnimatedPressable>
@@ -452,6 +616,12 @@ export default function CreateEventScreen() {
                 </ScrollView>
               </View>
             )}
+
+            {/* Safety note (spec §4 "note"; CLAUDE.md safety non-negotiable: report SLA <24h) */}
+            <View style={[styles.noteBox, { backgroundColor: colors.accentSoft }]}>
+              <Icon name="shield" size={15} color={colors.accentInk} />
+              <Text style={[styles.noteText, { color: colors.accentInk }]}>{t.createSafetyNote}</Text>
+            </View>
 
             <Button
               label={loading && uploadProgress > 0 && uploadProgress < 1
@@ -470,53 +640,68 @@ export default function CreateEventScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  container: { flexGrow: 1, paddingHorizontal: Spacing.lg, gap: Spacing.lg },
+  container: { flexGrow: 1, paddingHorizontal: Spacing.gutter, gap: Spacing.lg },
   header: { gap: Spacing.sm },
-  backBtn: { alignSelf: 'flex-start', paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: BorderRadius.full, borderWidth: 2 },
-  backBtnText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: DrawFont },
-  title: { fontSize: 28, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
-  subtitle: { fontSize: FontSize.sm },
-  stepBar: { height: 8, borderRadius: 4, overflow: 'hidden', borderWidth: 2 },
-  stepFill: { height: '100%', borderRadius: 4 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: Spacing.md, paddingVertical: 7, borderRadius: BorderRadius.full, borderWidth: 1 },
+  backBtnText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
+  title: { fontSize: FontSize.display, fontWeight: FontWeight.bold, fontFamily: TitleFont, letterSpacing: -0.5 },
+  subtitle: { fontSize: FontSize.base, fontFamily: UIFontLight },
   form: { gap: Spacing.md },
-  photoBtn: { borderWidth: 2.5, borderRadius: 18, overflow: 'hidden', height: 160 },
+  photoBtn: { borderWidth: 1, borderRadius: BorderRadius.lg, overflow: 'hidden', height: 160, position: 'relative' },
   photoPreview: { width: '100%', height: '100%' },
   photoRemove: { position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 14, width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
-  photoRemoveText: { color: '#fff', fontSize: 13, fontWeight: FontWeight.bold },
-  photoChange: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.45)', paddingVertical: 8, alignItems: 'center' },
+  photoChange: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.45)', paddingVertical: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   photoChangeText: { color: '#fff', fontSize: FontSize.sm, fontWeight: FontWeight.bold },
-  photoPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6 },
-  photoIcon: { fontSize: 32 },
-  photoLabel: { fontSize: FontSize.md, fontWeight: FontWeight.semibold },
+  photoPlaceholder: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: 'rgba(20,14,10,0.34)',
+  },
+  photoLabel: { fontSize: FontSize.base, fontWeight: FontWeight.semibold },
   photoSub: { fontSize: FontSize.xs },
   textarea: { minHeight: 88, paddingTop: Spacing.sm },
   field: { gap: Spacing.sm },
-  fieldLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
-  chips: { flexDirection: 'row', paddingVertical: 4, alignItems: 'center' },
+  fieldLabel: { fontSize: FontSize.xs, fontWeight: FontWeight.bold, fontFamily: UIFont, letterSpacing: 1.4 },
+  chips: { flexDirection: 'row', paddingVertical: 4, alignItems: 'center', gap: Spacing.sm },
   dateRow: { flexDirection: 'row', gap: Spacing.sm },
-  dateBtn: { flex: 1, borderRadius: BorderRadius.md, paddingHorizontal: Spacing.md, paddingVertical: 14, justifyContent: 'center', borderWidth: 2.5 },
+  dateBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: BorderRadius.md, paddingHorizontal: Spacing.md, paddingVertical: 13, borderWidth: 1 },
   timeBtnWidth: { flex: 0, minWidth: 110 },
-  dateBtnText: { fontSize: FontSize.sm, fontWeight: FontWeight.medium },
+  dateBtnText: { fontSize: FontSize.base, fontWeight: FontWeight.medium },
   optionRow: { flexDirection: 'row', gap: Spacing.sm },
-  optionChip: { flex: 1, paddingVertical: 12, borderRadius: BorderRadius.md, borderWidth: 2.5, alignItems: 'center' },
+  optionChip: { flex: 1, paddingVertical: 11, borderRadius: BorderRadius.md, borderWidth: 1, alignItems: 'center' },
   optionLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.bold },
   ageRow: { gap: Spacing.sm },
   ageGroup: { gap: 6 },
   ageGroupLabel: { fontSize: FontSize.xs, fontWeight: FontWeight.semibold },
   ageScroll: { flexDirection: 'row', alignItems: 'center' },
-  ageChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: BorderRadius.full, borderWidth: 2.5 },
+  ageChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: BorderRadius.full, borderWidth: 1 },
   ageLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.bold },
   uniGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  uniChip: { paddingHorizontal: Spacing.md, paddingVertical: 10, borderRadius: BorderRadius.md, borderWidth: 2.5 },
+  uniChip: { paddingHorizontal: Spacing.md, paddingVertical: 10, borderRadius: BorderRadius.md, borderWidth: 1 },
   uniLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.bold },
-  recurringRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, borderWidth: 2.5, borderRadius: BorderRadius.lg, padding: Spacing.md },
-  recurringIcon: { fontSize: 20 },
-  recurringLabel: { flex: 1, fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: DrawFont },
-  recurringToggle: { borderRadius: BorderRadius.full, borderWidth: 1.5, paddingHorizontal: 10, paddingVertical: 4 },
-  recurringToggleText: { fontSize: FontSize.xs, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
+  toggleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  toggleRowPlain: { paddingVertical: 9 },
+  toggleLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
+  toggleHint: { fontSize: 11, marginTop: 1 },
+  toggleSwitch: { width: 36, height: 20, borderRadius: 10, padding: 2, justifyContent: 'center' },
+  toggleKnob: { width: 16, height: 16, borderRadius: 8, backgroundColor: '#fff' },
+  restrictionsCard: { gap: 0 },
+  rowDivider: { borderTopWidth: 1, marginVertical: 2 },
+  capacityCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  capacityValue: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, fontFamily: UIFont },
+  capacityBtns: { flexDirection: 'row', gap: Spacing.sm },
+  stepperBtn: { paddingHorizontal: Spacing.md },
   locationModeRow: { flexDirection: 'row', gap: 10 },
-  locationModeBtn: { flex: 1, paddingVertical: 10, borderRadius: BorderRadius.md, borderWidth: 2.5, alignItems: 'center' },
-  locationModeTxt: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: DrawFont },
-  mapWrap: { height: 220, borderRadius: BorderRadius.lg, borderWidth: 2.5, overflow: 'hidden' },
+  locationModeBtn: { flex: 1, paddingVertical: 10, borderRadius: BorderRadius.md, borderWidth: 1, alignItems: 'center' },
+  locationModeTxt: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
+  mapWrap: { height: 220, borderRadius: BorderRadius.lg, borderWidth: 1, overflow: 'hidden' },
   pinStatus: { fontSize: FontSize.xs, fontWeight: FontWeight.semibold, textAlign: 'center' },
+  // Warm Paper "note" box (spec §4): accent.soft bg, shield icon, accent.ink text.
+  noteBox: { flexDirection: 'row', gap: 9, alignItems: 'flex-start', borderRadius: BorderRadius.md, padding: Spacing.md },
+  noteText: { flex: 1, fontSize: FontSize.xs, lineHeight: 17 },
+  checkInInfoHint: { fontSize: FontSize.xs, lineHeight: 16, marginTop: -4 },
+  checkInPhotoBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderWidth: 1, borderStyle: 'dashed', borderRadius: BorderRadius.md, paddingVertical: 12 },
+  checkInPhotoBtnText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
+  checkInPhotoPreviewWrap: { borderWidth: 1, borderRadius: BorderRadius.md, overflow: 'hidden', height: 110, position: 'relative' },
+  checkInPhotoPreview: { width: '100%', height: '100%' },
 });

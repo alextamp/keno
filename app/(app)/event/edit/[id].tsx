@@ -7,12 +7,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import * as ImagePicker from 'expo-image-picker';
+import { pickImage as pickPhoto } from '@/core/utils/imagePicker';
 import { format } from 'date-fns';
 import { useTheme } from '@/core/theme';
-import { BorderRadius, DrawFont, FontSize, FontWeight, Shadow, Spacing } from '@/core/constants/theme';
+import { BorderRadius, UIFont, TitleFont, FontSize, FontWeight, Shadow, Spacing } from '@/core/constants/theme';
 import { EventCategory, GenderFilter } from '@/features/events/domain/entities/event.entity';
 import { useEventsStore } from '@/features/events/presentation/store/events.store';
+import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
+import { ADMIN_UID } from '@/core/constants/admin';
 import { eventsRepository } from '@/features/events/data/repositories/events.repository.impl';
 import { isLeft } from '@/core/utils/either';
 import { containsBlockedContent } from '@/core/utils/contentModeration';
@@ -20,8 +22,9 @@ import { uploadEventImage } from '@/core/utils/uploadImage';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { CategoryChip } from '@/components/ui/CategoryChip';
+import { Icon } from '@/components/ui/Icon';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import { useTranslation, useLanguageStore } from '@/core/i18n';
+import { useTranslation, useLanguageStore, getDateLocale } from '@/core/i18n';
 import { GREEK_UNIVERSITIES, universityLabel } from '@/core/constants/universities';
 
 const UNIVERSITIES = ['Any', ...GREEK_UNIVERSITIES];
@@ -33,6 +36,7 @@ export default function EditEventScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const upsertEvent = useEventsStore((s) => s.upsertEvent);
+  const currentUser = useAuthStore((s) => s.user);
   const t = useTranslation();
   const { language } = useLanguageStore();
   const GENDER_OPTIONS: { value: GenderFilter; label: string }[] = [
@@ -58,6 +62,9 @@ export default function EditEventScreen() {
   const [genderFilter, setGenderFilter] = useState<GenderFilter>('any');
   const [selectedUniversities, setSelectedUniversities] = useState<string[]>(['Any']);
   const [pickerMode, setPickerMode] = useState<'date' | 'time' | null>(null);
+  const [checkInInfoText, setCheckInInfoText] = useState('');
+  const [checkInInfoPhotoUri, setCheckInInfoPhotoUri] = useState<string | null>(null);
+  const [isFlagship, setIsFlagship] = useState(false);
 
   useEffect(() => {
     eventsRepository.getEvent(id).then((result) => {
@@ -78,18 +85,21 @@ export default function EditEventScreen() {
       setMaxAge(e.maxAge ?? 26);
       setGenderFilter(e.genderFilter ?? 'any');
       setSelectedUniversities(e.allowedUniversities?.length ? e.allowedUniversities : ['Any']);
+      setCheckInInfoText(e.checkInInfo?.text ?? '');
+      setCheckInInfoPhotoUri(e.checkInInfo?.photoUri ?? null);
+      setIsFlagship(e.isFlagship ?? false);
       setLoading(false);
     });
   }, [id]);
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { Alert.alert(t.profileAlertPermTitle, t.profileAlertPermBody); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true, aspect: [16, 9], quality: 0.8,
-    });
-    if (!result.canceled) setImageUri(result.assets[0].uri);
+    const uri = await pickPhoto({ aspect: [16, 9] });
+    if (uri) setImageUri(uri);
+  };
+
+  const pickCheckInPhoto = async () => {
+    const uri = await pickPhoto({ aspect: [4, 3] });
+    if (uri) setCheckInInfoPhotoUri(uri);
   };
 
   const toggleUniversity = (u: string) => {
@@ -120,7 +130,7 @@ export default function EditEventScreen() {
     if (!title.trim() || !location.trim()) { Alert.alert(t.createAlertMissingTitle, t.createAlertMissingBody); return; }
     const max = parseInt(maxAttendees, 10);
     if (isNaN(max) || max < 2 || max > 100) { Alert.alert(t.createAlertBadMaxTitle, t.createAlertBadMaxBody); return; }
-    if (containsBlockedContent(title) || containsBlockedContent(description) || containsBlockedContent(customCategory)) {
+    if (containsBlockedContent(title) || containsBlockedContent(description) || containsBlockedContent(customCategory) || containsBlockedContent(checkInInfoText)) {
       Alert.alert(t.createAlertMissingTitle, t.validContentBlocked);
       return;
     }
@@ -134,6 +144,15 @@ export default function EditEventScreen() {
         finalImageUri = undefined;
       }
     }
+    let finalCheckInPhoto: string | undefined = checkInInfoPhotoUri ?? undefined;
+    if (checkInInfoPhotoUri && !checkInInfoPhotoUri.startsWith('http')) {
+      try {
+        finalCheckInPhoto = await uploadEventImage(checkInInfoPhotoUri);
+      } catch {
+        finalCheckInPhoto = undefined;
+      }
+    }
+
     const result = await eventsRepository.updateEvent(id, {
       title: title.trim(),
       description: description.trim(),
@@ -147,6 +166,10 @@ export default function EditEventScreen() {
       maxAge,
       allowedUniversities: selectedUniversities.includes('Any') ? undefined : selectedUniversities,
       genderFilter,
+      checkInInfo: (checkInInfoText.trim() || finalCheckInPhoto)
+        ? { text: checkInInfoText.trim() || undefined, photoUri: finalCheckInPhoto }
+        : undefined,
+      ...(currentUser?.id === ADMIN_UID ? { isFlagship } : {}),
     });
     if (isLeft(result)) Alert.alert(t.userInviteErrorTitle, result.left.message);
     else { upsertEvent(result.right); router.back(); }
@@ -156,14 +179,13 @@ export default function EditEventScreen() {
 
   if (loading) return <LoadingScreen />;
 
-  const bs = colors.borderStrong;
-
   return (
     <KeyboardAvoidingView style={[styles.flex, { backgroundColor: colors.background }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 40 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
         <View style={styles.header}>
-          <AnimatedPressable onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: colors.surfaceVariant, borderColor: bs }]}>
+          <AnimatedPressable onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Icon name="back" size={14} color={colors.textSecondary} />
             <Text style={[styles.backBtnText, { color: colors.textSecondary }]}>{t.editEventBack}</Text>
           </AnimatedPressable>
           <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>{t.editEventTitle}</Text>
@@ -171,18 +193,18 @@ export default function EditEventScreen() {
 
         <View style={styles.form}>
           {/* Photo */}
-          <AnimatedPressable onPress={pickImage} style={[styles.photoBtn, { backgroundColor: colors.surface, borderColor: bs, borderStyle: imageUri ? 'solid' : 'dashed' }]}>
+          <AnimatedPressable onPress={pickImage} style={[styles.photoBtn, { backgroundColor: colors.surface, borderColor: colors.border, borderStyle: imageUri ? 'solid' : 'dashed' }]}>
             {imageUri ? (
               <>
                 <Image source={{ uri: imageUri }} style={styles.photoPreview} />
                 <AnimatedPressable onPress={() => setImageUri(null)} style={styles.photoRemove}>
-                  <Text style={styles.photoRemoveText}>✕</Text>
+                  <Icon name="x" size={12} color="#fff" />
                 </AnimatedPressable>
               </>
             ) : (
               <View style={styles.photoPlaceholder}>
-                <Text style={styles.photoIcon}>📷</Text>
-                <Text style={[styles.photoLabel, { color: colors.textHint, fontFamily: DrawFont }]}>{t.editEventCoverPhoto}</Text>
+                <Icon name="camera" size={26} color={colors.textDecor} />
+                <Text style={[styles.photoLabel, { color: colors.textHint, fontFamily: UIFont }]}>{t.editEventCoverPhoto}</Text>
               </View>
             )}
           </AnimatedPressable>
@@ -191,7 +213,7 @@ export default function EditEventScreen() {
           <Input label={t.createLabelDescription} value={description} onChangeText={setDescription} placeholder={t.createDescriptionPlaceholder} multiline numberOfLines={3} style={styles.textarea} textAlignVertical="top" maxLength={600} />
 
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>{t.createLabelCategory}</Text>
+            <Text style={[styles.fieldLabel, { color: colors.textDecor }]}>{t.createLabelCategory}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
               {Object.values(EventCategory).map((cat, i, arr) => (
                 <View key={cat} style={{ marginRight: i < arr.length - 1 ? 10 : 0 }}>
@@ -205,13 +227,15 @@ export default function EditEventScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>{t.createLabelDateTime}</Text>
+            <Text style={[styles.fieldLabel, { color: colors.textDecor }]}>{t.createLabelDateTime}</Text>
             <View style={styles.dateRow}>
-              <AnimatedPressable style={[styles.dateBtn, { backgroundColor: colors.surface, borderColor: bs }]} onPress={() => setPickerMode('date')}>
-                <Text style={[styles.dateBtnText, { color: colors.textPrimary }]}>📅 {format(dateTime, 'EEE, d MMM yyyy')}</Text>
+              <AnimatedPressable style={[styles.dateBtn, { backgroundColor: colors.surface, borderColor: colors.primary }]} onPress={() => setPickerMode('date')}>
+                <Icon name="cal" size={14} color={colors.textSecondary} />
+                <Text style={[styles.dateBtnText, { color: colors.textPrimary }]}>{format(dateTime, 'EEE, d MMM yyyy', { locale: getDateLocale(language) })}</Text>
               </AnimatedPressable>
-              <AnimatedPressable style={[styles.dateBtn, styles.timeBtnWidth, { backgroundColor: colors.surface, borderColor: bs }]} onPress={() => setPickerMode('time')}>
-                <Text style={[styles.dateBtnText, { color: colors.textPrimary }]}>🕐 {format(dateTime, 'HH:mm')}</Text>
+              <AnimatedPressable style={[styles.dateBtn, styles.timeBtnWidth, { backgroundColor: colors.surface, borderColor: colors.primary }]} onPress={() => setPickerMode('time')}>
+                <Icon name="clock" size={14} color={colors.textSecondary} />
+                <Text style={[styles.dateBtnText, { color: colors.textPrimary }]}>{format(dateTime, 'HH:mm')}</Text>
               </AnimatedPressable>
             </View>
           </View>
@@ -225,12 +249,12 @@ export default function EditEventScreen() {
 
           {/* Gender */}
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>{t.createLabelGender}</Text>
+            <Text style={[styles.fieldLabel, { color: colors.textDecor }]}>{t.createLabelGender}</Text>
             <View style={styles.optionRow}>
               {GENDER_OPTIONS.map((g) => (
                 <AnimatedPressable key={g.value} onPress={() => setGenderFilter(g.value)}
-                  style={[styles.optionChip, { borderColor: bs, backgroundColor: genderFilter === g.value ? colors.primary : colors.surface }]}>
-                  <Text style={[styles.optionLabel, { color: genderFilter === g.value ? '#fff' : colors.textSecondary, fontFamily: DrawFont }]}>{g.label}</Text>
+                  style={[styles.optionChip, { borderColor: genderFilter === g.value ? colors.primary : colors.border, backgroundColor: genderFilter === g.value ? colors.accentSoft : colors.surface }]}>
+                  <Text style={[styles.optionLabel, { color: genderFilter === g.value ? colors.accentInk : colors.textSecondary, fontFamily: UIFont }]}>{g.label}</Text>
                 </AnimatedPressable>
               ))}
             </View>
@@ -238,7 +262,7 @@ export default function EditEventScreen() {
 
           {/* Age */}
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>{t.createLabelAgeRange}</Text>
+            <Text style={[styles.fieldLabel, { color: colors.textDecor }]}>{t.createLabelAgeRange}</Text>
             <View style={styles.ageRow}>
               {([t.createAgeFrom, t.createAgeTo]).map((label, idx) => {
                 const val = idx === 0 ? minAge : maxAge;
@@ -250,8 +274,8 @@ export default function EditEventScreen() {
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ageScroll}>
                       {opts.map((a, i, arr) => (
                         <AnimatedPressable key={a} onPress={() => setter(a)}
-                          style={[styles.ageChip, { borderColor: bs, backgroundColor: val === a ? colors.primary : colors.surface, marginRight: i < arr.length - 1 ? 8 : 0 }]}>
-                          <Text style={[styles.ageLabel, { color: val === a ? '#fff' : colors.textSecondary, fontFamily: DrawFont }]}>{a}</Text>
+                          style={[styles.ageChip, { borderColor: val === a ? colors.primary : colors.border, backgroundColor: val === a ? colors.accentSoft : colors.surface, marginRight: i < arr.length - 1 ? 8 : 0 }]}>
+                          <Text style={[styles.ageLabel, { color: val === a ? colors.accentInk : colors.textSecondary, fontFamily: UIFont }]}>{a}</Text>
                         </AnimatedPressable>
                       ))}
                     </ScrollView>
@@ -263,19 +287,68 @@ export default function EditEventScreen() {
 
           {/* University */}
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>{t.createLabelUniversity}</Text>
+            <Text style={[styles.fieldLabel, { color: colors.textDecor }]}>{t.createLabelUniversity}</Text>
             <View style={styles.uniGrid}>
               {UNIVERSITIES.map((u) => {
                 const sel = selectedUniversities.includes(u);
                 return (
                   <AnimatedPressable key={u} onPress={() => toggleUniversity(u)}
-                    style={[styles.uniChip, { borderColor: bs, backgroundColor: sel ? colors.primary : colors.surface, marginRight: 8, marginBottom: 8 }, sel && (Shadow.sm as any)]}>
-                    <Text style={[styles.uniLabel, { color: sel ? '#fff' : colors.textSecondary, fontFamily: DrawFont }]}>{u === 'Any' ? t.createGenderAny : universityLabel(u, language)}</Text>
+                    style={[styles.uniChip, { borderColor: sel ? colors.primary : colors.border, backgroundColor: sel ? colors.accentSoft : colors.surface, marginRight: 8, marginBottom: 8 }]}>
+                    <Text style={[styles.uniLabel, { color: sel ? colors.accentInk : colors.textSecondary, fontFamily: UIFont }]}>{u === 'Any' ? t.createGenderAny : universityLabel(u, language)}</Text>
                   </AnimatedPressable>
                 );
               })}
             </View>
           </View>
+
+          {/* Find-your-group info (research doc #9) — same optional field as
+              the create flow; leave blank and check-in is unaffected. */}
+          <View style={styles.field}>
+            <Text style={[styles.fieldLabel, { color: colors.textDecor }]}>{t.createCheckInInfoLabel}</Text>
+            <Text style={[styles.checkInInfoHint, { color: colors.textHint }]}>{t.createCheckInInfoHint}</Text>
+            <Input
+              value={checkInInfoText}
+              onChangeText={setCheckInInfoText}
+              placeholder={t.createCheckInInfoPlaceholder}
+              multiline
+              numberOfLines={2}
+              style={styles.textarea}
+              textAlignVertical="top"
+              maxLength={200}
+            />
+            {checkInInfoPhotoUri ? (
+              <View style={[styles.checkInPhotoPreviewWrap, { borderColor: colors.border }]}>
+                <Image source={{ uri: checkInInfoPhotoUri }} style={styles.checkInPhotoPreview} />
+                <AnimatedPressable onPress={() => setCheckInInfoPhotoUri(null)} style={styles.photoRemove} hitSlop={8}>
+                  <Icon name="x" size={12} color="#fff" />
+                </AnimatedPressable>
+              </View>
+            ) : (
+              <AnimatedPressable onPress={pickCheckInPhoto} style={[styles.checkInPhotoBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Icon name="camera" size={15} color={colors.textSecondary} />
+                <Text style={[styles.checkInPhotoBtnText, { color: colors.textSecondary }]}>{t.createCheckInInfoPhotoBtn}</Text>
+              </AnimatedPressable>
+            )}
+          </View>
+
+          {/* Admin-only "Keno Wednesdays" flagship pin (research doc #28) —
+              not a general creator feature, since letting anyone pin their
+              own event above everyone else's would just be abuse. */}
+          {currentUser?.id === ADMIN_UID && (
+            <AnimatedPressable
+              onPress={() => setIsFlagship((v) => !v)}
+              style={[
+                styles.flagshipRow,
+                { borderColor: isFlagship ? colors.primary : colors.border, backgroundColor: isFlagship ? colors.accentSoft : colors.surface },
+              ]}
+            >
+              <Icon name="star" size={16} color={isFlagship ? colors.primary : colors.textSecondary} filled={isFlagship} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.flagshipLabel, { color: isFlagship ? colors.accentInk : colors.textPrimary }]}>{t.editEventFlagshipLabel}</Text>
+                <Text style={[styles.flagshipHint, { color: isFlagship ? colors.accentInk : colors.textHint }]}>{t.editEventFlagshipHint}</Text>
+              </View>
+            </AnimatedPressable>
+          )}
 
           <Button
             label={saving && uploadProgress > 0 && uploadProgress < 1
@@ -293,37 +366,43 @@ export default function EditEventScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  container: { flexGrow: 1, paddingHorizontal: Spacing.lg, gap: Spacing.lg },
+  container: { flexGrow: 1, paddingHorizontal: Spacing.gutter, gap: Spacing.lg },
   header: { gap: Spacing.sm },
-  backBtn: { alignSelf: 'flex-start', paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: BorderRadius.full, borderWidth: 2 },
-  backBtnText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: DrawFont },
-  pageTitle: { fontSize: 28, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: Spacing.md, paddingVertical: 7, borderRadius: BorderRadius.full, borderWidth: 1 },
+  backBtnText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
+  pageTitle: { fontSize: FontSize.display, fontWeight: FontWeight.bold, fontFamily: TitleFont, letterSpacing: -0.5 },
   form: { gap: Spacing.md },
-  photoBtn: { borderWidth: 2.5, borderRadius: 18, overflow: 'hidden', height: 160 },
+  photoBtn: { borderWidth: 1, borderRadius: BorderRadius.lg, overflow: 'hidden', height: 160 },
   photoPreview: { width: '100%', height: '100%' },
   photoRemove: { position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 12, width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
-  photoRemoveText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   photoPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6 },
-  photoIcon: { fontSize: 32 },
-  photoLabel: { fontSize: FontSize.md, fontWeight: FontWeight.semibold },
+  photoLabel: { fontSize: FontSize.base, fontWeight: FontWeight.semibold },
   textarea: { minHeight: 88, paddingTop: Spacing.sm },
   field: { gap: Spacing.sm },
-  fieldLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
+  fieldLabel: { fontSize: FontSize.xs, fontWeight: FontWeight.bold, fontFamily: UIFont, letterSpacing: 1.4 },
   chips: { flexDirection: 'row', paddingVertical: 4, alignItems: 'center' },
   dateRow: { flexDirection: 'row', gap: Spacing.sm },
-  dateBtn: { flex: 1, borderRadius: BorderRadius.md, paddingHorizontal: Spacing.md, paddingVertical: 14, justifyContent: 'center', borderWidth: 2.5 },
+  dateBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: BorderRadius.md, paddingHorizontal: Spacing.md, paddingVertical: 13, borderWidth: 1 },
   timeBtnWidth: { flex: 0, minWidth: 110 },
   dateBtnText: { fontSize: FontSize.sm, fontWeight: FontWeight.medium },
   optionRow: { flexDirection: 'row', gap: Spacing.sm },
-  optionChip: { flex: 1, paddingVertical: 12, borderRadius: BorderRadius.md, borderWidth: 2.5, alignItems: 'center' },
+  optionChip: { flex: 1, paddingVertical: 11, borderRadius: BorderRadius.md, borderWidth: 1, alignItems: 'center' },
   optionLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.bold },
   ageRow: { gap: Spacing.sm },
   ageGroup: { gap: 6 },
   ageGroupLabel: { fontSize: FontSize.xs, fontWeight: FontWeight.semibold },
   ageScroll: { flexDirection: 'row', alignItems: 'center' },
-  ageChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: BorderRadius.full, borderWidth: 2.5 },
+  ageChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: BorderRadius.full, borderWidth: 1 },
   ageLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.bold },
   uniGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  uniChip: { paddingHorizontal: Spacing.md, paddingVertical: 10, borderRadius: BorderRadius.md, borderWidth: 2.5 },
+  uniChip: { paddingHorizontal: Spacing.md, paddingVertical: 10, borderRadius: BorderRadius.md, borderWidth: 1 },
   uniLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.bold },
+  checkInInfoHint: { fontSize: FontSize.xs, lineHeight: 16, marginTop: -4 },
+  checkInPhotoBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderWidth: 1, borderStyle: 'dashed', borderRadius: BorderRadius.md, paddingVertical: 12 },
+  checkInPhotoBtnText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
+  checkInPhotoPreviewWrap: { borderWidth: 1, borderRadius: BorderRadius.md, overflow: 'hidden', height: 110, position: 'relative' },
+  checkInPhotoPreview: { width: '100%', height: '100%' },
+  flagshipRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, borderWidth: 1, borderRadius: BorderRadius.lg, padding: Spacing.md },
+  flagshipLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
+  flagshipHint: { fontSize: 11, marginTop: 1 },
 });

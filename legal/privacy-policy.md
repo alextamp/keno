@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated: July 3, 2026**
+**Last updated: August 4, 2026**
 
 Keno ("we," "us," "the App") is a hyper-local event-sharing app for university students. This policy explains what information we collect, why, and what control you have over it.
 
@@ -20,6 +20,16 @@ Keno is operated by Alex Tamp ([alextampdias@gmail.com](mailto:alextampdias@gmai
 - Bio
 - Profile photo
 - Interests (used to personalize your event feed)
+- An emergency contact name and phone number, used only by the in-app safety
+  button during a live event you've checked into, which lets you send that
+  contact a pre-filled text message or call 112 — we don't contact them
+  ourselves or use this information for anything else
+
+**Identity verification.** University email verification is the default way
+to confirm you're a student. If that isn't available to you, you can instead
+upload a photo of a student or government ID as a fallback — this photo is
+stored securely, visible only to you and to app administrators reviewing the
+verification request, and is never shown to other users.
 
 **Content you create**, including:
 - Events you create (title, description, category, location, date/time, cover photo)

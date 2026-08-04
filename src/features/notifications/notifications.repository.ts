@@ -16,6 +16,7 @@ export interface CreateNotifParams {
   fromUid: string;
   fromName: string;
   fromAvatarColor?: string;
+  fromPhotoUri?: string;
   type: NotifType;
   eventId?: string;
   eventTitle?: string;
@@ -31,6 +32,7 @@ export const notificationsRepository = {
       fromUid: params.fromUid,
       fromName: params.fromName,
       fromAvatarColor: params.fromAvatarColor ?? null,
+      fromPhotoUri: params.fromPhotoUri ?? null,
       type: params.type,
       eventId: params.eventId ?? null,
       eventTitle: params.eventTitle ?? null,
@@ -50,6 +52,7 @@ export const notificationsRepository = {
             fromUid: data.fromUid,
             fromName: data.fromName,
             fromAvatarColor: data.fromAvatarColor ?? undefined,
+            fromPhotoUri: data.fromPhotoUri ?? undefined,
             type: data.type as NotifType,
             eventId: data.eventId ?? undefined,
             eventTitle: data.eventTitle ?? undefined,

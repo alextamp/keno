@@ -10,6 +10,22 @@ service firebase.storage {
                    && request.resource.contentType.matches('image/.*');
     }
 
+    // Group cover photos — any signed-in user can upload/read
+    match /groups/{filename} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.size < 10 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // DM photos — any signed-in user can upload/read
+    match /dm-images/{filename} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.size < 8 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
     // Profile avatars — filenames are "{uid}.{ext}", so this restricts writes
     // to the signed-in user's own avatar file.
     match /avatars/{filename} {
@@ -29,6 +45,19 @@ service firebase.storage {
                       || request.auth.uid == 'Ijfcvx8cqGb1WNnOZxWgGUuGD6N2');
       allow write: if request.auth != null
                    && filename.matches(request.auth.uid + '[.].+')
+                   && request.resource.size < 8 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // Optional screenshots attached to user-submitted "report an issue"
+    // tickets (Settings → Safety & Privacy) — private, same access pattern
+    // as verification-photos: only the uploader and the admin can read.
+    match /issue-reports/{filename} {
+      allow read: if request.auth != null
+                  && (filename.matches(request.auth.uid + '_.+')
+                      || request.auth.uid == 'Ijfcvx8cqGb1WNnOZxWgGUuGD6N2');
+      allow write: if request.auth != null
+                   && filename.matches(request.auth.uid + '_.+')
                    && request.resource.size < 8 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
     }

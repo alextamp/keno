@@ -1,10 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import {
-  Image,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,10 +11,11 @@ import {
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
+import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useTheme } from '@/core/theme';
-import { BorderRadius, DrawFont, FontSize, FontWeight, Spacing } from '@/core/constants/theme';
+import { BorderRadius, UIFont, UIFontLight, LogoFont, FontSize, FontWeight, Spacing } from '@/core/constants/theme';
 import { useTranslation } from '@/core/i18n';
 
 export default function SignInScreen() {
@@ -26,6 +25,16 @@ export default function SignInScreen() {
   const isLoading = useAuthStore((s) => s.isLoading);
   const error = useAuthStore((s) => s.error);
   const clearError = useAuthStore((s) => s.clearError);
+  const user = useAuthStore((s) => s.user);
+  // AuthGate (app/_layout.tsx) does redirect to /(auth)/pending-verification
+  // once the post-sign-in profile load resolves, but that's a second or two
+  // after the Connect button's own spinner already stops (signIn() only
+  // awaits the Firebase Auth call, not the Firestore profile load that
+  // follows it) — during that gap the screen looks like it did nothing.
+  // Surfacing the status here immediately removes that dead-feeling pause,
+  // on top of whatever screen the redirect lands on a moment later.
+  const pendingIdVerification = user?.idVerificationStatus === 'pending';
+  const rejectedIdVerification = user?.idVerificationStatus === 'rejected';
   const t = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,6 +43,13 @@ export default function SignInScreen() {
   const handleSignIn = async () => {
     clearError();
     await signIn({ email: email.trim().toLowerCase(), password });
+    // Correct credentials but an unverified account: onAuthStateChanged
+    // deliberately keeps `user`/isEmailVerified false for these (see
+    // auth.store), so nothing here otherwise tells the router to move —
+    // without this the screen just sits there looking like nothing happened.
+    if (auth.currentUser && !auth.currentUser.emailVerified) {
+      router.replace('/(auth)/verify-email');
+    }
   };
 
   return (
@@ -48,14 +64,30 @@ export default function SignInScreen() {
         automaticallyAdjustKeyboardInsets
       >
         <View style={styles.brand}>
-          <Image source={require('../../assets/images/icon.png')} style={styles.logo} />
-          <Text style={[styles.tagline, { color: colors.textSecondary }]}>{t.authTagline}</Text>
+          <View style={[styles.mk, { backgroundColor: colors.primary }]}>
+            <Text style={styles.mkLetter}>κ</Text>
+          </View>
+          <Text style={[styles.wordmark, { color: colors.textPrimary }]}>
+            keno<Text style={{ color: colors.primary }}>.</Text>
+          </Text>
+          <Text style={[styles.tagline, { color: colors.textHint }]}>{t.authTagline}</Text>
         </View>
 
         <View style={styles.form}>
           {error && (
-            <View style={[styles.errorBanner, { borderColor: colors.borderStrong }]}>
+            <View style={[styles.errorBanner, { borderColor: colors.error }]}>
               <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+            </View>
+          )}
+
+          {(pendingIdVerification || rejectedIdVerification) && (
+            <View style={[styles.infoBanner, { borderColor: colors.primary, backgroundColor: colors.accentSoft }]}>
+              <Text style={[styles.infoTitle, { color: colors.accentInk }]}>
+                {rejectedIdVerification ? t.pendingVerificationRejectedTitle : t.pendingVerificationTitle}
+              </Text>
+              <Text style={[styles.infoText, { color: colors.accentInk }]}>
+                {rejectedIdVerification ? t.pendingVerificationRejectedBody : t.pendingVerificationBody}
+              </Text>
             </View>
           )}
 
@@ -116,26 +148,42 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xxl,
     gap: Spacing.xl,
   },
-  brand: { alignItems: 'center', gap: Spacing.sm },
-  logo: {
-    width: 96,
-    height: 96,
-    borderRadius: 24,
-  },
+  brand: { alignItems: 'center', gap: 4 },
+  mk: { width: 64, height: 64, borderRadius: 15, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  mkLetter: { fontFamily: LogoFont, fontWeight: FontWeight.bold, fontSize: 38, color: '#FBF3EA', lineHeight: 42 },
+  wordmark: { fontFamily: LogoFont, fontWeight: FontWeight.bold, fontSize: 26, letterSpacing: -1 },
   tagline: {
-    fontSize: FontSize.md,
+    fontSize: FontSize.base,
+    fontFamily: UIFontLight,
     textAlign: 'center',
+    marginTop: 4,
   },
   form: { gap: Spacing.md },
   errorBanner: {
     backgroundColor: '#FEF2F2',
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
-    borderWidth: 2.5,
+    borderWidth: 1,
   },
   errorText: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.medium,
+  },
+  infoBanner: {
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    borderWidth: 1,
+    gap: 4,
+  },
+  infoTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+    fontFamily: UIFont,
+  },
+  infoText: {
+    fontSize: FontSize.sm,
+    fontFamily: UIFontLight,
+    lineHeight: 19,
   },
   forgotBtn: { alignItems: 'center', paddingVertical: 4 },
   forgotText: { fontSize: FontSize.sm, fontWeight: FontWeight.medium },
@@ -148,6 +196,6 @@ const styles = StyleSheet.create({
   footerLink: {
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
-    fontFamily: DrawFont,
+    fontFamily: UIFont,
   },
 });

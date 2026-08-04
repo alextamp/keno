@@ -1,57 +1,100 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle, useSharedValue, withSpring, withSequence, interpolate, Extrapolation,
+} from 'react-native-reanimated';
 import PagerView from 'react-native-pager-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/core/theme';
-import { DrawFont, FontSize, FontWeight } from '@/core/constants/theme';
+import { UIFont, FontSize, FontWeight } from '@/core/constants/theme';
 import { useNotificationsStore } from '@/features/notifications/notifications.store';
 import { useTabNavigation } from '@/core/tabNavigation';
 import { usePressAnimation } from '@/core/hooks/usePressAnimation';
 import { useTranslation } from '@/core/i18n';
+import { Icon, IconName } from '@/components/ui/Icon';
+import { haptics } from '@/core/utils/haptics';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 import FeedTab from '@/screens/FeedTab';
-import CreateTab from '@/screens/CreateTab';
 import MapTab from '@/screens/MapTab';
-import GroupsTab from '@/screens/GroupsTab';
+import CreateTab from '@/screens/CreateTab';
+import LeaderboardTab from '@/screens/LeaderboardTab';
 import ProfileTab from '@/screens/ProfileTab';
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-type TabDef = { label: string; icon: IoniconName; iconFocused: IoniconName };
-
-const TAB_ICONS: { icon: IoniconName; iconFocused: IoniconName }[] = [
-  { icon: 'home-outline',       iconFocused: 'home' },
-  { icon: 'add-circle-outline', iconFocused: 'add-circle' },
-  { icon: 'map-outline',        iconFocused: 'map' },
-  { icon: 'people-outline',     iconFocused: 'people' },
-  { icon: 'person-outline',     iconFocused: 'person' },
-];
+// Mockup tab bar order: Home / Map / [Create FAB] / Leaderboard / Profile.
+const TAB_ICONS: IconName[] = ['home', 'map', 'plus', 'trophy', 'user'];
+const FAB_INDEX = 2;
 
 function TabBarItem({
-  tab, focused, color, badge, onPress,
+  icon, label, focused, badge, onPress,
 }: {
-  tab: TabDef;
+  icon: IconName;
+  label: string;
   focused: boolean;
-  color: string;
   badge?: number;
   onPress: () => void;
 }) {
   const { colors } = useTheme();
-  const { animatedStyle, onPressIn, onPressOut } = usePressAnimation(0.88);
+  const { animatedStyle: pressStyle, onPressIn, onPressOut } = usePressAnimation(0.88);
+  const focusAnim = useSharedValue(focused ? 1 : 0);
+  // Separate from focusAnim on purpose: this always settles back to exactly 1,
+  // so the active tab's icon never sits at a fractional scale (that soft/blurry
+  // look) — it only pulses at the instant of switching, then snaps crisp.
+  const pulse = useSharedValue(1);
+
+  useEffect(() => {
+    focusAnim.value = withSpring(focused ? 1 : 0, { damping: 18, stiffness: 240 });
+    if (focused) {
+      pulse.value = withSequence(
+        withSpring(1.22, { damping: 10, stiffness: 350 }),
+        withSpring(1, { damping: 12, stiffness: 280 }),
+      );
+    }
+  }, [focused]);
+
+  const pillStyle = useAnimatedStyle(() => ({
+    opacity: focusAnim.value,
+    transform: [{ scale: interpolate(focusAnim.value, [0, 1], [0.5, 1], Extrapolation.CLAMP) }],
+  }));
+
+  const iconWrapStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse.value }],
+  }));
+
+  const color = focused ? colors.primary : colors.textDecor;
+
   return (
-    <AnimatedPressable onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut} style={[styles.tabItem, animatedStyle]}>
-      <View style={[styles.tabIconWrap, focused && { backgroundColor: colors.primary + '22' }]}>
-        <Ionicons name={focused ? tab.iconFocused : tab.icon} size={24} color={color} />
+    <AnimatedPressable onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut} style={[styles.tabItem, pressStyle]}>
+      <Animated.View style={[styles.iconWrap, iconWrapStyle]}>
+        <Animated.View style={[styles.activePill, { backgroundColor: colors.accentSoft }, pillStyle]} />
+        <Icon name={icon} size={23} color={color} strokeWidth={1.8} />
         {!!badge && badge > 0 && (
-          <View style={[styles.notifBadge, { backgroundColor: colors.primary }]}>
+          <View style={[styles.notifBadge, { backgroundColor: colors.primary, borderColor: colors.surface }]}>
             <Text style={styles.notifBadgeText}>{badge > 9 ? '9+' : badge}</Text>
           </View>
         )}
+      </Animated.View>
+      <Text style={[styles.tabLabel, { color, fontFamily: UIFont, opacity: focused ? 1 : 0.8 }]}>{label}</Text>
+    </AnimatedPressable>
+  );
+}
+
+function FabItem({ onPress }: { onPress: () => void }) {
+  const { colors } = useTheme();
+  const { animatedStyle, onPressIn, onPressOut } = usePressAnimation(0.92);
+  return (
+    <AnimatedPressable
+      onPress={() => { haptics.medium(); onPress(); }}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={[styles.fabWrap, animatedStyle]}
+    >
+      <View style={[styles.fabRing, { backgroundColor: colors.background, borderColor: colors.border }]}>
+        <View style={[styles.fab, { backgroundColor: colors.primary, shadowColor: colors.primary }]}>
+          <Icon name="plus" size={25} color="#fff" strokeWidth={2} />
+        </View>
       </View>
-      <Text style={[styles.tabLabel, { color, fontFamily: DrawFont }]}>{tab.label}</Text>
     </AnimatedPressable>
   );
 }
@@ -60,13 +103,7 @@ export default function AppHub() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const t = useTranslation();
-  const TABS: TabDef[] = [
-    { ...TAB_ICONS[0], label: t.tabFeed },
-    { ...TAB_ICONS[1], label: t.tabCreate },
-    { ...TAB_ICONS[2], label: t.tabMap },
-    { ...TAB_ICONS[3], label: t.tabGroups },
-    { ...TAB_ICONS[4], label: t.profileTitle },
-  ];
+  const LABELS = [t.tabFeed, t.tabMap, '', t.leaderboardTitle, t.profileTitle];
   const unreadCount = useNotificationsStore((s) => s.unreadCount);
   const pagerRef = useRef<PagerView>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -74,6 +111,7 @@ export default function AppHub() {
   const { pendingTab, clearPendingTab } = useTabNavigation();
 
   const goTo = (index: number) => {
+    if (index !== activeIndex) haptics.light();
     pagerRef.current?.setPage(index);
     setActiveIndex(index);
     setVisited((prev) => (prev.has(index) ? prev : new Set(prev).add(index)));
@@ -108,14 +146,14 @@ export default function AppHub() {
         <View key="feed" style={styles.page}>
           {visited.has(0) && <FeedTab />}
         </View>
-        <View key="create" style={styles.page}>
-          {visited.has(1) && <CreateTab />}
-        </View>
         <View key="map" style={styles.page}>
-          {visited.has(2) && <MapTab />}
+          {visited.has(1) && <MapTab />}
         </View>
-        <View key="groups" style={styles.page}>
-          {visited.has(3) && <GroupsTab />}
+        <View key="create" style={styles.page}>
+          {visited.has(2) && <CreateTab />}
+        </View>
+        <View key="leaderboard" style={styles.page}>
+          {visited.has(3) && <LeaderboardTab />}
         </View>
         <View key="profile" style={styles.page}>
           {visited.has(4) && <ProfileTab />}
@@ -129,19 +167,25 @@ export default function AppHub() {
           height: tabBarHeight,
           paddingBottom: insets.bottom + 4,
           backgroundColor: colors.surface,
-          borderTopColor: colors.borderStrong,
+          borderTopColor: colors.border,
         },
       ]}>
-        {TABS.map((tab, i) => (
-          <TabBarItem
-            key={tab.label}
-            tab={tab}
-            focused={activeIndex === i}
-            color={activeIndex === i ? colors.primary : colors.textHint}
-            badge={i === 0 ? unreadCount : undefined}
-            onPress={() => goTo(i)}
-          />
-        ))}
+        {TAB_ICONS.map((icon, i) =>
+          i === FAB_INDEX ? (
+            <View key="fab" style={styles.tabItem}>
+              <FabItem onPress={() => goTo(i)} />
+            </View>
+          ) : (
+            <TabBarItem
+              key={icon}
+              icon={icon}
+              label={LABELS[i]}
+              focused={activeIndex === i}
+              badge={i === 0 ? unreadCount : undefined}
+              onPress={() => goTo(i)}
+            />
+          ),
+        )}
       </View>
     </View>
   );
@@ -153,17 +197,46 @@ const styles = StyleSheet.create({
   page: { flex: 1 },
   tabBar: {
     flexDirection: 'row',
-    borderTopWidth: 2.5,
+    borderTopWidth: 1,
     paddingTop: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#241F19',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+      },
+      android: { elevation: 8 },
+    }),
   },
-  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 3 },
-  tabIconWrap: { position: 'relative', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 4 },
-  tabLabel: { fontSize: FontSize.xs, fontWeight: FontWeight.bold },
+  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 5 },
+  tabLabel: {
+    fontSize: FontSize.xs, fontWeight: FontWeight.bold, letterSpacing: 0.15,
+    includeFontPadding: false, textAlignVertical: 'center',
+  },
+  iconWrap: { width: 46, height: 32, alignItems: 'center', justifyContent: 'center' },
+  activePill: {
+    position: 'absolute',
+    width: 40, height: 32, borderRadius: 13,
+  },
+  fabWrap: { alignItems: 'center', justifyContent: 'center' },
+  fabRing: {
+    width: 66, height: 66, borderRadius: 33, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center', marginTop: -24,
+  },
+  fab: {
+    width: 56, height: 56, borderRadius: 28,
+    alignItems: 'center', justifyContent: 'center',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.32,
+    shadowRadius: 12,
+    elevation: 10,
+  },
   notifBadge: {
-    position: 'absolute', top: -4, right: -8,
-    minWidth: 16, height: 16, borderRadius: 8,
+    position: 'absolute', top: -2, right: 2,
+    minWidth: 15, height: 15, borderRadius: 8, borderWidth: 1.5,
     alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 3,
   },
-  notifBadgeText: { color: '#fff', fontSize: 9, fontWeight: FontWeight.extrabold },
+  notifBadgeText: { color: '#fff', fontSize: 9, fontWeight: FontWeight.bold },
 });

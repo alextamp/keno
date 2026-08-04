@@ -1,35 +1,100 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import {
-  Pressable, ScrollView, StyleSheet, Text, View,
+  Platform, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import MapView, { Marker, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/core/theme';
-import { DrawFont, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@/core/constants/theme';
+import { UIFont, UIFontLight, TitleFont, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@/core/constants/theme';
 import { TAB_BAR_BASE_HEIGHT } from '@/core/constants/layout';
 import { useEventsStore } from '@/features/events/presentation/store/events.store';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { useTabNavigation } from '@/core/tabNavigation';
 import {
-  EventEntity, EventCategory, EVENT_CATEGORY_COLORS,
+  EventEntity, EventCategory, EVENT_CATEGORY_COLORS, isEventPast,
 } from '@/features/events/domain/entities/event.entity';
 import { useTranslation } from '@/core/i18n';
+import { Icon, IconName } from '@/components/ui/Icon';
+import { Card } from '@/components/ui/Card';
+import { FilterSheet, FeedRadius, FeedWhen } from '@/components/ui/FilterSheet';
+import { haversineKm, matchesWhenBucket } from '@/core/utils/geo';
+import { haptics } from '@/core/utils/haptics';
 
 // Athens city centre default
 const ATHENS = { latitude: 37.9838, longitude: 23.7275, latitudeDelta: 0.06, longitudeDelta: 0.06 };
 
-const FILTER_DEFS: { key: string; value: EventCategory | null; emoji: string; color: string }[] = [
-  { key: 'catAll',    value: null,                  emoji: '🌟', color: '#C94D0A' },
-  { key: 'catParty',  value: EventCategory.Party,   emoji: '🎈', color: '#8B3FCC' },
-  { key: 'catSports', value: EventCategory.Sports,  emoji: '⚽', color: '#0A8A52' },
-  { key: 'catStudy',  value: EventCategory.Study,   emoji: '✏️', color: '#2952CC' },
-  { key: 'catChill',  value: EventCategory.Chill,   emoji: '🎨', color: '#CC1F6E' },
-  { key: 'catCoffee', value: EventCategory.Coffee,  emoji: '☕', color: '#CC6B00' },
-  { key: 'catOther',  value: EventCategory.Other,   emoji: '🌈', color: '#504540' },
+const CITY_REGIONS: Record<string, { latitude: number; longitude: number; latitudeDelta: number; longitudeDelta: number }> = {
+  athens: { latitude: 37.9838, longitude: 23.7275, latitudeDelta: 0.06, longitudeDelta: 0.06 },
+  thessaloniki: { latitude: 40.6355, longitude: 22.9375, latitudeDelta: 0.06, longitudeDelta: 0.06 },
+  patras: { latitude: 38.2466, longitude: 21.7346, latitudeDelta: 0.06, longitudeDelta: 0.06 },
+  larissa: { latitude: 39.6364, longitude: 22.4137, latitudeDelta: 0.06, longitudeDelta: 0.06 },
+  volos: { latitude: 39.3671, longitude: 22.7458, latitudeDelta: 0.06, longitudeDelta: 0.06 },
+};
+
+const FILTER_DEFS: { key: string; value: EventCategory | null }[] = [
+  { key: 'catAll',    value: null },
+  { key: 'catParty',  value: EventCategory.Party },
+  { key: 'catSports', value: EventCategory.Sports },
+  { key: 'catStudy',  value: EventCategory.Study },
+  { key: 'catChill',  value: EventCategory.Chill },
+  { key: 'catCoffee', value: EventCategory.Coffee },
+  { key: 'catOther',  value: EventCategory.Other },
 ];
+
+const CATEGORY_PIN_ICON: Record<EventCategory, IconName> = {
+  [EventCategory.Party]: 'star',
+  [EventCategory.Sports]: 'zap',
+  [EventCategory.Study]: 'edit',
+  [EventCategory.Chill]: 'heart',
+  [EventCategory.Coffee]: 'chat',
+  [EventCategory.Other]: 'pin',
+};
+
+// Warm Paper map style (spec §4 "Map"): land #EFE9DF, roads white, parks
+// #E2EADC, water #DCE6EC — decluttered (POI/transit labels hidden).
+const LIGHT_MAP_STYLE = [
+  { elementType: 'geometry', stylers: [{ color: '#EFE9DF' }] },
+  { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#9A8E82' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#FAF7F2' }] },
+  { featureType: 'administrative', elementType: 'geometry', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#E2EADC' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#FFFFFF' }] },
+  { featureType: 'road', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#FFFFFF' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#F2EBE0' }] },
+  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#DCE6EC' }] },
+];
+
+const DARK_MAP_STYLE = [
+  { elementType: 'geometry', stylers: [{ color: '#1E1813' }] },
+  { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#9D8F7E' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#17120E' }] },
+  { featureType: 'administrative', elementType: 'geometry', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#22271F' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#241C16' }] },
+  { featureType: 'road', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#332A20' }] },
+  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0E1A20' }] },
+];
+
+function getEventCity(lat: number, lng: number): string | null {
+  const cities = Object.entries(CITY_REGIONS);
+  const distances = cities.map(([city, region]) => {
+    const dist = Math.sqrt((lat - region.latitude) ** 2 + (lng - region.longitude) ** 2);
+    return { city, dist };
+  });
+  const closest = distances.sort((a, b) => a.dist - b.dist)[0];
+  return closest.dist < 0.15 ? closest.city : null; // ~15km radius in lat/lng coords
+}
 
 function spreadCoincident(events: EventEntity[]): (EventEntity & { spreadLat: number; spreadLng: number })[] {
   const seen: Record<string, number> = {};
@@ -61,7 +126,18 @@ export default function MapScreen() {
   const clearFocusLocation = useTabNavigation((s) => s.clearFocusLocation);
 
   const [selected, setSelected] = useState<EventCategory | null>(null);
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+
+  // Filter bottom-sheet state (mockup 10 · design/screens.html "10 · Φίλτρα") —
+  // same shared sheet FeedTab uses, filtering the already-loaded events client-side.
+  const [filterSheetVisible, setFilterSheetVisible] = useState(false);
+  const [radiusKm, setRadiusKm] = useState<FeedRadius>(null);
+  const [when, setWhen] = useState<FeedWhen>(null);
+  const [uniOnly, setUniOnly] = useState(false);
+  const [soloFriendly, setSoloFriendly] = useState(false);
+  const hasActiveFilters = radiusKm != null || when != null || uniOnly || soloFriendly;
+  const following = user?.following ?? [];
 
   useEffect(() => {
     (async () => {
@@ -95,12 +171,52 @@ export default function MapScreen() {
     clearFocusLocation();
   }, [focusLocation, clearFocusLocation]);
 
+  // A distance chip was picked in the filter sheet — request location (once)
+  // if we didn't already get it from the on-mount request above.
+  const handleRadiusChange = async (next: FeedRadius) => {
+    if (next == null || userLocation) {
+      setRadiusKm(next);
+      return;
+    }
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') return;
+    const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+    setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+    setRadiusKm(next);
+  };
+
+  const clearFilterSheet = () => {
+    setRadiusKm(null);
+    setWhen(null);
+    setUniOnly(false);
+    setSoloFriendly(false);
+  };
+
   const now = new Date();
   const eventsWithCoords = spreadCoincident(
     events.filter((e) => {
-      if (e.dateTime < now) return false;
+      if (isEventPast(e)) return false;
       if (selected && e.category !== selected) return false;
-      return e.latitude != null && e.longitude != null;
+      if (e.latitude == null || e.longitude == null) return false;
+      if (selectedCity) {
+        const eventCity = getEventCity(e.latitude, e.longitude);
+        if (eventCity !== selectedCity) return false;
+      }
+      // Filter sheet: ΑΠΟΣΤΑΣΗ
+      if (radiusKm != null && userLocation) {
+        const dist = haversineKm(userLocation.latitude, userLocation.longitude, e.latitude, e.longitude);
+        if (dist > radiusKm) return false;
+      }
+      // Filter sheet: ΠΟΤΕ
+      if (when && !matchesWhenBucket(e.dateTime, when, now)) return false;
+      // Filter sheet: ΠΟΙΟΙ — "Από τη σχολή μου"
+      if (uniOnly && user?.universityName) {
+        const fromMyUni = e.creatorUniversity === user.universityName || (e.allowedUniversities ?? []).includes(user.universityName);
+        if (!fromMyUni) return false;
+      }
+      // Filter sheet: ΠΟΙΟΙ — "Έρχονται μόνοι" (nobody you follow is going yet)
+      if (soloFriendly && e.attendeeIds.some((uid) => following.includes(uid))) return false;
+      return true;
     })
   );
 
@@ -113,41 +229,90 @@ export default function MapScreen() {
         showsUserLocation
         showsMyLocationButton={false}
         userInterfaceStyle={isDark ? 'dark' : 'light'}
+        customMapStyle={isDark ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
+        // Handling taps here (matched by identifier) instead of on each
+        // Marker's own onPress — react-native-maps' per-marker onPress is
+        // known to be unreliable on iOS once the marker has custom child
+        // content, which is exactly what these pins are. onMarkerPress on
+        // the MapView itself goes through the native markerPress delegate
+        // directly and doesn't have that problem.
+        onMarkerPress={(e) => {
+          const eventId = e.nativeEvent.id;
+          if (!eventId) return;
+          haptics.light();
+          router.push(`/(app)/event/${eventId}`);
+        }}
       >
         {eventsWithCoords.map((e) => {
           const catColor = EVENT_CATEGORY_COLORS[e.category];
           return (
             <Marker
               key={e.id}
+              identifier={e.id}
               coordinate={{ latitude: e.spreadLat, longitude: e.spreadLng }}
-              onPress={() => router.push(`/(app)/event/${e.id}`)}
-              tracksViewChanges={false}
+              // Android snapshots custom marker views to bitmaps for
+              // rendering; if tracksViewChanges is false from the first
+              // frame, that snapshot is sometimes taken before the child
+              // view has painted, leaving a permanently blank/invisible
+              // marker. iOS renders custom marker views natively and
+              // doesn't have this issue, so keep tracking off there for
+              // perf.
+              tracksViewChanges={Platform.OS === 'android'}
             >
-              <View style={[styles.pin, { backgroundColor: catColor, borderColor: catColor }]}>
-                <Text style={styles.pinEmoji}>
-                  {FILTERS.find((f) => f.value === e.category)?.emoji ?? '📍'}
-                </Text>
+              <View style={[styles.pin, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Icon name={CATEGORY_PIN_ICON[e.category]} size={15} color={catColor} />
               </View>
-              <View style={[styles.pinTail, { borderTopColor: catColor }]} />
             </Marker>
           );
         })}
       </MapView>
 
-      {/* Filter pills overlay */}
+      {/* Filter chips overlay */}
       <View style={[styles.filtersOverlay, { paddingTop: insets.top + 10 }]}>
+        <View style={styles.filterRowWithBtn}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+            {FILTERS.map((f) => {
+              const isActive = selected === f.value;
+              return (
+                <AnimatedPressable key={f.label} onPress={() => setSelected(f.value)}>
+                  <View style={[
+                    styles.chip,
+                    { backgroundColor: isActive ? colors.accentSoft : colors.surface, borderColor: isActive ? colors.primary : colors.border },
+                  ]}>
+                    <Text style={[styles.chipText, { color: isActive ? colors.accentInk : colors.textSecondary, fontWeight: isActive ? FontWeight.semibold : FontWeight.medium }]}>{f.label}</Text>
+                  </View>
+                </AnimatedPressable>
+              );
+            })}
+          </ScrollView>
+          <AnimatedPressable onPress={() => { haptics.light(); setFilterSheetVisible(true); }} style={styles.mapFilterBtnWrap}>
+            <View style={[styles.mapFilterBtn, { backgroundColor: hasActiveFilters ? colors.accentSoft : colors.surface, borderColor: hasActiveFilters ? colors.primary : colors.border }]}>
+              <Icon name="filter" size={15} color={hasActiveFilters ? colors.accentInk : colors.textSecondary} />
+            </View>
+            {hasActiveFilters && <View style={[styles.mapFilterDot, { backgroundColor: colors.primary }]} />}
+          </AnimatedPressable>
+        </View>
+
+        {/* City filter chips */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-          {FILTERS.map((f) => {
-            const isActive = selected === f.value;
+          <AnimatedPressable
+            onPress={() => { setSelectedCity(null); if (userLocation) mapRef.current?.animateToRegion({ ...userLocation, latitudeDelta: 0.02, longitudeDelta: 0.02 }, 600); }}
+          >
+            <View style={[styles.chip, { backgroundColor: !selectedCity ? colors.accentSoft : colors.surface, borderColor: !selectedCity ? colors.primary : colors.border }]}>
+              <Text style={[styles.chipText, { color: !selectedCity ? colors.accentInk : colors.textSecondary, fontWeight: !selectedCity ? FontWeight.semibold : FontWeight.medium }]}>{t.mapAllCities}</Text>
+            </View>
+          </AnimatedPressable>
+          {Object.keys(CITY_REGIONS).map((city) => {
+            const isActive = selectedCity === city;
             return (
               <AnimatedPressable
-                key={f.label}
-                onPress={() => setSelected(f.value)}
+                key={city}
+                onPress={() => { setSelectedCity(city); mapRef.current?.animateToRegion(CITY_REGIONS[city], 600); }}
               >
-                <View style={[styles.pillOuter, { backgroundColor: 'rgba(0,0,0,0.75)' }]}>
-                  <View style={[styles.pillInner, { backgroundColor: isActive ? f.color : 'rgba(255,255,255,0.15)' }]}>
-                    <Text style={styles.pillText}>{f.emoji} {f.label}{isActive ? ' ★' : ''}</Text>
-                  </View>
+                <View style={[styles.chip, { backgroundColor: isActive ? colors.accentSoft : colors.surface, borderColor: isActive ? colors.primary : colors.border }]}>
+                  <Text style={[styles.chipText, { color: isActive ? colors.accentInk : colors.textSecondary, fontWeight: isActive ? FontWeight.semibold : FontWeight.medium }]}>
+                    {city.charAt(0).toUpperCase() + city.slice(1)}
+                  </Text>
                 </View>
               </AnimatedPressable>
             );
@@ -158,16 +323,16 @@ export default function MapScreen() {
       {/* Empty state */}
       {eventsWithCoords.length === 0 && (
         <View style={styles.emptyOverlay} pointerEvents="none">
-          <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.borderStrong }]}>
-            <Text style={styles.emptyEmoji}>🗺️</Text>
-            <Text style={[styles.emptyTitle, { color: colors.textPrimary, fontFamily: DrawFont }]}>{t.mapEmptyTitle}</Text>
+          <Card padded style={styles.emptyCard}>
+            <Icon name="map" size={34} color={colors.textDecor} />
+            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>{t.mapEmptyTitle}</Text>
             <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>{t.mapEmptyBody}</Text>
-          </View>
+          </Card>
         </View>
       )}
 
       {/* Event count badge */}
-      <View style={[styles.countBadge, { backgroundColor: colors.surface, borderColor: colors.borderStrong, bottom: TAB_BAR_BASE_HEIGHT + insets.bottom + 16 }]}>
+      <View style={[styles.countBadge, { backgroundColor: colors.surface, borderColor: colors.border, bottom: TAB_BAR_BASE_HEIGHT + insets.bottom + 16 }]}>
         <Text style={[styles.countText, { color: colors.textPrimary }]}>
           {t.mapEvents(eventsWithCoords.length)}
         </Text>
@@ -177,12 +342,26 @@ export default function MapScreen() {
       {userLocation && (
         <AnimatedPressable
           onPress={() => mapRef.current?.animateToRegion({ ...userLocation, latitudeDelta: 0.02, longitudeDelta: 0.02 }, 600)}
-          style={[styles.locBtn, { backgroundColor: colors.surface, borderColor: colors.borderStrong, bottom: TAB_BAR_BASE_HEIGHT + insets.bottom + 16 }]}
+          style={[styles.locBtn, { backgroundColor: colors.surface, borderColor: colors.border, bottom: TAB_BAR_BASE_HEIGHT + insets.bottom + 16 }]}
         >
-          <Text style={styles.locBtnIcon}>📍</Text>
+          <Icon name="pin" size={19} color={colors.primary} />
         </AnimatedPressable>
       )}
 
+      <FilterSheet
+        visible={filterSheetVisible}
+        onClose={() => setFilterSheetVisible(false)}
+        radiusKm={radiusKm}
+        onRadiusChange={handleRadiusChange}
+        when={when}
+        onWhenChange={setWhen}
+        uniOnly={uniOnly}
+        onUniOnlyChange={setUniOnly}
+        soloFriendly={soloFriendly}
+        onSoloFriendlyChange={setSoloFriendly}
+        resultCount={eventsWithCoords.length}
+        onClear={clearFilterSheet}
+      />
     </View>
   );
 }
@@ -190,54 +369,50 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   map: { flex: 1 },
-  // Pins
+  // Pins (spec §4 "Map": 32px white circle, 1px border, category-colored icon)
+  // No Shadow.sm here — its `elevation` (Android's shadow mechanism) breaks
+  // react-native-maps' native bitmap snapshot for custom marker views on
+  // Android, making pins render as fully invisible while the map tiles
+  // underneath render fine. iOS shadow props don't have this problem since
+  // iOS renders marker views natively instead of snapshotting them.
   pin: {
-    width: 38, height: 38, borderRadius: 19,
+    width: 32, height: 32, borderRadius: 16,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 3,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4,
-    elevation: 4,
-  },
-  pinEmoji: { fontSize: 18 },
-  pinTail: {
-    width: 0, height: 0,
-    borderLeftWidth: 6, borderRightWidth: 6, borderTopWidth: 8,
-    borderLeftColor: 'transparent', borderRightColor: 'transparent',
-    alignSelf: 'center', marginTop: -1,
+    borderWidth: 1,
+    ...(Platform.OS === 'ios' ? Shadow.sm : null),
   },
   // Filters overlay
   filtersOverlay: { position: 'absolute', top: 0, left: 0, right: 0 },
-  filterRow: { paddingHorizontal: Spacing.lg, gap: 8, flexDirection: 'row', paddingBottom: 8 },
-  pillOuter: { borderRadius: 999, padding: 2.5 },
-  pillInner: { borderRadius: 999, height: 30, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' },
-  pillText: { fontSize: 12, fontWeight: '800', color: '#FFFFFF', fontFamily: DrawFont },
+  filterRowWithBtn: { flexDirection: 'row', alignItems: 'center' },
+  filterRow: { paddingLeft: Spacing.gutter, gap: 7, flexDirection: 'row', paddingBottom: 8, paddingRight: Spacing.md },
+  mapFilterBtnWrap: { marginRight: Spacing.gutter, marginBottom: 8 },
+  mapFilterBtn: {
+    width: 34, height: 34, borderRadius: BorderRadius.full,
+    borderWidth: 1, alignItems: 'center', justifyContent: 'center',
+    ...Shadow.sm,
+  },
+  mapFilterDot: { position: 'absolute', top: -1, right: -1, width: 8, height: 8, borderRadius: 4 },
+  chip: { borderRadius: BorderRadius.full, borderWidth: 1, paddingHorizontal: Spacing.base, paddingVertical: 9, alignItems: 'center', justifyContent: 'center' },
+  chipText: { fontSize: FontSize.base, fontFamily: UIFont },
   // Count badge
   countBadge: {
-    position: 'absolute', right: Spacing.lg,
-    borderWidth: 2.5, borderRadius: BorderRadius.full,
-    paddingHorizontal: Spacing.md, paddingVertical: 6,
-    ...Shadow.sm,
+    position: 'absolute', right: Spacing.gutter,
+    borderWidth: 1, borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.base, paddingVertical: 7,
   },
-  countText: { fontSize: FontSize.xs, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
+  countText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
   // Location button
   locBtn: {
-    position: 'absolute', left: Spacing.lg,
-    width: 44, height: 44, borderRadius: 22,
-    borderWidth: 2.5, alignItems: 'center', justifyContent: 'center',
-    ...Shadow.sm,
+    position: 'absolute', left: Spacing.gutter,
+    width: 42, height: 42, borderRadius: 21,
+    borderWidth: 1, alignItems: 'center', justifyContent: 'center',
   },
-  locBtnIcon: { fontSize: 20 },
   // Empty state
   emptyOverlay: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl,
   },
-  emptyCard: {
-    borderWidth: 2.5, borderRadius: BorderRadius.xl,
-    padding: Spacing.lg, alignItems: 'center', gap: 6,
-    maxWidth: 280, ...Shadow.sm,
-  },
-  emptyEmoji: { fontSize: 40 },
-  emptyTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.extrabold, textAlign: 'center' },
-  emptyBody: { fontSize: FontSize.sm, textAlign: 'center', lineHeight: 19 },
+  emptyCard: { alignItems: 'center', gap: 6, maxWidth: 280, ...Shadow.sheet },
+  emptyTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, fontFamily: UIFont, textAlign: 'center' },
+  emptyBody: { fontSize: FontSize.base, fontFamily: UIFontLight, textAlign: 'center', lineHeight: 19 },
 });

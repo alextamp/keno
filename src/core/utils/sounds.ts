@@ -1,4 +1,5 @@
 import { createAudioPlayer, setAudioModeAsync, AudioPlayer } from 'expo-audio';
+import { usePreferencesStore } from '@/core/store/preferences.store';
 
 // Without this, iOS silences all playback whenever the phone's physical
 // mute switch is on — sound effects would appear to "not work" for anyone
@@ -25,6 +26,7 @@ function getPlayer(key: SoundKey): AudioPlayer {
 
 export const sounds = {
   async play(key: SoundKey) {
+    if (!usePreferencesStore.getState().soundEffectsEnabled) return;
     try {
       const player = getPlayer(key);
       await player.seekTo(0);

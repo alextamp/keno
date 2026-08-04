@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 import { uploadProfilePhoto } from '@/core/utils/uploadImage';
+import { pickImage } from '@/core/utils/imagePicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/core/theme';
@@ -11,17 +11,22 @@ import { useEventsStore } from '@/features/events/presentation/store/events.stor
 import { eventsRepository } from '@/features/events/data/repositories/events.repository.impl';
 import { isLeft } from '@/core/utils/either';
 import { containsBlockedContent } from '@/core/utils/contentModeration';
-import { DrawFont, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@/core/constants/theme';
+import { UIFont, TitleFont, FontSize, FontWeight, Spacing, BorderRadius } from '@/core/constants/theme';
 import { TAB_BAR_BASE_HEIGHT } from '@/core/constants/layout';
-import { EventEntity, isAttending } from '@/features/events/domain/entities/event.entity';
-import { EventCard } from '@/components/ui/EventCard';
+import { EventEntity, isEventPast } from '@/features/events/domain/entities/event.entity';
 import { useTranslation, useLanguageStore } from '@/core/i18n';
 import { universityLabel } from '@/core/constants/universities';
-import { getLevel, isBetaTesterUser } from '@/core/constants/gamification';
+import { getLevel, isVerifiedUser, isRegularUser, isBetaTesterUser, LEVELS } from '@/core/constants/gamification';
 import { LevelsModal } from '@/components/ui/LevelsModal';
+import { Icon } from '@/components/ui/Icon';
+import { Card } from '@/components/ui/Card';
+import { Tag } from '@/components/ui/Tag';
+import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
+import { SectionLabel } from '@/components/ui/SectionLabel';
+import { ProgressTrack } from '@/components/ui/ProgressTrack';
 import { fetchUserProfiles, UserProfile } from '@/core/utils/userProfiles';
 
-const AVATAR_COLORS = ['#C94D0A','#7C3AED','#059669','#2563EB','#DB2777','#D97706','#DC2626','#0891B2'];
+const AVATAR_COLORS = ['#B8482A','#7C3AED','#059669','#2563EB','#DB2777','#D97706','#DC2626','#0891B2'];
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -29,8 +34,8 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const updateProfile = useAuthStore((s) => s.updateProfile);
-  const unsaveEvent = useAuthStore((s) => s.unsaveEvent);
   const signOut = useAuthStore((s) => s.signOut);
+  const claimChallenge = useAuthStore((s) => s.claimChallenge);
   const t = useTranslation();
   const { language } = useLanguageStore();
   const events = useEventsStore((s) => s.events);
@@ -51,42 +56,74 @@ export default function ProfileScreen() {
       if (!isLeft(result)) setMyEvents(result.right);
     });
   }, [user?.id]);
-  const [profileTab, setProfileTab] = useState<'upcoming' | 'past' | 'saved'>('upcoming');
+
+  // Challenge definitions + the XP-claiming effect below both live here,
+  // above the `if (!user) return` guard further down — they used to sit
+  // after it, which meant signing out (user -> null, re-rendering this
+  // always-mounted tab) skipped this hook entirely and React threw
+  // "Rendered fewer hooks than expected." Every hook must run on every
+  // render; guard clauses that change what gets *rendered* have to come
+  // after all of them, not before.
+  const challenges: { id: string; emoji: string; title: string; desc: string; xp: number; current: number; target: number }[] = user ? [
+    { id: 'join_1',    emoji: '🎯', title: t.challengeJoin1Title,    desc: t.challengeJoin1Desc,    xp: 10,  current: Math.min(user.joinedEvents.length, 1),    target: 1  },
+    { id: 'join_5',    emoji: '⭐', title: t.challengeJoin5Title,    desc: t.challengeJoin5Desc,    xp: 50,  current: Math.min(user.joinedEvents.length, 5),    target: 5  },
+    { id: 'join_10',   emoji: '🏆', title: t.challengeJoin10Title,   desc: t.challengeJoin10Desc,   xp: 100, current: Math.min(user.joinedEvents.length, 10),   target: 10 },
+    { id: 'join_25',   emoji: '👑', title: t.challengeJoin25Title,   desc: t.challengeJoin25Desc,   xp: 250, current: Math.min(user.joinedEvents.length, 25),   target: 25 },
+    { id: 'create_1',  emoji: '📣', title: t.challengeCreate1Title,  desc: t.challengeCreate1Desc,  xp: 25,  current: Math.min(user.createdEvents.length, 1),   target: 1  },
+    { id: 'create_5',  emoji: '🎪', title: t.challengeCreate5Title,  desc: t.challengeCreate5Desc,  xp: 125, current: Math.min(user.createdEvents.length, 5),   target: 5  },
+    { id: 'streak_3',  emoji: '🔥', title: t.challengeStreak3Title,  desc: t.challengeStreak3Desc,  xp: 15,  current: Math.min(user.currentStreak ?? 0, 3),     target: 3  },
+    { id: 'streak_7',  emoji: '💥', title: t.challengeStreak7Title,  desc: t.challengeStreak7Desc,  xp: 30,  current: Math.min(user.currentStreak ?? 0, 7),     target: 7  },
+    { id: 'follow_5',  emoji: '👥', title: t.challengeFollow5Title,  desc: t.challengeFollow5Desc,  xp: 15,  current: Math.min(user.following?.length ?? 0, 5),  target: 5  },
+    { id: 'follow_10', emoji: '🌐', title: t.challengeFollow10Title, desc: t.challengeFollow10Desc, xp: 25,  current: Math.min(user.following?.length ?? 0, 10), target: 10 },
+  ] : [];
+  // claimedChallengeIds is built with arrayUnion (auth.store's claimChallenge),
+  // which only ever appends — so its order already is completion order. Sort
+  // done challenges by it so whichever one you *just* finished sinks to the
+  // very bottom instead of sitting wherever its fixed definition-order slot
+  // happens to be, keeping the collapsed view showing mostly what's still new.
+  const claimOrder = user?.claimedChallengeIds ?? [];
+  const doneChallenges = challenges
+    .filter((c) => c.current >= c.target)
+    .sort((a, b) => claimOrder.indexOf(a.id) - claimOrder.indexOf(b.id));
+  const doneChallengeIds = doneChallenges.map((c) => c.id).join(',');
+
+  // Pay out a challenge's XP exactly once, the moment it's newly completed —
+  // previously the "+XP" shown on each card was never actually granted.
+  useEffect(() => {
+    if (!user) return;
+    doneChallenges.forEach((c) => {
+      if (!user.claimedChallengeIds?.includes(c.id)) claimChallenge(c.id, c.xp).catch(() => {});
+    });
+  }, [doneChallengeIds, user?.claimedChallengeIds?.join(',')]);
+
   const [editing, setEditing] = useState(false);
   const [draftBio, setDraftBio] = useState(user?.bio ?? '');
   const [draftName, setDraftName] = useState(user?.name ?? '');
-  const [draftColor, setDraftColor] = useState(user?.avatarColor ?? '#C94D0A');
+  const [draftColor, setDraftColor] = useState(user?.avatarColor ?? '#B8482A');
   const [draftPhoto, setDraftPhoto] = useState<string | undefined>(user?.photoUri);
   const [isSaving, setIsSaving] = useState(false);
   const [showAllChallenges, setShowAllChallenges] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<{ emoji: string; label: string; description: string; earned: boolean } | null>(null);
   const [showLevelModal, setShowLevelModal] = useState(false);
-  const [followList, setFollowList] = useState<'followers' | 'following' | null>(null);
+  const [followList, setFollowList] = useState<'followers' | 'following' | 'connections' | null>(null);
   const [followProfiles, setFollowProfiles] = useState<Record<string, UserProfile>>({});
 
   const pickPhoto = async () => {
     if (!editing) return;
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { Alert.alert(t.profileAlertPermTitle, t.profileAlertPermBody); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-    if (!result.canceled) setDraftPhoto(result.assets[0].uri);
+    const uri = await pickImage({ aspect: [1, 1] });
+    if (uri) setDraftPhoto(uri);
   };
 
   if (!user) return (
     <View style={{ flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 32 }}>
       <Text style={{ fontSize: 48 }}>👤</Text>
-      <Text style={{ fontSize: 18, fontWeight: '800', fontFamily: DrawFont, color: colors.textPrimary, textAlign: 'center' }}>{t.profileErrorTitle}</Text>
+      <Text style={{ fontSize: 18, fontWeight: '800', fontFamily: UIFont, color: colors.textPrimary, textAlign: 'center' }}>{t.profileErrorTitle}</Text>
       <Text style={{ fontSize: 14, color: colors.textHint, textAlign: 'center' }}>{t.profileErrorBody}</Text>
       <AnimatedPressable
         onPress={() => signOut()}
         style={{ backgroundColor: colors.primary, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 999, marginTop: 8 }}
       >
-        <Text style={{ color: '#fff', fontWeight: '800', fontFamily: DrawFont, fontSize: 16 }}>{t.settingsSignOut}</Text>
+        <Text style={{ color: '#fff', fontWeight: '800', fontFamily: UIFont, fontSize: 16 }}>{t.settingsSignOut}</Text>
       </AnimatedPressable>
     </View>
   );
@@ -97,29 +134,24 @@ export default function ProfileScreen() {
 
   const now = new Date();
   const streak = user.currentStreak ?? 0;
-  const levelInfo = getLevel(user.xp ?? 0);
+  const levelInfo = getLevel(user.xp ?? 0, user.id);
+  // Overall journey progress (0 XP through the last level's threshold), not
+  // just the current level's own segment — matches the LevelsModal roadmap.
+  const maxLevelXP = LEVELS[LEVELS.length - 1].minXP;
+  const overallLevelProgress = Math.min(1, (user.xp ?? 0) / maxLevelXP);
 
-  const upcomingEvents = myEvents.filter((e) => e.dateTime >= now);
-  const pastEvents = myEvents.filter((e) => e.dateTime < now).sort((a, b) => b.dateTime.getTime() - a.dateTime.getTime());
+  const upcomingEvents = myEvents.filter((e) => !isEventPast(e));
+  const pastEvents = myEvents.filter((e) => isEventPast(e)).sort((a, b) => b.dateTime.getTime() - a.dateTime.getTime());
   const savedEvents = events.filter((e) => user.savedEventIds?.includes(e.id));
 
-  const totalJoined = user.joinedEvents.length;
-  const followingCount = user.following?.length ?? 0;
+  // "Connections" (profile stat) is a *mutual* follow — someone you follow
+  // who follows you back — not the raw following count used by the
+  // follow_5/follow_10 challenges above.
+  const connectionsCount = (user.following ?? []).filter((id) => (user.followers ?? []).includes(id)).length;
 
-  const challenges: { id: string; emoji: string; title: string; desc: string; xp: number; current: number; target: number }[] = [
-    { id: 'join_1',    emoji: '🎯', title: 'First step',      desc: 'Join your first event',    xp: 10,  current: Math.min(totalJoined, 1),    target: 1  },
-    { id: 'join_5',    emoji: '⭐', title: 'Getting social',  desc: 'Join 5 events',             xp: 50,  current: Math.min(totalJoined, 5),    target: 5  },
-    { id: 'join_10',   emoji: '🏆', title: 'Regular',         desc: 'Join 10 events',            xp: 100, current: Math.min(totalJoined, 10),   target: 10 },
-    { id: 'join_25',   emoji: '👑', title: 'Veteran',         desc: 'Join 25 events',            xp: 250, current: Math.min(totalJoined, 25),   target: 25 },
-    { id: 'create_1',  emoji: '📣', title: 'First event',     desc: 'Create your first event',   xp: 25,  current: Math.min(createdCount, 1),   target: 1  },
-    { id: 'create_5',  emoji: '🎪', title: 'Organizer',       desc: 'Create 5 events',           xp: 125, current: Math.min(createdCount, 5),   target: 5  },
-    { id: 'streak_3',  emoji: '🔥', title: 'On fire',         desc: '3-day attendance streak',   xp: 15,  current: Math.min(streak, 3),         target: 3  },
-    { id: 'streak_7',  emoji: '💥', title: 'Unstoppable',     desc: '7-day attendance streak',   xp: 30,  current: Math.min(streak, 7),         target: 7  },
-    { id: 'follow_5',  emoji: '👥', title: 'Connected',       desc: 'Follow 5 people',           xp: 15,  current: Math.min(followingCount, 5),  target: 5  },
-    { id: 'follow_10', emoji: '🌐', title: 'Networker',       desc: 'Follow 10 people',          xp: 25,  current: Math.min(followingCount, 10), target: 10 },
-  ];
+  // challenges/claimOrder/doneChallenges are computed above, before the
+  // !user guard (Rules of Hooks — see the comment up there).
   const activeChallenges = challenges.filter((c) => c.current < c.target);
-  const doneChallenges = challenges.filter((c) => c.current >= c.target);
   const visibleChallenges = showAllChallenges ? [...activeChallenges, ...doneChallenges] : [...activeChallenges.slice(0, 3), ...doneChallenges.slice(0, 1)];
 
   const badges: { emoji: string; label: string; description: string; earned: boolean }[] = [
@@ -155,13 +187,17 @@ export default function ProfileScreen() {
     setEditing(false);
   };
   const handleCancel = () => {
-    setDraftBio(user.bio ?? ''); setDraftName(user.name); setDraftColor(user.avatarColor ?? '#C94D0A');
+    setDraftBio(user.bio ?? ''); setDraftName(user.name); setDraftColor(user.avatarColor ?? '#B8482A');
     setDraftPhoto(user.photoUri); setEditing(false);
   };
 
-  const openFollowList = async (type: 'followers' | 'following') => {
+  const openFollowList = async (type: 'followers' | 'following' | 'connections') => {
     setFollowList(type);
-    const uids = type === 'followers' ? (user.followers ?? []) : (user.following ?? []);
+    const uids = type === 'followers'
+      ? (user.followers ?? [])
+      : type === 'following'
+        ? (user.following ?? [])
+        : (user.following ?? []).filter((id) => (user.followers ?? []).includes(id));
     if (uids.length === 0) return;
     const missing = uids.filter((id) => !followProfiles[id]);
     if (missing.length > 0) {
@@ -170,7 +206,7 @@ export default function ProfileScreen() {
     }
   };
 
-  const bs = colors.borderStrong;
+  const bs = colors.border;
 
   return (
     <ScrollView style={[styles.root,{backgroundColor:colors.background}]} contentContainerStyle={[styles.content, { paddingTop: insets.top + 12, paddingBottom: TAB_BAR_BASE_HEIGHT + insets.bottom + 24 }]} showsVerticalScrollIndicator={false}>
@@ -188,57 +224,62 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* ── Hero ── */}
-      <View style={styles.hero}>
-        <AnimatedPressable onPress={pickPhoto} style={[styles.avatarWrap, { borderColor: bs }]}>
-          {(editing ? draftPhoto : user.photoUri) ? (
-            <Image source={{ uri: editing ? draftPhoto : user.photoUri }} style={styles.avatarPhoto} />
-          ) : (
-            <View style={[styles.avatar,{backgroundColor:editing?draftColor:(user.avatarColor??colors.primary)}]}>
-              <Text style={styles.avatarText}>{initials}</Text>
-            </View>
-          )}
-          {editing && (
-            <View style={[styles.photoOverlay,{backgroundColor:'rgba(0,0,0,0.4)'}]}>
-              <Text style={styles.cameraIcon}>📷</Text>
-            </View>
-          )}
-        </AnimatedPressable>
-
-        {editing ? (
-          <>
-            <View style={styles.colorRow}>
-              {AVATAR_COLORS.map((c) => (
-                <AnimatedPressable key={c} onPress={() => setDraftColor(c)}
-                  style={[styles.colorDot,{backgroundColor:c, borderColor: bs},draftColor===c&&styles.colorDotSelected]} />
-              ))}
-            </View>
-            <AnimatedPressable onPress={() => setDraftPhoto(undefined)}>
-              <Text style={[styles.removePhotoLabel,{color:colors.textHint}]}>{t.profileRemovePhoto}</Text>
-            </AnimatedPressable>
-          </>
-        ) : (
-          <>
-            <Text style={[styles.heroName,{color:colors.textPrimary}]}>{user.name}</Text>
-            <Text style={[styles.heroEmail,{color:colors.textHint}]}>{user.universityEmail}</Text>
-            {!!user.universityName && (
-              <Text style={[styles.heroUni,{color:colors.textSecondary}]}>🎓 {universityLabel(user.universityName, language)}{user.department ? `  ·  ${user.department}` : ''}</Text>
+      {/* ── Hero: edit mode keeps the big centered avatar + color picker;
+          view mode is the mock's compact avatar+name+school row (mockup 21). ── */}
+      {editing ? (
+        <View style={styles.heroEditing}>
+          <AnimatedPressable onPress={pickPhoto} style={[styles.avatarWrap, { borderColor: bs }]}>
+            {draftPhoto ? (
+              <Image source={{ uri: draftPhoto }} style={styles.avatarPhoto} />
+            ) : (
+              <View style={[styles.avatar, { backgroundColor: draftColor }]}>
+                <Text style={styles.avatarText}>{initials}</Text>
+              </View>
             )}
-            <AnimatedPressable onPress={() => setShowLevelModal(true)} style={[styles.levelPill, { backgroundColor: levelInfo.color + '18', borderColor: levelInfo.color }]}>
-              <Text style={styles.levelPillEmoji}>{levelInfo.emoji}</Text>
-              <Text style={[styles.levelPillName, { color: levelInfo.color }]}>{levelInfo.name}</Text>
-              <Text style={[styles.levelPillXP, { color: levelInfo.color }]}>{user.xp ?? 0} XP</Text>
-              {levelInfo.next && (
-                <View style={[styles.levelPillTrack, { backgroundColor: levelInfo.color + '30' }]}>
-                  <View style={[styles.levelPillFill, { backgroundColor: levelInfo.color, width: `${Math.round(levelInfo.progress * 100)}%` as any }]} />
-                </View>
-              )}
-            </AnimatedPressable>
-          </>
-        )}
-      </View>
+            <View style={[styles.photoOverlay,{backgroundColor:'rgba(0,0,0,0.4)'}]}>
+              <Icon name="camera" size={20} color="#fff" />
+            </View>
+          </AnimatedPressable>
+          <View style={styles.colorRow}>
+            {AVATAR_COLORS.map((c) => (
+              <AnimatedPressable key={c} onPress={() => setDraftColor(c)}
+                style={[styles.colorDot,{backgroundColor:c, borderColor: bs},draftColor===c&&styles.colorDotSelected]} />
+            ))}
+          </View>
+          <AnimatedPressable onPress={() => setDraftPhoto(undefined)}>
+            <Text style={[styles.removePhotoLabel,{color:colors.textHint}]}>{t.profileRemovePhoto}</Text>
+          </AnimatedPressable>
+        </View>
+      ) : (
+        <View style={styles.heroView}>
+          <View style={[styles.avatarWrapSm, { borderColor: bs }]}>
+            {user.photoUri ? (
+              <Image source={{ uri: user.photoUri }} style={styles.avatarPhotoSm} />
+            ) : (
+              <View style={[styles.avatarSm, { backgroundColor: user.avatarColor ?? colors.primary }]}>
+                <Text style={styles.avatarTextSm}>{initials}</Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.heroInfo}>
+            <Text style={[styles.heroName,{color:colors.textPrimary}]} numberOfLines={1}>{user.name}</Text>
+            {!!user.universityName && (
+              <Text style={[styles.heroUni,{color:colors.textHint}]} numberOfLines={1}>
+                {universityLabel(user.universityName, language)}{user.department ? ` · ${user.department}` : ''}
+              </Text>
+            )}
+            <View style={styles.pillRow}>
+              <AnimatedPressable onPress={() => setShowLevelModal(true)}>
+                <Tag label={levelInfo.name} />
+              </AnimatedPressable>
+              {isVerifiedUser(user.checkInCount) && <VerifiedBadge />}
+              {isRegularUser(user.currentStreak) && <VerifiedBadge label={t.regularBadgeLabel} icon="flame" />}
+            </View>
+          </View>
+        </View>
+      )}
 
-      <LevelsModal visible={showLevelModal} xp={user.xp ?? 0} onClose={() => setShowLevelModal(false)} />
+      <LevelsModal visible={showLevelModal} xp={user.xp ?? 0} uid={user.id} onClose={() => setShowLevelModal(false)} />
 
       {/* ── Edit fields ── */}
       {editing && (
@@ -258,24 +299,45 @@ export default function ProfileScreen() {
         <Text style={[styles.bio,{color:colors.textPrimary}]}>{user.bio}</Text>
       ) : null)}
 
-      {/* ── Stats strip ── */}
+      {/* ── Level / XP progress card (mockup 21) — tapping it opens the same
+          LevelsModal roadmap as the "ΕΣΥ" pill in the hero row. ── */}
       {!editing && (
-        <View style={[styles.statsStrip, { backgroundColor: colors.surface, borderColor: bs }]}>
+        <AnimatedPressable onPress={() => setShowLevelModal(true)}>
+          <Card padded style={styles.levelCard}>
+            <View style={styles.levelCardHeader}>
+              <SectionLabel label={t.profileLevelProgressLabel(levelInfo.name)} />
+              <Text style={[styles.levelCardFraction, { color: colors.textHint }]}>
+                {user.xp ?? 0}/{maxLevelXP}
+              </Text>
+            </View>
+            <ProgressTrack progress={overallLevelProgress} style={styles.levelCardTrack} />
+            <Text style={[styles.levelCardCaption, { color: colors.textHint }]}>
+              {levelInfo.next ? t.profileLevelXpToNext(levelInfo.xpNeeded - levelInfo.xpInLevel) : t.profileLevelMaxed}
+            </Text>
+          </Card>
+        </AnimatedPressable>
+      )}
+
+      {/* ── Stats row (mockup 21): 3 equal columns, 1px vertical rules, no boxes.
+          Followers aren't shown here (only 3 slots in the mock) — "Meetups"
+          reuses the existing following-count/list, closest available proxy
+          for "people you know" without adding a new data field. ── */}
+      {!editing && (
+        <Card style={styles.statsCard}>
           {[
-            { n: user.followers?.length ?? 0, label: 'Followers', onPress: () => openFollowList('followers') },
-            { n: user.following?.length ?? 0, label: 'Following', onPress: () => openFollowList('following') },
-            { n: createdCount + joinedCount,   label: 'Events',    onPress: undefined },
-            { n: streak,                       label: streak >= 7 ? '💥 Streak' : streak > 0 ? '🔥 Streak' : 'Streak', onPress: undefined },
+            { n: createdCount + joinedCount, label: t.profileStatEvents, onPress: undefined as (() => void) | undefined },
+            { n: connectionsCount,           label: t.profileStatMeetups, onPress: () => openFollowList('connections') },
+            { n: streak,                     label: t.profileStatStreak, onPress: undefined as (() => void) | undefined },
           ].map(({ n, label, onPress }, i, arr) => (
             <React.Fragment key={label}>
-              <AnimatedPressable onPress={onPress ?? undefined} disabled={!onPress} style={styles.statCell}>
-                <Text style={[styles.statNum, { color: colors.primary }]}>{n}</Text>
-                <Text style={[styles.statLbl, { color: colors.textSecondary }]}>{label}</Text>
+              <AnimatedPressable onPress={onPress} disabled={!onPress} style={styles.statCell}>
+                <Text style={[styles.statNum, { color: colors.textPrimary }]}>{n}</Text>
+                <Text style={[styles.statLbl, { color: colors.textHint }]}>{label.toUpperCase()}</Text>
               </AnimatedPressable>
               {i < arr.length - 1 && <View style={[styles.statDivider, { backgroundColor: colors.border }]} />}
             </React.Fragment>
           ))}
-        </View>
+        </Card>
       )}
 
       {/* ── Followers / Following sheet ── */}
@@ -284,12 +346,16 @@ export default function ProfileScreen() {
           <AnimatedPressable style={[styles.sheetContainer, { backgroundColor: colors.surface, borderColor: bs }]} onPress={() => {}}>
             <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>
-              {followList === 'followers' ? 'Followers' : 'Following'}
+              {followList === 'followers' ? t.userFollowersTitle : followList === 'following' ? t.userFollowingTitle : t.userConnectionsTitle}
             </Text>
             {(() => {
-              const uids = followList === 'followers' ? (user.followers ?? []) : (user.following ?? []);
+              const uids = followList === 'followers'
+                ? (user.followers ?? [])
+                : followList === 'following'
+                  ? (user.following ?? [])
+                  : (user.following ?? []).filter((id) => (user.followers ?? []).includes(id));
               if (uids.length === 0) {
-                return <Text style={[styles.sheetEmpty, { color: colors.textHint }]}>{followList === 'followers' ? 'No followers yet' : 'Not following anyone yet'}</Text>;
+                return <Text style={[styles.sheetEmpty, { color: colors.textHint }]}>{t.userConnectionsEmpty}</Text>;
               }
               return (
                 <ScrollView showsVerticalScrollIndicator={false} style={styles.sheetList}>
@@ -313,7 +379,7 @@ export default function ProfileScreen() {
                           <Text style={[styles.personName, { color: colors.textPrimary }]}>{p?.name ?? uid}</Text>
                           {!!p?.university && <Text style={[styles.personUni, { color: colors.textHint }]}>🎓 {universityLabel(p.university, language)}</Text>}
                         </View>
-                        <Text style={[styles.personChevron, { color: colors.textHint }]}>›</Text>
+                        <Icon name="fwd" size={15} color={colors.textHint} />
                       </AnimatedPressable>
                     );
                   })}
@@ -329,15 +395,15 @@ export default function ProfileScreen() {
       {!editing && (
         <View style={[styles.badgesCard, { backgroundColor: colors.surface, borderColor: bs }]}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t.profileBadgesTitle}</Text>
-          <View style={styles.badgesRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.badgesRow}>
             {badges.map((b) => (
               <AnimatedPressable key={b.label} onPress={() => setSelectedBadge(b)}
                 style={[styles.badge, { opacity: b.earned ? 1 : 0.28 }]}>
                 <Text style={styles.badgeEmoji}>{b.emoji}</Text>
-                <Text style={[styles.badgeLabel, { color: b.earned ? colors.textPrimary : colors.textHint }]}>{b.label}</Text>
+                <Text style={[styles.badgeLabel, { color: b.earned ? colors.textPrimary : colors.textHint }]} numberOfLines={1}>{b.label}</Text>
               </AnimatedPressable>
             ))}
-          </View>
+          </ScrollView>
         </View>
       )}
 
@@ -400,65 +466,54 @@ export default function ProfileScreen() {
         </AnimatedPressable>
       </Modal>
 
-      {/* Events tabs */}
-      <View style={styles.eventsSection}>
-        <View style={[styles.tabsRow, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
-          {([
-            { key: 'upcoming', label: t.profileTabUpcoming(upcomingEvents.length) },
-            { key: 'past', label: t.profileTabPast(pastEvents.length) },
-            { key: 'saved', label: t.profileTabSaved(savedEvents.length) },
-          ] as const).map((tab) => (
-            <AnimatedPressable
-              key={tab.key}
-              onPress={() => setProfileTab(tab.key)}
-              style={[styles.tabBtn, profileTab === tab.key && { backgroundColor: colors.surface, borderColor: bs }]}
-            >
-              <Text style={[styles.tabText, { color: profileTab === tab.key ? colors.primary : colors.textSecondary }]}
-                numberOfLines={1}>
-                {tab.label}
-              </Text>
-            </AnimatedPressable>
-          ))}
+      {/* Upcoming/past/saved used to render their full lists inline here —
+          now they're just links out to a dedicated page each, to keep the
+          profile itself short. */}
+      {!editing && (
+        <View style={styles.eventsSection}>
+          <AnimatedPressable onPress={() => router.push('/(app)/profile/events/upcoming' as any)} style={[styles.settingRow, { backgroundColor: colors.surface, borderColor: bs }]}>
+            <View style={styles.settingLeft}>
+              <Icon name="cal" size={18} color={colors.textPrimary} />
+              <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>{t.profileTabUpcoming(upcomingEvents.length)}</Text>
+            </View>
+            <Icon name="fwd" size={16} color={colors.textHint} />
+          </AnimatedPressable>
+          <AnimatedPressable onPress={() => router.push('/(app)/profile/events/past' as any)} style={[styles.settingRow, { backgroundColor: colors.surface, borderColor: bs }]}>
+            <View style={styles.settingLeft}>
+              <Icon name="clock" size={18} color={colors.textPrimary} />
+              <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>{t.profileTabPast(pastEvents.length)}</Text>
+            </View>
+            <Icon name="fwd" size={16} color={colors.textHint} />
+          </AnimatedPressable>
+          <AnimatedPressable onPress={() => router.push('/(app)/profile/events/saved' as any)} style={[styles.settingRow, { backgroundColor: colors.surface, borderColor: bs }]}>
+            <View style={styles.settingLeft}>
+              <Icon name="bookmark" size={18} color={colors.textPrimary} />
+              <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>{t.profileTabSaved(savedEvents.length)}</Text>
+            </View>
+            <Icon name="fwd" size={16} color={colors.textHint} />
+          </AnimatedPressable>
         </View>
+      )}
 
-        <View style={styles.eventsList}>
-          {profileTab === 'upcoming' && (
-            upcomingEvents.length === 0
-              ? <Text style={[styles.emptyTab, { color: colors.textHint }]}>{t.profileEmptyUpcoming}</Text>
-              : upcomingEvents.map((e) => (
-                <EventCard key={e.id} event={e} isJoined={isAttending(e, user.id)} onPress={() => router.push(`/(app)/event/${e.id}`)} />
-              ))
-          )}
-          {profileTab === 'past' && (
-            pastEvents.length === 0
-              ? <Text style={[styles.emptyTab, { color: colors.textHint }]}>{t.profileEmptyPast}</Text>
-              : pastEvents.map((e) => (
-                <EventCard key={e.id} event={e} isJoined={isAttending(e, user.id)} onPress={() => router.push(`/(app)/event/${e.id}`)} faded />
-              ))
-          )}
-          {profileTab === 'saved' && (
-            savedEvents.length === 0
-              ? <Text style={[styles.emptyTab, { color: colors.textHint }]}>{t.profileEmptySaved}</Text>
-              : savedEvents.map((e) => (
-                <EventCard
-                  key={e.id}
-                  event={e}
-                  isSaved
-                  onSave={() => unsaveEvent(e.id).catch(() => {})}
-                  onPress={() => router.push(`/(app)/event/${e.id}`)}
-                />
-              ))
-          )}
-        </View>
-      </View>
+      {!editing && (
+        <AnimatedPressable onPress={() => router.push('/(app)/profile/tickets' as any)} style={[styles.settingRow,{backgroundColor:colors.surface,borderColor: bs, marginBottom: 10}]}>
+          <View style={styles.settingLeft}>
+            <Icon name="ticket" size={18} color={colors.textPrimary} />
+            <Text style={[styles.settingLabel,{color:colors.textPrimary}]}>{t.profileTicketsPhotosBtn}</Text>
+          </View>
+          <Icon name="fwd" size={16} color={colors.textHint} />
+        </AnimatedPressable>
+      )}
 
-      <AnimatedPressable onPress={() => router.push('/(app)/settings' as any)} style={[styles.settingRow,{backgroundColor:colors.surface,borderColor: bs}]}>
-        <View style={styles.settingLeft}>
-          <Text style={styles.settingIcon}>⚙️</Text>
-          <Text style={[styles.settingLabel,{color:colors.textPrimary}]}>{t.profileSettings}</Text>
-        </View>
-        <Text style={[styles.settingChevron,{color:colors.textHint}]}>›</Text>
-      </AnimatedPressable>
+      {!editing && (
+        <AnimatedPressable onPress={() => router.push('/(app)/settings' as any)} style={[styles.settingRow,{backgroundColor:colors.surface,borderColor: bs, marginBottom: 10}]}>
+          <View style={styles.settingLeft}>
+            <Icon name="settings" size={18} color={colors.textPrimary} />
+            <Text style={[styles.settingLabel,{color:colors.textPrimary}]}>{t.profileSettings}</Text>
+          </View>
+          <Icon name="fwd" size={16} color={colors.textHint} />
+        </AnimatedPressable>
+      )}
     </ScrollView>
   );
 }
@@ -466,107 +521,107 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   // Layout
   root: { flex: 1 },
-  content: { paddingHorizontal: Spacing.lg, gap: Spacing.lg },
+  content: { paddingHorizontal: Spacing.gutter, gap: Spacing.lg },
   // Top bar
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  pageTitle: { fontSize: 28, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
+  pageTitle: { fontSize: FontSize.xxl, fontWeight: FontWeight.bold, fontFamily: TitleFont, letterSpacing: -0.4 },
   topActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  editBtn: { paddingHorizontal: Spacing.md, paddingVertical: 8, borderRadius: BorderRadius.full, borderWidth: 2.5 },
-  editBtnLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: DrawFont },
-  // Hero
-  hero: { alignItems: 'center', gap: Spacing.sm },
+  editBtn: { paddingHorizontal: Spacing.md, paddingVertical: 8, borderRadius: BorderRadius.full, borderWidth: 1 },
+  editBtnLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
+  // Hero — edit mode: big centered avatar + color picker
+  heroEditing: { alignItems: 'center', gap: Spacing.sm },
   avatarWrap: { position: 'relative', width: 96, height: 96, borderRadius: 48, overflow: 'hidden', borderWidth: 3 },
   avatar: { width: 96, height: 96, borderRadius: 48, alignItems: 'center', justifyContent: 'center' },
   avatarPhoto: { width: 96, height: 96, borderRadius: 48 },
   avatarText: { color: '#fff', fontSize: 34, fontWeight: FontWeight.bold },
   photoOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  cameraIcon: { fontSize: 26 },
   colorRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap', justifyContent: 'center', marginTop: 4 },
-  colorDot: { width: 34, height: 34, borderRadius: 17, borderWidth: 2 },
+  colorDot: { width: 34, height: 34, borderRadius: 17, borderWidth: 1 },
   colorDotSelected: { borderWidth: 3, borderColor: '#fff', transform: [{ scale: 1.18 }] },
   removePhotoLabel: { fontSize: FontSize.xs, fontWeight: FontWeight.medium },
-  heroName: { fontSize: FontSize.xxl, fontWeight: FontWeight.extrabold, fontFamily: DrawFont, marginTop: 4 },
-  heroEmail: { fontSize: FontSize.sm },
-  heroUni: { fontSize: FontSize.sm, fontWeight: FontWeight.medium },
-  // Level pill (inline in hero)
-  levelPill: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 2, borderRadius: BorderRadius.full, paddingHorizontal: Spacing.md, paddingVertical: 7, marginTop: 4 },
-  levelPillEmoji: { fontSize: 16 },
-  levelPillName: { fontSize: FontSize.sm, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
-  levelPillXP: { fontSize: FontSize.xs, fontWeight: FontWeight.bold, opacity: 0.7 },
-  levelPillTrack: { width: 48, height: 5, borderRadius: 3, overflow: 'hidden' },
-  levelPillFill: { height: 5, borderRadius: 3 },
+  // Hero — view mode (mockup 21): compact avatar + name/school/pills row
+  heroView: { flexDirection: 'row', alignItems: 'center', gap: 13 },
+  avatarWrapSm: { width: 56, height: 56, borderRadius: 28, overflow: 'hidden', borderWidth: 1 },
+  avatarSm: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+  avatarPhotoSm: { width: 56, height: 56, borderRadius: 28 },
+  avatarTextSm: { color: '#fff', fontSize: 20, fontWeight: FontWeight.bold },
+  heroInfo: { flex: 1, minWidth: 0, gap: 2 },
+  heroName: { fontSize: 16.5, fontWeight: FontWeight.semibold, fontFamily: TitleFont, letterSpacing: -0.4 },
+  heroUni: { fontSize: FontSize.sm },
+  pillRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginTop: 4 },
+  // Level / XP progress card (mockup 21)
+  levelCard: { gap: 0 },
+  levelCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 },
+  levelCardFraction: { fontSize: 11.5 },
+  levelCardTrack: { marginBottom: 7 },
+  levelCardCaption: { fontSize: 11.5 },
   // Edit block
-  editBlock: { borderWidth: 2.5, borderRadius: BorderRadius.lg, padding: Spacing.md, gap: 6, ...Shadow.sm },
-  editLabel: { fontSize: FontSize.xs, fontWeight: FontWeight.bold, fontFamily: DrawFont },
+  editBlock: { borderWidth: 1, borderRadius: BorderRadius.lg, padding: Spacing.md, gap: 6},
+  editLabel: { fontSize: FontSize.xs, fontWeight: FontWeight.bold, fontFamily: UIFont },
   editInput: { fontSize: FontSize.base, fontWeight: FontWeight.medium, paddingVertical: 4 },
   editDivider: { height: 1.5, marginVertical: 6 },
   cancelBtn: { alignItems: 'center' },
   cancelLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.medium },
   // Bio
   bio: { fontSize: FontSize.md, lineHeight: 22, textAlign: 'center' },
-  // Stats strip
-  statsStrip: { flexDirection: 'row', borderWidth: 2.5, borderRadius: BorderRadius.lg, overflow: 'hidden', ...Shadow.sm },
+  // Stats row (mockup 21): 3 equal columns, vertical rules, no boxes
+  statsCard: { flexDirection: 'row' },
   statCell: { flex: 1, alignItems: 'center', paddingVertical: Spacing.md, gap: 2 },
-  statNum: { fontSize: 24, fontWeight: FontWeight.extrabold, fontFamily: DrawFont, letterSpacing: -0.5 },
-  statLbl: { fontSize: 10, fontWeight: FontWeight.bold, fontFamily: DrawFont },
-  statDivider: { width: 1.5 },
+  statNum: { fontSize: 19, fontWeight: FontWeight.bold, fontFamily: TitleFont, letterSpacing: -0.5 },
+  statLbl: { fontSize: 9.5, fontWeight: FontWeight.semibold, fontFamily: UIFont, letterSpacing: 0.4 },
+  statDivider: { width: 1 },
   // Badges
-  badgesCard: { borderWidth: 2.5, borderRadius: BorderRadius.lg, padding: Spacing.md, gap: Spacing.sm, ...Shadow.sm },
-  sectionTitle: { fontSize: FontSize.md, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
-  badgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 },
+  badgesCard: { borderWidth: 1, borderRadius: BorderRadius.lg, padding: Spacing.md, gap: Spacing.sm},
+  sectionTitle: { fontSize: FontSize.md, fontWeight: FontWeight.extrabold, fontFamily: UIFont },
+  badgesRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
   badge: { alignItems: 'center', gap: 3, width: 50 },
   badgeEmoji: { fontSize: 26 },
-  badgeLabel: { fontSize: 9, fontFamily: DrawFont, textAlign: 'center' },
+  badgeLabel: { fontSize: 9, fontFamily: UIFont, textAlign: 'center' },
   // Badge modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
-  modalCard: { width: '100%', maxWidth: 300, borderWidth: 2.5, borderRadius: BorderRadius.xl, padding: Spacing.xl, alignItems: 'center', gap: Spacing.md, ...Shadow.sm },
+  modalCard: { width: '100%', maxWidth: 300, borderWidth: 1, borderRadius: BorderRadius.xl, padding: Spacing.xl, alignItems: 'center', gap: Spacing.md},
   modalEmoji: { fontSize: 52 },
-  modalBadgeName: { fontSize: FontSize.xl, fontWeight: FontWeight.extrabold, fontFamily: DrawFont, textAlign: 'center' },
+  modalBadgeName: { fontSize: FontSize.xl, fontWeight: FontWeight.extrabold, fontFamily: UIFont, textAlign: 'center' },
   modalDesc: { fontSize: FontSize.sm, textAlign: 'center', lineHeight: 20 },
   modalStatus: { paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: BorderRadius.full, borderWidth: 1.5, marginTop: 4 },
-  modalStatusText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: DrawFont },
+  modalStatusText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
   // Challenges
-  challengesCard: { borderWidth: 2.5, borderRadius: BorderRadius.lg, padding: Spacing.md, gap: Spacing.md, ...Shadow.sm },
+  challengesCard: { borderWidth: 1, borderRadius: BorderRadius.lg, padding: Spacing.md, gap: Spacing.md},
   challengesHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   challengesSub: { fontSize: FontSize.xs, fontWeight: FontWeight.semibold },
   challengeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
   challengeEmoji: { fontSize: 22, marginTop: 2 },
   challengeBody: { flex: 1, gap: 3 },
   challengeTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  challengeTitle: { fontSize: FontSize.sm, fontWeight: FontWeight.extrabold, fontFamily: DrawFont, flex: 1 },
+  challengeTitle: { fontSize: FontSize.sm, fontWeight: FontWeight.extrabold, fontFamily: UIFont, flex: 1 },
   xpPill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: BorderRadius.full, borderWidth: 1.5 },
-  xpPillText: { fontSize: 10, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
+  xpPillText: { fontSize: 10, fontWeight: FontWeight.extrabold, fontFamily: UIFont },
   challengeDesc: { fontSize: FontSize.xs, lineHeight: 16 },
   challengeTrack: { height: 5, borderRadius: 3, overflow: 'hidden', borderWidth: 1, marginTop: 2 },
   challengeFill: { height: 5, borderRadius: 3 },
   challengeProgress: { fontSize: 9, fontWeight: FontWeight.bold, textAlign: 'right' },
   showMoreBtn: { alignItems: 'center', paddingTop: 4 },
-  showMoreText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: DrawFont },
+  showMoreText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
   // Events section
-  eventsSection: { gap: Spacing.md },
-  tabsRow: { flexDirection: 'row', borderRadius: BorderRadius.lg, borderWidth: 1.5, overflow: 'hidden' },
-  tabBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: BorderRadius.lg, borderWidth: 0 },
-  tabText: { fontSize: 10, fontWeight: FontWeight.bold, fontFamily: DrawFont },
-  emptyTab: { fontSize: FontSize.sm, textAlign: 'center', paddingVertical: Spacing.xl },
-  eventsList: { gap: 14 },
+  eventsSection: { gap: Spacing.sm },
   // Settings
-  settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 2.5, borderRadius: BorderRadius.lg, paddingHorizontal: Spacing.md, paddingVertical: 14, ...Shadow.sm },
+  settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderRadius: BorderRadius.lg, paddingHorizontal: Spacing.md, paddingVertical: 14},
   settingLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   settingIcon: { fontSize: 20 },
-  settingLabel: { fontSize: FontSize.base, fontWeight: FontWeight.medium, fontFamily: DrawFont },
+  settingLabel: { fontSize: FontSize.base, fontWeight: FontWeight.medium, fontFamily: UIFont },
   settingChevron: { fontSize: 20, fontWeight: FontWeight.bold },
   // Follow sheet
   sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },
-  sheetContainer: { borderTopLeftRadius: 28, borderTopRightRadius: 28, borderWidth: 2.5, borderBottomWidth: 0, padding: Spacing.lg, maxHeight: '75%' },
+  sheetContainer: { borderTopLeftRadius: 28, borderTopRightRadius: 28, borderWidth: 1, borderBottomWidth: 0, padding: Spacing.lg, maxHeight: '75%' },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: Spacing.lg },
-  sheetTitle: { fontSize: FontSize.xl, fontWeight: FontWeight.extrabold, fontFamily: DrawFont, marginBottom: Spacing.md },
+  sheetTitle: { fontSize: FontSize.xl, fontWeight: FontWeight.extrabold, fontFamily: UIFont, marginBottom: Spacing.md },
   sheetEmpty: { fontSize: FontSize.sm, textAlign: 'center', paddingVertical: Spacing.xl },
   sheetList: {},
   personRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: 10, borderBottomWidth: 1.5 },
-  personAvatar: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  personAvatar: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   personInitials: { color: '#fff', fontSize: FontSize.md, fontWeight: FontWeight.bold },
   personInfo: { flex: 1, gap: 2 },
-  personName: { fontSize: FontSize.base, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
+  personName: { fontSize: FontSize.base, fontWeight: FontWeight.extrabold, fontFamily: UIFont },
   personUni: { fontSize: FontSize.xs },
   personChevron: { fontSize: 20, fontWeight: FontWeight.bold },
 });

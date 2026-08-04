@@ -14,7 +14,7 @@ interface GroupsState {
   createGroup: (params: CreateGroupParams) => Promise<GroupEntity | null>;
   joinGroup: (groupId: string, userId: string) => Promise<boolean>;
   leaveGroup: (groupId: string, userId: string) => Promise<boolean>;
-  inviteToGroup: (groupId: string, userId: string, invitedByUid: string, invitedByName: string, groupTitle: string) => Promise<boolean>;
+  inviteToGroup: (groupId: string, userId: string, invitedByUid: string, invitedByName: string, groupTitle: string, invitedByAvatarColor?: string, invitedByPhotoUri?: string) => Promise<boolean>;
   updateGroup: (groupId: string, params: UpdateGroupParams) => Promise<boolean>;
   deleteGroup: (groupId: string, creatorId: string) => Promise<boolean>;
   requestToJoinGroup: (groupId: string, userId: string, message: string) => Promise<boolean>;
@@ -102,8 +102,8 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     );
   },
 
-  inviteToGroup: async (groupId, userId, invitedByUid, invitedByName, groupTitle) => {
-    const result = await groupsRepository.inviteToGroup(groupId, userId, invitedByUid, invitedByName, groupTitle);
+  inviteToGroup: async (groupId, userId, invitedByUid, invitedByName, groupTitle, invitedByAvatarColor, invitedByPhotoUri) => {
+    const result = await groupsRepository.inviteToGroup(groupId, userId, invitedByUid, invitedByName, groupTitle, invitedByAvatarColor, invitedByPhotoUri);
     return fold(result,
       () => false,
       () => true,

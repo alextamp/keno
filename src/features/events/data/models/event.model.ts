@@ -37,6 +37,22 @@ export function eventFromFirestore(doc: DocumentSnapshot<DocumentData>): EventMo
     longitude: data.longitude as number | undefined,
     reactions: (data.reactions as EventEntity['reactions']) ?? { hype: [], funny: [], interested: [] },
     waitlistIds: (data.waitlistIds as string[]) ?? [],
+    hostArrivedAt: data.hostArrivedAt ? (data.hostArrivedAt as Timestamp).toDate() : undefined,
+    standInHostId: data.standInHostId as string | undefined,
+    standInClaimedAt: data.standInClaimedAt ? (data.standInClaimedAt as Timestamp).toDate() : undefined,
+    feedbackGoodCount: (data.feedbackGoodCount as number) ?? 0,
+    feedbackBadCount: (data.feedbackBadCount as number) ?? 0,
+    soloFriendly: (data.soloFriendly as boolean) ?? false,
+    checkInInfo: data.checkInInfo as EventEntity['checkInInfo'],
+    referredBy: (data.referredBy as Record<string, string>) ?? undefined,
+    endedAt: data.endedAt ? (data.endedAt as Timestamp).toDate() : undefined,
+    isFlagship: (data.isFlagship as boolean) ?? false,
+    rsvpStakes: data.rsvpStakes
+      ? Object.fromEntries(
+          Object.entries(data.rsvpStakes as Record<string, { xp: number; timestamp: Timestamp; didCheckIn: boolean }>)
+            .map(([uid, s]) => [uid, { xp: s.xp, timestamp: s.timestamp.toDate(), didCheckIn: !!s.didCheckIn }]),
+        )
+      : undefined,
     messages: ((data.messages as any[]) ?? []).map((m) => ({
       id: m.id as string,
       userId: m.userId as string,
@@ -72,6 +88,9 @@ export function eventToFirestore(
     ...(event.longitude != null ? { longitude: event.longitude } : {}),
     reactions: event.reactions,
     waitlistIds: event.waitlistIds ?? [],
+    ...(event.soloFriendly ? { soloFriendly: true } : {}),
+    ...(event.checkInInfo && (event.checkInInfo.text || event.checkInInfo.photoUri) ? { checkInInfo: event.checkInInfo } : {}),
+    ...(event.isFlagship ? { isFlagship: true } : {}),
     messages: event.messages.map((m) => ({
       ...m,
       timestamp: Timestamp.fromDate(m.timestamp),

@@ -1,37 +1,66 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SectionLabel } from '@/components/ui/SectionLabel';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { isToday, isYesterday } from 'date-fns';
 import { useTheme } from '@/core/theme';
-import { DrawFont, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@/core/constants/theme';
+import { UIFont, UIFontLight, TitleFont, FontSize, FontWeight, Spacing } from '@/core/constants/theme';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { useNotificationsStore } from '@/features/notifications/notifications.store';
 import { NotificationEntity, NotifType } from '@/features/notifications/notification.entity';
 import { formatMessageTime } from '@/core/utils/time';
 import { useTranslation, useLanguageStore } from '@/core/i18n';
+import { Icon, IconName } from '@/components/ui/Icon';
 
-const NOTIF_EMOJIS: Record<NotifType, string> = {
-  follow: '👤',
-  event_join: '🎉',
-  event_message: '💬',
-  event_invite: '✉️',
-  waitlist_promoted: '🎊',
-  event_cancelled: '❌',
-  event_reminder: '⏰',
-  group_invite: '👥',
-  event_join_request: '🔒',
-  event_join_accepted: '🎉',
-  group_join_request: '🔒',
-  group_join_accepted: '🎉',
-  group_message: '💬',
+const NOTIF_ICONS: Record<NotifType, IconName> = {
+  follow: 'user',
+  event_join: 'users',
+  event_message: 'chat',
+  event_invite: 'mail',
+  waitlist_promoted: 'zap',
+  event_cancelled: 'x',
+  event_reminder: 'clock',
+  group_invite: 'users',
+  event_join_request: 'lock',
+  event_join_accepted: 'check',
+  group_join_request: 'lock',
+  group_join_accepted: 'check',
+  group_message: 'chat',
+  dm_message: 'chat',
+  buddy_match: 'users',
+  mutual_match: 'heart',
+  level_up: 'trophy',
+  friend_going: 'users',
+  referral_reward: 'gift',
 };
 
-function NotifAvatar({ name, color }: { name: string; color?: string }) {
+// Screen 26: notifications grouped into ΣΗΜΕΡΑ / ΧΘΕΣ / ΠΑΛΙΟΤΕΡΑ sections.
+function groupByDay(notifications: NotificationEntity[]): { label: string; items: NotificationEntity[] }[] {
+  const today: NotificationEntity[] = [];
+  const yesterday: NotificationEntity[] = [];
+  const earlier: NotificationEntity[] = [];
+  for (const n of notifications) {
+    if (isToday(n.createdAt)) today.push(n);
+    else if (isYesterday(n.createdAt)) yesterday.push(n);
+    else earlier.push(n);
+  }
+  return [
+    { label: 'today', items: today },
+    { label: 'yesterday', items: yesterday },
+    { label: 'earlier', items: earlier },
+  ].filter((s) => s.items.length > 0);
+}
+
+function NotifAvatar({ name, color, photoUri }: { name: string; color?: string; photoUri?: string }) {
   const initial = name.charAt(0).toUpperCase();
+  if (photoUri) {
+    return <Image source={{ uri: photoUri }} style={styles.avatar} />;
+  }
   return (
-    <View style={[styles.avatar, { backgroundColor: color ?? '#C94D0A' }]}>
+    <View style={[styles.avatar, { backgroundColor: color ?? '#B8482A' }]}>
       <Text style={styles.avatarText}>{initial}</Text>
     </View>
   );
@@ -54,6 +83,8 @@ export default function NotificationsScreen() {
   const handleTap = (notif: NotificationEntity) => {
     if ((notif.type === 'group_invite' || notif.type === 'group_join_request' || notif.type === 'group_join_accepted' || notif.type === 'group_message') && notif.eventId) {
       router.push(`/(app)/group/${notif.eventId}`);
+    } else if (notif.type === 'event_message' && notif.eventId) {
+      router.push(`/(app)/event-chat/${notif.eventId}` as any);
     } else if (notif.eventId) {
       router.push(`/(app)/event/${notif.eventId}`);
     } else if (notif.type === 'follow') {
@@ -61,7 +92,33 @@ export default function NotificationsScreen() {
     }
   };
 
-  const bs = colors.borderStrong;
+  const getLabel = (notif: NotificationEntity): string => {
+    switch (notif.type) {
+      case 'follow': return t.notifFollow(notif.fromName);
+      case 'event_join': return t.notifEventJoin(notif.fromName, notif.eventTitle ?? '');
+      case 'event_message': return t.notifEventMessage(notif.fromName, notif.eventTitle ?? '');
+      case 'event_invite': return t.notifEventInvite(notif.fromName, notif.eventTitle ?? '');
+      case 'waitlist_promoted': return t.notifWaitlistPromoted(notif.eventTitle ?? '');
+      case 'event_cancelled': return t.notifEventCancelled(notif.eventTitle ?? '');
+      case 'event_reminder': return t.notifEventReminder(notif.eventTitle ?? '');
+      case 'event_join_request': return t.notifEventJoinRequest(notif.fromName, notif.eventTitle ?? '');
+      case 'event_join_accepted': return t.notifEventJoinAccepted(notif.eventTitle ?? '');
+      case 'group_join_request': return t.notifGroupJoinRequest(notif.fromName, notif.eventTitle ?? '');
+      case 'group_join_accepted': return t.notifGroupJoinAccepted(notif.eventTitle ?? '');
+      case 'group_message': return t.notifGroupMessage(notif.fromName, notif.eventTitle ?? '');
+      case 'level_up': return t.notifLevelUp(notif.eventTitle ?? '');
+      case 'friend_going': return t.notifFriendGoing(notif.fromName, notif.eventTitle ?? '');
+      case 'referral_reward': return t.notifReferralReward(notif.fromName, notif.eventTitle ?? '');
+      default: return t.notifGroupInvite(notif.fromName, notif.eventTitle ?? '');
+    }
+  };
+
+  const sections = useMemo(() => groupByDay(notifications), [notifications]);
+  const sectionLabels: Record<string, string> = {
+    today: t.notifSectionToday,
+    yesterday: t.notifSectionYesterday,
+    earlier: t.notifSectionEarlier,
+  };
 
   return (
     <ScrollView
@@ -72,72 +129,46 @@ export default function NotificationsScreen() {
       <ScreenHeader title={t.notifTitle} />
 
       {notifications.length === 0 ? (
-        <View style={[styles.empty, { backgroundColor: colors.surface, borderColor: bs }]}>
-          <Text style={styles.emptyEmoji}>🔔</Text>
+        <View style={styles.empty}>
+          <Icon name="bell" size={40} color={colors.textDecor} />
           <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>{t.notifEmptyTitle}</Text>
           <Text style={[styles.emptyBody, { color: colors.textHint }]}>{t.notifEmptyBody}</Text>
         </View>
       ) : (
-        <View style={styles.list}>
-          {notifications.map((notif) => {
-            const emoji = NOTIF_EMOJIS[notif.type];
-            const label = notif.type === 'follow'
-              ? t.notifFollow(notif.fromName)
-              : notif.type === 'event_join'
-              ? t.notifEventJoin(notif.fromName, notif.eventTitle ?? '')
-              : notif.type === 'event_message'
-              ? t.notifEventMessage(notif.fromName, notif.eventTitle ?? '')
-              : notif.type === 'event_invite'
-              ? t.notifEventInvite(notif.fromName, notif.eventTitle ?? '')
-              : notif.type === 'waitlist_promoted'
-              ? t.notifWaitlistPromoted(notif.eventTitle ?? '')
-              : notif.type === 'event_cancelled'
-              ? t.notifEventCancelled(notif.eventTitle ?? '')
-              : notif.type === 'event_reminder'
-              ? t.notifEventReminder(notif.eventTitle ?? '')
-              : notif.type === 'event_join_request'
-              ? t.notifEventJoinRequest(notif.fromName, notif.eventTitle ?? '')
-              : notif.type === 'event_join_accepted'
-              ? t.notifEventJoinAccepted(notif.eventTitle ?? '')
-              : notif.type === 'group_join_request'
-              ? t.notifGroupJoinRequest(notif.fromName, notif.eventTitle ?? '')
-              : notif.type === 'group_join_accepted'
-              ? t.notifGroupJoinAccepted(notif.eventTitle ?? '')
-              : notif.type === 'group_message'
-              ? t.notifGroupMessage(notif.fromName, notif.eventTitle ?? '')
-              : t.notifGroupInvite(notif.fromName, notif.eventTitle ?? '');
-            return (
-              <AnimatedPressable
-                key={notif.id}
-                onPress={() => handleTap(notif)}
-                style={[
-                  styles.row,
-                  {
-                    backgroundColor: notif.read ? colors.surface : colors.surfaceVariant,
-                    borderColor: bs,
-                  },
-                ]}
-              >
-                <View style={styles.rowLeft}>
-                  <NotifAvatar name={notif.fromName} color={notif.fromAvatarColor} />
-                  {!notif.read && (
-                    <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />
-                  )}
-                </View>
-                <View style={styles.rowBody}>
-                  <Text style={styles.rowEmoji}>{emoji}</Text>
-                  <View style={styles.rowText}>
-                    <Text style={[styles.rowLabel, { color: colors.textPrimary }]} numberOfLines={2}>
-                      {label}
-                    </Text>
-                    <Text style={[styles.rowTime, { color: colors.textHint }]}>
-                      {formatMessageTime(notif.createdAt, language)}
-                    </Text>
-                  </View>
-                </View>
-              </AnimatedPressable>
-            );
-          })}
+        <View>
+          {sections.map((section) => (
+            <View key={section.label}>
+              <SectionLabel label={sectionLabels[section.label]} style={styles.sectionLabel} />
+              {section.items.map((notif, i) => {
+                const icon = NOTIF_ICONS[notif.type];
+                const label = getLabel(notif);
+                return (
+                  <AnimatedPressable
+                    key={notif.id}
+                    onPress={() => handleTap(notif)}
+                    style={[
+                      styles.row,
+                      { borderTopColor: colors.border, borderTopWidth: i === 0 ? 0 : 1 },
+                    ]}
+                  >
+                    <NotifAvatar name={notif.fromName} color={notif.fromAvatarColor} photoUri={notif.fromPhotoUri} />
+                    <View style={styles.rowBody}>
+                      <View style={styles.rowLabelRow}>
+                        <Icon name={icon} size={13} color={colors.textSecondary} />
+                        <Text style={[styles.rowLabel, { color: colors.textPrimary }]} numberOfLines={2}>
+                          {label}
+                        </Text>
+                      </View>
+                      <Text style={[styles.rowTime, { color: colors.textHint }]}>
+                        {formatMessageTime(notif.createdAt, language)}
+                      </Text>
+                    </View>
+                    {!notif.read && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
+                  </AnimatedPressable>
+                );
+              })}
+            </View>
+          ))}
         </View>
       )}
     </ScrollView>
@@ -146,35 +177,26 @@ export default function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: { paddingHorizontal: Spacing.lg, gap: Spacing.lg },
+  content: { paddingHorizontal: Spacing.gutter },
   empty: {
-    borderWidth: 2.5,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.xl,
+    paddingVertical: Spacing.xxl,
     alignItems: 'center',
     gap: Spacing.sm,
-    ...Shadow.sm,
   },
-  emptyEmoji: { fontSize: 44 },
-  emptyTitle: { fontSize: FontSize.xl, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
-  emptyBody: { fontSize: FontSize.sm, textAlign: 'center', lineHeight: 20 },
-  list: { gap: Spacing.sm },
+  emptyTitle: { fontSize: FontSize.xl, fontWeight: FontWeight.bold, fontFamily: TitleFont },
+  emptyBody: { fontSize: FontSize.base, fontFamily: UIFontLight, textAlign: 'center', lineHeight: 20 },
+  sectionLabel: { marginTop: Spacing.md, marginBottom: 4 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 2.5,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
+    paddingVertical: 12,
     gap: Spacing.md,
-    ...Shadow.sm,
   },
-  rowLeft: { position: 'relative' },
-  avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#fff', fontSize: 18, fontWeight: FontWeight.bold },
-  unreadDot: { position: 'absolute', top: 0, right: 0, width: 10, height: 10, borderRadius: 5 },
-  rowBody: { flex: 1, flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
-  rowEmoji: { fontSize: 20, marginTop: 2 },
-  rowText: { flex: 1, gap: 2 },
-  rowLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.medium, lineHeight: 19 },
-  rowTime: { fontSize: FontSize.xs },
+  avatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  avatarText: { color: '#fff', fontSize: FontSize.base, fontWeight: FontWeight.bold, fontFamily: UIFont },
+  unreadDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
+  rowBody: { flex: 1, gap: 3 },
+  rowLabelRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 7 },
+  rowLabel: { flex: 1, fontSize: FontSize.sm, fontFamily: UIFontLight, lineHeight: 19 },
+  rowTime: { fontSize: FontSize.xs, marginLeft: 20 },
 });

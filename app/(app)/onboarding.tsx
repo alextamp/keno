@@ -1,27 +1,37 @@
 import React, { useRef, useState } from 'react';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import {
-  Alert, Animated, Dimensions, Image, Pressable, ScrollView,
+  Alert, Animated, Dimensions, Image, ScrollView,
   StyleSheet, Text, TextInput, View,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
+import { pickImage } from '@/core/utils/imagePicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/core/theme';
-import { DrawFont, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@/core/constants/theme';
+import { UIFont, UIFontLight, TitleFont, LogoFont, FontSize, FontWeight, Spacing, BorderRadius } from '@/core/constants/theme';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { useTranslation, useLanguageStore } from '@/core/i18n';
 import { universityLabel } from '@/core/constants/universities';
 import { INTERESTS } from '@/core/constants/interests';
 import { uploadProfilePhoto } from '@/core/utils/uploadImage';
+import { analytics } from '@/core/utils/analytics';
+import { Icon, IconName } from '@/components/ui/Icon';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 
 const { width: SW } = Dimensions.get('window');
 
 const AVATAR_COLORS = [
-  '#C94D0A', '#8B3FCC', '#0A8A52', '#2952CC',
-  '#CC1F6E', '#CC6B00', '#0891B2', '#DC2626',
+  '#B8482A', '#7E52A8', '#3F7A55', '#3A6494',
+  '#B2537A', '#A0702C', '#0891B2', '#DC2626',
   '#7C3AED', '#059669', '#D97706', '#DB2777',
 ];
+
+// Cycled per-chip accent for the interest dots (spec §4 chip anatomy) — the
+// dot colors are purely decorative variety, not tied to any data field.
+const INTEREST_DOTS = ['#8A6A4F', '#4A7C59', '#4A6B8A', '#8A4A6B', '#6B7A3A'];
+
+const FEATURE_ICONS: IconName[] = ['cal', 'users', 'map', 'bell'];
 
 const TOTAL_STEPS = 4;
 
@@ -36,21 +46,14 @@ export default function OnboardingScreen() {
 
   const [step, setStep] = useState(0);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
-  const [avatarColor, setAvatarColor] = useState(user?.avatarColor ?? '#C94D0A');
+  const [avatarColor, setAvatarColor] = useState(user?.avatarColor ?? '#B8482A');
   const [bio, setBio] = useState(user?.bio ?? '');
   const [draftPhoto, setDraftPhoto] = useState<string | undefined>(user?.photoUri);
   const [saving, setSaving] = useState(false);
 
   const pickPhoto = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { Alert.alert(t.profileAlertPermTitle, t.profileAlertPermBody); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-    if (!result.canceled) setDraftPhoto(result.assets[0].uri);
+    const uri = await pickImage({ aspect: [1, 1] });
+    if (uri) setDraftPhoto(uri);
   };
 
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -79,6 +82,7 @@ export default function OnboardingScreen() {
       }
     }
     await completeOnboarding({ interests: selectedInterests, bio, avatarColor, photoUri: finalPhotoUri });
+    analytics.track('onboarding_completed', { interestCount: selectedInterests.length, hasPhoto: !!finalPhotoUri });
     router.replace('/(app)');
   };
 
@@ -87,22 +91,19 @@ export default function OnboardingScreen() {
   const steps = [
     // Step 0: Welcome
     <View key="welcome" style={styles.stepContent}>
-      <Text style={styles.welcomeEmoji}>🎓</Text>
+      <View style={[styles.mk, { backgroundColor: colors.primary }]}>
+        <Text style={styles.mkLetter}>κ</Text>
+      </View>
       <Text style={[styles.welcomeTitle, { color: colors.textPrimary }]}>
         {t.onboardingWelcome(user?.name?.split(' ')[0] ?? '')}
       </Text>
-      <Text style={[styles.welcomeSub, { color: colors.textSecondary }]}>
+      <Text style={[styles.welcomeSub, { color: colors.textHint }]}>
         {t.onboardingWelcomeSub}
       </Text>
       <View style={styles.featureList}>
-        {[
-          ['📅', t.onboardingFeature1],
-          ['👥', t.onboardingFeature2],
-          ['🗺️', t.onboardingFeature3],
-          ['🔔', t.onboardingFeature4],
-        ].map(([emoji, text]) => (
+        {[t.onboardingFeature1, t.onboardingFeature2, t.onboardingFeature3, t.onboardingFeature4].map((text, i) => (
           <View key={text} style={styles.featureRow}>
-            <Text style={styles.featureEmoji}>{emoji}</Text>
+            <Icon name={FEATURE_ICONS[i]} size={19} color={colors.textSecondary} />
             <Text style={[styles.featureText, { color: colors.textPrimary }]}>{text}</Text>
           </View>
         ))}
@@ -112,11 +113,11 @@ export default function OnboardingScreen() {
     // Step 1: Interests
     <View key="interests" style={styles.stepContent}>
       <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>{t.onboardingInterestsTitle}</Text>
-      <Text style={[styles.stepSub, { color: colors.textSecondary }]}>
+      <Text style={[styles.stepSub, { color: colors.textHint }]}>
         {t.onboardingInterestsSub}
       </Text>
       <View style={styles.interestGrid}>
-        {INTERESTS.map(({ key, tKey, emoji }) => {
+        {INTERESTS.map(({ key, tKey }, i) => {
           const selected = selectedInterests.includes(key);
           return (
             <AnimatedPressable
@@ -124,52 +125,43 @@ export default function OnboardingScreen() {
               onPress={() => toggleInterest(key)}
               style={[
                 styles.interestChip,
-                {
-                  backgroundColor: selected ? colors.primary : colors.surface,
-                  borderColor: selected ? colors.primary : colors.border,
-                },
-                selected && (Shadow.sm as object),
+                { backgroundColor: selected ? colors.accentSoft : colors.surface, borderColor: selected ? colors.primary : colors.border },
               ]}
             >
-              <Text style={styles.interestEmoji}>{emoji}</Text>
-              <Text style={[styles.interestLabel, { color: selected ? '#fff' : colors.textPrimary }]}>
+              <View style={[styles.interestDot, { backgroundColor: INTEREST_DOTS[i % INTEREST_DOTS.length] }]} />
+              <Text style={[styles.interestLabel, { color: selected ? colors.accentInk : colors.textPrimary }]}>
                 {t[tKey as keyof typeof t] as string}
               </Text>
             </AnimatedPressable>
           );
         })}
       </View>
-      {selectedInterests.length > 0 && selectedInterests.length < 3 && (
-        <Text style={[styles.hintText, { color: colors.textHint }]}>
-          {t.onboardingInterestsPick(3 - selectedInterests.length)}
-        </Text>
-      )}
     </View>,
 
     // Step 2: Personalise
     <View key="personalise" style={styles.stepContent}>
       <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>{t.onboardingPersonaliseTitle}</Text>
-      <Text style={[styles.stepSub, { color: colors.textSecondary }]}>
+      <Text style={[styles.stepSub, { color: colors.textHint }]}>
         {t.onboardingPersonaliseSub}
       </Text>
 
       {/* Avatar preview */}
       <View style={styles.avatarPreviewRow}>
-        <AnimatedPressable onPress={pickPhoto} style={[styles.avatarPreview, { backgroundColor: avatarColor, borderColor: colors.borderStrong }]}>
+        <AnimatedPressable onPress={pickPhoto} style={[styles.avatarPreview, { backgroundColor: avatarColor }]}>
           {draftPhoto ? (
             <Image source={{ uri: draftPhoto }} style={styles.avatarPreviewPhoto} />
           ) : (
             <Text style={styles.avatarInitials}>{initials}</Text>
           )}
           <View style={styles.photoOverlay}>
-            <Text style={styles.cameraIcon}>📷</Text>
+            <Icon name="camera" size={13} color="#fff" />
           </View>
         </AnimatedPressable>
         <Text style={[styles.avatarName, { color: colors.textPrimary }]}>{user?.name}</Text>
       </View>
 
       {/* Colour picker */}
-      <Text style={[styles.colorLabel, { color: colors.textSecondary }]}>{t.onboardingPickColor}</Text>
+      <Text style={[styles.fieldLabel, { color: colors.textDecor }]}>{t.onboardingPickColor}</Text>
       <View style={styles.colorGrid}>
         {AVATAR_COLORS.map((c) => (
           <AnimatedPressable
@@ -178,16 +170,16 @@ export default function OnboardingScreen() {
             style={[
               styles.colorDot,
               { backgroundColor: c },
-              avatarColor === c && { borderWidth: 3, borderColor: '#fff', transform: [{ scale: 1.15 }] },
+              avatarColor === c && { borderWidth: 3, borderColor: colors.surface, transform: [{ scale: 1.15 }] },
             ]}
           />
         ))}
       </View>
 
       {/* Bio */}
-      <Text style={[styles.colorLabel, { color: colors.textSecondary }]}>{t.onboardingBioLabel}</Text>
+      <Text style={[styles.fieldLabel, { color: colors.textDecor }]}>{t.onboardingBioLabel}</Text>
       <TextInput
-        style={[styles.bioInput, { backgroundColor: colors.surfaceVariant, borderColor: colors.border, color: colors.textPrimary }]}
+        style={[styles.bioInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.textPrimary }]}
         placeholder={t.onboardingBioPlaceholder(user?.department ?? 'Student', user?.universityName ?? 'University')}
         placeholderTextColor={colors.textHint}
         value={bio}
@@ -201,12 +193,14 @@ export default function OnboardingScreen() {
 
     // Step 3: All set
     <View key="done" style={styles.stepContent}>
-      <Text style={styles.doneEmoji}>🚀</Text>
+      <View style={[styles.halo, { backgroundColor: colors.accentSoft }]}>
+        <Icon name="check" size={34} color={colors.primary} strokeWidth={2.4} />
+      </View>
       <Text style={[styles.welcomeTitle, { color: colors.textPrimary }]}>{t.onboardingDoneTitle}</Text>
-      <Text style={[styles.welcomeSub, { color: colors.textSecondary }]}>
+      <Text style={[styles.welcomeSub, { color: colors.textHint }]}>
         {t.onboardingDoneSub}
       </Text>
-      <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.borderStrong }]}>
+      <Card padded style={styles.summaryCard}>
         <View style={[styles.summaryAvatar, { backgroundColor: avatarColor }]}>
           {draftPhoto ? (
             <Image source={{ uri: draftPhoto }} style={styles.summaryAvatarPhoto} />
@@ -216,8 +210,8 @@ export default function OnboardingScreen() {
         </View>
         <View style={styles.summaryInfo}>
           <Text style={[styles.summaryName, { color: colors.textPrimary }]}>{user?.name}</Text>
-          <Text style={[styles.summaryUni, { color: colors.textSecondary }]}>
-            🎓 {universityLabel(user?.universityName ?? '', language)}
+          <Text style={[styles.summaryUni, { color: colors.textHint }]}>
+            {universityLabel(user?.universityName ?? '', language)}
           </Text>
           {selectedInterests.length > 0 && (
             <Text style={[styles.summaryInterests, { color: colors.textHint }]} numberOfLines={1}>
@@ -228,7 +222,7 @@ export default function OnboardingScreen() {
             </Text>
           )}
         </View>
-      </View>
+      </Card>
     </View>,
   ];
 
@@ -252,7 +246,7 @@ export default function OnboardingScreen() {
               styles.dot,
               {
                 backgroundColor: i <= step ? colors.primary : colors.border,
-                width: i === step ? 20 : 8,
+                width: i === step ? 17 : 6,
               },
             ]}
           />
@@ -271,26 +265,35 @@ export default function OnboardingScreen() {
         </Animated.View>
       </ScrollView>
 
-      {/* CTA footer */}
+      {/* CTA footer — the interests step (mockup 03) replaces the usual
+          back/continue pair with a "N επιλεγμένα" counter + continue row. */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 20, borderTopColor: colors.border, backgroundColor: colors.background }]}>
-        {step > 0 && (
-          <AnimatedPressable onPress={() => animateTo(step - 1)} style={[styles.backBtn, { borderColor: colors.border }]}>
-            <Text style={[styles.backBtnText, { color: colors.textSecondary }]}>{t.onboardingBtnBack}</Text>
-          </AnimatedPressable>
+        {step === 1 ? (
+          <View style={styles.interestsFooterRow}>
+            <Text style={[styles.interestsCount, { color: colors.textHint }]}>
+              {t.onboardingInterestsCount(selectedInterests.length)}
+            </Text>
+            <Button
+              label={t.onboardingBtnContinue}
+              onPress={() => animateTo(step + 1)}
+              disabled={!canAdvance}
+            />
+          </View>
+        ) : (
+          <>
+            {step > 0 && (
+              <Button label={t.onboardingBtnBack} variant="outline" onPress={() => animateTo(step - 1)} />
+            )}
+            <Button
+              label={saving ? t.onboardingBtnSaving : isLast ? t.onboardingBtnFinish : step === 0 ? t.onboardingBtnGetStarted : t.onboardingBtnContinue}
+              onPress={isLast ? handleFinish : () => animateTo(step + 1)}
+              disabled={!canAdvance || saving}
+              loading={saving}
+              fullWidth={step === 0}
+              style={step > 0 ? { flex: 1 } : undefined}
+            />
+          </>
         )}
-        <AnimatedPressable
-          onPress={isLast ? handleFinish : () => animateTo(step + 1)}
-          disabled={!canAdvance || saving}
-          style={[
-            styles.nextBtn,
-            { backgroundColor: canAdvance ? colors.primary : colors.border, borderColor: colors.borderStrong },
-            step === 0 && { flex: 1 },
-          ]}
-        >
-          <Text style={styles.nextBtnText}>
-            {saving ? t.onboardingBtnSaving : isLast ? t.onboardingBtnFinish : step === 0 ? t.onboardingBtnGetStarted : t.onboardingBtnContinue}
-          </Text>
-        </AnimatedPressable>
       </View>
     </View>
   );
@@ -300,54 +303,51 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   progressRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, paddingBottom: 8,
+    gap: 5, paddingBottom: 8,
   },
-  dot: { height: 8, borderRadius: 4 },
-  scrollContent: { padding: Spacing.xl },
-  stepContent: { gap: Spacing.lg },
+  dot: { height: 6, borderRadius: 3 },
+  scrollContent: { padding: Spacing.gutter },
+  stepContent: { gap: Spacing.base, alignItems: 'center' },
   // Welcome
-  welcomeEmoji: { fontSize: 64, textAlign: 'center' },
-  doneEmoji: { fontSize: 64, textAlign: 'center' },
-  welcomeTitle: { fontSize: FontSize.display, fontWeight: FontWeight.extrabold, fontFamily: DrawFont, textAlign: 'center', lineHeight: 38 },
-  welcomeSub: { fontSize: FontSize.md, textAlign: 'center', lineHeight: 22 },
-  featureList: { gap: Spacing.sm, marginTop: 8 },
+  mk: { width: 74, height: 74, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  mkLetter: { fontFamily: LogoFont, fontWeight: FontWeight.bold, fontSize: 44, color: '#FBF3EA', lineHeight: 48 },
+  halo: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center' },
+  welcomeTitle: { fontSize: FontSize.xxl, fontWeight: FontWeight.bold, fontFamily: TitleFont, textAlign: 'center', letterSpacing: -0.4, marginTop: 6 },
+  welcomeSub: { fontSize: FontSize.base, fontFamily: UIFontLight, textAlign: 'center', lineHeight: 21, paddingHorizontal: 6 },
+  featureList: { gap: 4, marginTop: 10, alignSelf: 'stretch' },
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.sm },
-  featureEmoji: { fontSize: 22 },
-  featureText: { fontSize: FontSize.md, fontWeight: FontWeight.bold, fontFamily: DrawFont },
+  featureText: { fontSize: FontSize.base, fontWeight: FontWeight.medium, fontFamily: UIFontLight },
   // Interests
-  stepTitle: { fontSize: FontSize.xxl, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
-  stepSub: { fontSize: FontSize.md, lineHeight: 22, marginTop: -Spacing.sm },
-  interestGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  interestChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: BorderRadius.full, borderWidth: 2 },
-  interestEmoji: { fontSize: 16 },
-  interestLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: DrawFont },
-  hintText: { fontSize: FontSize.sm, textAlign: 'center', marginTop: 4 },
+  stepTitle: { fontSize: FontSize.xxl, fontWeight: FontWeight.bold, fontFamily: TitleFont, letterSpacing: -0.4, alignSelf: 'flex-start' },
+  stepSub: { fontSize: FontSize.base, fontFamily: UIFontLight, lineHeight: 21, alignSelf: 'flex-start', marginTop: -6 },
+  interestGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignSelf: 'stretch' },
+  interestChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 13, paddingVertical: 9, borderRadius: BorderRadius.full, borderWidth: 1 },
+  interestDot: { width: 6, height: 6, borderRadius: 3 },
+  interestLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.medium, fontFamily: UIFont },
+  hintText: { fontSize: FontSize.sm, fontFamily: UIFontLight, textAlign: 'center', marginTop: 4 },
+  interestsFooterRow: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.md },
+  interestsCount: { fontSize: FontSize.sm, fontFamily: UIFontLight },
   // Personalise
-  avatarPreviewRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginVertical: 8 },
-  avatarPreview: { width: 72, height: 72, borderRadius: 36, borderWidth: 3, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  avatarPreviewRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, alignSelf: 'stretch' },
+  avatarPreview: { width: 68, height: 68, borderRadius: 34, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   avatarPreviewPhoto: { width: '100%', height: '100%' },
-  avatarInitials: { color: '#fff', fontSize: FontSize.xxl, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
+  avatarInitials: { color: '#fff', fontSize: FontSize.xxl, fontWeight: FontWeight.bold, fontFamily: UIFont },
   photoOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', paddingVertical: 3 },
-  cameraIcon: { fontSize: 14 },
-  avatarName: { fontSize: FontSize.lg, fontWeight: FontWeight.extrabold, fontFamily: DrawFont, flex: 1 },
-  colorLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: DrawFont },
-  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  colorDot: { width: 36, height: 36, borderRadius: 18 },
-  bioInput: { borderRadius: BorderRadius.lg, borderWidth: 1.5, padding: Spacing.md, fontSize: FontSize.sm, minHeight: 80, textAlignVertical: 'top' },
-  charCount: { fontSize: FontSize.xs, textAlign: 'right', marginTop: -Spacing.sm },
+  avatarName: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, fontFamily: UIFont, flex: 1 },
+  fieldLabel: { fontSize: FontSize.xs, fontWeight: FontWeight.bold, fontFamily: UIFont, letterSpacing: 1.4, alignSelf: 'flex-start' },
+  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignSelf: 'stretch' },
+  colorDot: { width: 34, height: 34, borderRadius: 17 },
+  bioInput: { borderRadius: BorderRadius.md, borderWidth: 1, padding: Spacing.md, fontSize: FontSize.base, fontFamily: UIFontLight, minHeight: 80, textAlignVertical: 'top', alignSelf: 'stretch' },
+  charCount: { fontSize: FontSize.xs, textAlign: 'right', alignSelf: 'stretch' },
   // Summary
-  summaryCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.lg, borderRadius: BorderRadius.xl, borderWidth: 2.5, ...Shadow.sm },
-  summaryAvatar: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  summaryCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, alignSelf: 'stretch' },
+  summaryAvatar: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   summaryAvatarPhoto: { width: '100%', height: '100%' },
-  summaryInitials: { color: '#fff', fontSize: FontSize.xl, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
+  summaryInitials: { color: '#fff', fontSize: FontSize.xl, fontWeight: FontWeight.bold, fontFamily: UIFont },
   summaryInfo: { flex: 1, gap: 3 },
-  summaryName: { fontSize: FontSize.lg, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
-  summaryUni: { fontSize: FontSize.sm },
+  summaryName: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, fontFamily: UIFont },
+  summaryUni: { fontSize: FontSize.sm, fontFamily: UIFontLight },
   summaryInterests: { fontSize: FontSize.xs, marginTop: 2 },
   // Footer
-  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', gap: Spacing.sm, padding: Spacing.lg, borderTopWidth: 1 },
-  backBtn: { paddingHorizontal: Spacing.lg, paddingVertical: 14, borderRadius: BorderRadius.full, borderWidth: 2, justifyContent: 'center' },
-  backBtnText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: DrawFont },
-  nextBtn: { flex: 1, paddingVertical: 16, borderRadius: BorderRadius.full, borderWidth: 2.5, alignItems: 'center', justifyContent: 'center' },
-  nextBtnText: { color: '#fff', fontSize: FontSize.md, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
+  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', gap: Spacing.sm, padding: Spacing.gutter, borderTopWidth: 1 },
 });

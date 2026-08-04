@@ -29,9 +29,28 @@ service cloud.firestore {
       // next person off an event's waitlist into someone else's joined list.
       // The admin may additionally strip a deleted event's id out of
       // createdEvents/joinedEvents when removing a reported event they don't own.
+      // Attendance history (Anti-Flake system) can be updated by the user themselves only.
       allow update: if isOwner(userId) ||
         (isAdmin() && onlyChangedFields(['joinedEvents', 'createdEvents', 'idVerificationStatus', 'isBetaTester'])) ||
-        (signedIn() && onlyChangedFields(['joinedEvents', 'followers']));
+        (signedIn() && onlyChangedFields(['joinedEvents', 'followers', 'attendanceHistory'])) ||
+        // A roll-call check-in (organizer checking someone else in) may also
+        // touch checkInCount/xp/reliabilityScore/weeklyQuests, but xp only as
+        // a bounded delta — never an arbitrary value — so a cross-user write
+        // can't be used to inflate someone's (or your own, via a crafted
+        // client) XP or ticket count. checkInCount is always exactly +1. xp
+        // is checkinBonus (5) plus an optional RSVP stake refund (capped at
+        // the UI's max stake of 60, see XP_VALUES.rsvpStakeOptions in
+        // event/[id].tsx) plus an optional one-time checkin_event weekly
+        // quest bonus (20) the first time it's completed that week — so the
+        // valid range is [+5, +85]. Keep these in sync with
+        // XP_VALUES.checkinBonus / rsvpStakeOptions in
+        // src/core/constants/gamification.ts and WEEKLY_QUESTS in
+        // src/core/constants/quests.ts.
+        (signedIn() &&
+          onlyChangedFields(['joinedEvents', 'followers', 'attendanceHistory', 'reliabilityScore', 'checkInCount', 'xp', 'weeklyQuests']) &&
+          request.resource.data.checkInCount == resource.data.get('checkInCount', 0) + 1 &&
+          request.resource.data.xp >= resource.data.get('xp', 0) + 5 &&
+          request.resource.data.xp <= resource.data.get('xp', 0) + 85);
       allow delete: if isOwner(userId);
 
       // Per-user notifications (actual storage path — not the root collection below)
@@ -41,6 +60,22 @@ service cloud.firestore {
         allow update: if isOwner(userId);
         allow delete: if isOwner(userId);
       }
+
+      // Per-user reviews (from other users)
+      match /reviews/{reviewId} {
+        allow read: if signedIn();
+        allow create: if signedIn();
+      }
+
+      // Sensitive documents (currently: ID verification photo) — never on
+      // the public users/{userId} doc, since a Storage download URL's
+      // embedded token bypasses storage.rules once it's readable from
+      // anywhere. Owner and admin only, same as the actual file in Storage.
+      match /private/{docId} {
+        allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
+        allow create, update: if signedIn() && request.auth.uid == userId;
+        allow delete: if false;
+      }
     }
 
     // Events + subcollections
@@ -48,19 +83,110 @@ service cloud.firestore {
       allow read: if signedIn();
       allow create: if signedIn() && request.resource.data.creatorId == request.auth.uid;
       // Creator can edit everything; anyone else can only touch join/waitlist/reaction
-      // state, or ask to join a private event via joinRequests.
+      // state, XP stakes (for Anti-Flake system), or ask to join a private event via joinRequests.
+      // referredBy is never client-writable — it's set by the claimReferral
+      // Cloud Function only, which verifies the caller is actually attending
+      // and can't overwrite an existing claim. (A prior version let any
+      // signed-in user write onlyChangedFields(['referredBy']) directly,
+      // which meant they could plant an arbitrary invitee uid -> their own
+      // uid mapping for events they had nothing to do with, then farm the
+      // referral XP off other people's organic check-ins.)
+      // isFlagship is admin-only regardless of who owns the event — without
+      // this, any creator could self-flag their own event (the app only
+      // hides the toggle in the UI for non-admins, which a raw write bypasses)
+      // and hijack the feed's pinned banner slot.
       allow update: if signedIn() && (
         resource.data.creatorId == request.auth.uid ||
-        onlyChangedFields(['attendeeIds', 'waitlistIds', 'reactions', 'joinRequests'])
-      );
+        onlyChangedFields(['attendeeIds', 'waitlistIds', 'reactions', 'joinRequests', 'rsvpStakes'])
+      ) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['referredBy'])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isFlagship']) || isAdmin());
       allow delete: if signedIn() && (resource.data.creatorId == request.auth.uid || isAdmin());
 
-      // Chat messages
+      // Chat messages — auto-expiring 24h after the event starts (research
+      // doc #8), enforced here too so a modified client can't keep posting
+      // into a thread the UI has already closed. sweepExpiredChats (Cloud
+      // Function) deletes the backlog itself once the window has passed.
       match /messages/{messageId} {
         allow read: if signedIn();
-        allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
-        // Reactions are added/removed by users other than the author.
-        allow update: if signedIn() && onlyChangedFields(['reactions']);
+        allow create: if signedIn() && request.resource.data.userId == request.auth.uid &&
+          request.time < get(/databases/$(database)/documents/events/$(eventId)).data.dateTime + duration.value(24, 'h');
+        // Reactions are added/removed by anyone; only the author may edit
+        // (text/editedAt) or soft-delete (isDeleted, clearing text/imageUri)
+        // their own message.
+        allow update: if signedIn() && (
+          onlyChangedFields(['reactions']) ||
+          (resource.data.userId == request.auth.uid && onlyChangedFields(['text', 'editedAt', 'isDeleted', 'imageUri']))
+        );
+        allow delete: if false;
+      }
+
+      // Photo wall — post-event shared photos. Posting is restricted to
+      // people who actually checked in (a real checkIns doc must exist for
+      // them on this event), not just anyone who joined/RSVP'd — otherwise
+      // someone who never showed up could post photos claiming they were
+      // there. Reading stays open to any signed-in user, same as before.
+      match /photos/{photoId} {
+        allow read: if signedIn();
+        allow create: if signedIn() && request.resource.data.uploaderUid == request.auth.uid &&
+          exists(/databases/$(database)/documents/events/$(eventId)/checkIns/$(request.auth.uid));
+        allow update, delete: if false;
+      }
+
+      // Private per-event data only the creator (or a stand-in host who
+      // claimed hosting duties via claimStandInHost, see events/{eventId}
+      // standInHostId) can read — currently just the QR check-in secret
+      // (events.repository.impl's createEvent / checkInWithToken).
+      match /private/{docId} {
+        allow read: if signedIn() && (
+          get(/databases/$(database)/documents/events/$(eventId)).data.creatorId == request.auth.uid ||
+          get(/databases/$(database)/documents/events/$(eventId)).data.standInHostId == request.auth.uid
+        );
+        allow create: if signedIn() && get(/databases/$(database)/documents/events/$(eventId)).data.creatorId == request.auth.uid;
+        allow update, delete: if false;
+      }
+
+      // Check-ins for solo buddy matching + the real QR/roll-call record.
+      // A self check-in must prove it saw the rotating secret + a bucket
+      // within one 30s window (±45s) of now; the event creator (or a
+      // stand-in host who took over — see standInHostId above) can always
+      // write on someone else's behalf (manual roll-call fallback).
+      match /checkIns/{userId} {
+        allow read: if signedIn();
+        allow create: if signedIn() && request.resource.data.userId == userId && (
+          get(/databases/$(database)/documents/events/$(eventId)).data.creatorId == request.auth.uid ||
+          get(/databases/$(database)/documents/events/$(eventId)).data.standInHostId == request.auth.uid ||
+          (
+            request.auth.uid == userId &&
+            request.resource.data.secret == get(/databases/$(database)/documents/events/$(eventId)/private/checkin).data.secret &&
+            request.resource.data.bucket is number &&
+            (request.resource.data.bucket * 30000) > (request.time.toMillis() - 45000) &&
+            (request.resource.data.bucket * 30000) < (request.time.toMillis() + 45000)
+          )
+        );
+        // Two allowed updates: the owner adding the one-time "did you come
+        // alone?" flag the success screen asks post-check-in (solo-buddy-
+        // matching signal) — never touching secret/bucket/timestamp — or
+        // any other signed-in user toggling themselves in/out of `kudos`
+        // (Strava-Kudos-style acknowledgment), same trust model as chat
+        // message reactions above (arrayUnion/Remove of the caller's own
+        // uid, not enforced field-by-field here).
+        allow update: if signedIn() && (
+          (request.auth.uid == userId &&
+            onlyChangedFields(['arrivedSolo']) &&
+            request.resource.data.arrivedSolo is bool) ||
+          (request.auth.uid != userId && onlyChangedFields(['kudos'])) ||
+          (request.auth.uid == userId &&
+            onlyChangedFields(['feedback']) &&
+            request.resource.data.feedback in ['good', 'bad'])
+        );
+        allow delete: if false;
+      }
+
+      // Swipes for mutual matching (post-event)
+      match /swipes/{swipeId} {
+        allow read: if signedIn() && request.auth.uid == resource.data.fromUid;
+        allow create: if signedIn() && request.resource.data.fromUid == request.auth.uid;
+        allow update: if false;
         allow delete: if false;
       }
 
@@ -83,7 +209,14 @@ service cloud.firestore {
         allow create: if signedIn() &&
           request.resource.data.senderId == request.auth.uid &&
           request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
-        allow update: if false;
+        // Either participant may react; only the sender may edit or
+        // soft-delete their own message.
+        allow update: if signedIn() &&
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds &&
+          (
+            onlyChangedFields(['reactions']) ||
+            (request.auth.uid == resource.data.senderId && onlyChangedFields(['isDeleted', 'text', 'editedAt']))
+          );
         allow delete: if false;
       }
     }
@@ -97,17 +230,31 @@ service cloud.firestore {
       // anyone can ask to join a private group via joinRequests.
       allow update: if signedIn() && (
         resource.data.creatorId == request.auth.uid ||
-        onlyChangedFields(['memberIds', 'invitedUserIds', 'eventIds', 'joinRequests'])
+        onlyChangedFields(['memberIds', 'invitedUserIds', 'eventIds', 'joinRequests']) ||
+        (isAdmin() && onlyChangedFields(['isVerifiedOrganiser']))
       );
       allow delete: if signedIn() && resource.data.creatorId == request.auth.uid;
 
       match /messages/{messageId} {
         allow read: if signedIn();
         allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
-        // Reactions are added/removed by users other than the author.
-        allow update: if signedIn() && onlyChangedFields(['reactions']);
+        // Reactions are added/removed by anyone; only the author may edit
+        // (text/editedAt) or soft-delete (isDeleted, clearing text/imageUri)
+        // their own message.
+        allow update: if signedIn() && (
+          onlyChangedFields(['reactions']) ||
+          (resource.data.userId == request.auth.uid && onlyChangedFields(['text', 'editedAt', 'isDeleted', 'imageUri']))
+        );
         allow delete: if false;
       }
+    }
+
+    // Mutual matches from post-event swiping
+    match /mutualMatches/{matchId} {
+      allow read: if signedIn() && (request.auth.uid == resource.data.user1Id || request.auth.uid == resource.data.user2Id);
+      allow create: if false; // Only Cloud Functions create these
+      allow update: if false;
+      allow delete: if false;
     }
 
     // User reports — write-only from clients; only the admin can review/resolve them.

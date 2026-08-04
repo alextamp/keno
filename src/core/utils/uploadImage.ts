@@ -72,3 +72,48 @@ export async function uploadVerificationPhoto(
   const ext = localUri.split('.').pop()?.split('?')[0] ?? 'jpg';
   return uploadToStorage(`verification-photos/${uid}.${ext}`, localUri, onProgress);
 }
+
+export async function uploadGroupCoverPhoto(
+  localUri: string,
+  onProgress?: (pct: number) => void,
+): Promise<string> {
+  const ext = localUri.split('.').pop()?.split('?')[0] ?? 'jpg';
+  return uploadToStorage(`groups/${Date.now()}.${ext}`, localUri, onProgress);
+}
+
+export async function uploadDmImage(
+  localUri: string,
+  onProgress?: (pct: number) => void,
+): Promise<string> {
+  const ext = localUri.split('.').pop()?.split('?')[0] ?? 'jpg';
+  return uploadToStorage(`dm-images/${Date.now()}.${ext}`, localUri, onProgress);
+}
+
+export async function uploadEventChatImage(
+  localUri: string,
+  onProgress?: (pct: number) => void,
+): Promise<string> {
+  const ext = localUri.split('.').pop()?.split('?')[0] ?? 'jpg';
+  return uploadToStorage(`events/${Date.now()}.${ext}`, localUri, onProgress);
+}
+
+export async function uploadGroupChatImage(
+  localUri: string,
+  onProgress?: (pct: number) => void,
+): Promise<string> {
+  const ext = localUri.split('.').pop()?.split('?')[0] ?? 'jpg';
+  return uploadToStorage(`groups/${Date.now()}.${ext}`, localUri, onProgress);
+}
+
+// Optional screenshot attached to a user-submitted "report an issue" ticket
+// (Settings → Safety & Privacy). Filename is "{uid}_{timestamp}.{ext}" so
+// storage.rules can restrict reads to the uploader + admin, same pattern as
+// verification-photos.
+export async function uploadIssueScreenshot(
+  uid: string,
+  localUri: string,
+  onProgress?: (pct: number) => void,
+): Promise<string> {
+  const ext = localUri.split('.').pop()?.split('?')[0] ?? 'jpg';
+  return uploadToStorage(`issue-reports/${uid}_${Date.now()}.${ext}`, localUri, onProgress);
+}

@@ -1,10 +1,11 @@
 import React, { forwardRef, useState } from 'react';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import {
-  Pressable, StyleSheet, Text, TextInput, TextInputProps, View, ViewStyle,
+  StyleSheet, Text, TextInput, TextInputProps, View, ViewStyle,
 } from 'react-native';
 import { useTheme } from '@/core/theme';
 import { BorderRadius, FontSize, FontWeight, Spacing } from '@/core/constants/theme';
+import { Icon } from './Icon';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -42,7 +43,7 @@ export const Input = forwardRef<TextInput, InputProps>(
           />
           {isPassword && (
             <AnimatedPressable onPress={() => setHidden((v) => !v)} style={styles.eyeBtn} hitSlop={8}>
-              <Text style={styles.eyeIcon}>{hidden ? '👁' : '🙈'}</Text>
+              <Icon name={hidden ? 'eye' : 'eye-off'} size={18} color={colors.textHint} />
             </AnimatedPressable>
           )}
         </View>
@@ -69,8 +70,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: BorderRadius.md,
-    borderWidth: 2.5,
-    minHeight: 50,
+    borderWidth: 1,
+    minHeight: 46,
   },
   input: {
     paddingHorizontal: Spacing.md,
@@ -78,6 +79,5 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
   },
   eyeBtn: { paddingHorizontal: Spacing.md },
-  eyeIcon: { fontSize: 18 },
   hint: { fontSize: FontSize.xs },
 });

@@ -1,22 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { collection, deleteDoc, doc, getDoc, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useTheme } from '@/core/theme';
-import { DrawFont, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@/core/constants/theme';
+import { UIFont, UIFontLight, TitleFont, FontSize, FontWeight, Spacing, BorderRadius } from '@/core/constants/theme';
 import { useTranslation, useLanguageStore } from '@/core/i18n';
 import { formatMessageTime } from '@/core/utils/time';
 import { isLeft } from '@/core/utils/either';
 import { eventsRepository } from '@/features/events/data/repositories/events.repository.impl';
+import { Icon } from '@/components/ui/Icon';
 
 interface ReportItem {
   id: string;
   reportedEventId?: string;
-  reportedUid: string;
+  /** Absent for user-submitted "report an issue" tickets (Settings → Safety &
+   *  Privacy) — those aren't about a specific user, just an app problem. */
+  reportedUid?: string;
   reporterUid: string;
   reason: string;
   createdAt: Date;
@@ -24,13 +27,17 @@ interface ReportItem {
   eventGone?: boolean;
   reportedUserName?: string;
   reporterName?: string;
+  /** "Report an issue" tickets only. */
+  description?: string;
+  screenshotUrl?: string;
 }
 
-const REASON_KEYS: Record<string, 'eventReportSpam' | 'eventReportInappropriate' | 'eventReportMisinformation' | 'eventReportFake'> = {
+const REASON_KEYS: Record<string, 'eventReportSpam' | 'eventReportInappropriate' | 'eventReportMisinformation' | 'eventReportFake' | 'adminReportsIssueLabel'> = {
   spam: 'eventReportSpam',
   inappropriate: 'eventReportInappropriate',
   misinformation: 'eventReportMisinformation',
   fake: 'eventReportFake',
+  app_issue: 'adminReportsIssueLabel',
 };
 
 async function fetchUserName(uid: string, cache: Map<string, string>): Promise<string> {
@@ -70,9 +77,12 @@ export default function AdminReportsScreen() {
             reporterUid: data.reporterUid,
             reason: data.reason,
             createdAt: data.createdAt?.toDate?.() ?? new Date(),
+            description: data.description,
+            screenshotUrl: data.screenshotUrl,
           };
+          // "Report an issue" tickets have no reportedUid — nothing to look up.
           const [reportedUserName, reporterName] = await Promise.all([
-            fetchUserName(base.reportedUid, nameCache),
+            base.reportedUid ? fetchUserName(base.reportedUid, nameCache) : Promise.resolve(undefined),
             fetchUserName(base.reporterUid, nameCache),
           ]);
           base.reportedUserName = reportedUserName;
@@ -119,7 +129,7 @@ export default function AdminReportsScreen() {
         onPress: async () => {
           setBusyId(report.id);
           try {
-            const result = await eventsRepository.deleteEvent(report.reportedEventId!, report.reportedUid);
+            const result = await eventsRepository.deleteEvent(report.reportedEventId!, report.reportedUid!);
             if (isLeft(result)) {
               Alert.alert(t.createAlertSaveError, result.left.message);
               return;
@@ -135,7 +145,7 @@ export default function AdminReportsScreen() {
     ]);
   };
 
-  const bs = colors.borderStrong;
+  const bs = colors.border;
 
   return (
     <ScrollView
@@ -149,7 +159,7 @@ export default function AdminReportsScreen() {
         <ActivityIndicator style={{ marginTop: Spacing.xl }} color={colors.primary} />
       ) : reports.length === 0 ? (
         <View style={[styles.empty, { backgroundColor: colors.surface, borderColor: bs }]}>
-          <Text style={styles.emptyEmoji}>🛡️</Text>
+          <Icon name="shield" size={38} color={colors.textDecor} />
           <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>{t.adminReportsEmpty}</Text>
           <Text style={[styles.emptyBody, { color: colors.textHint }]}>{t.adminReportsEmptyBody}</Text>
         </View>
@@ -181,15 +191,30 @@ export default function AdminReportsScreen() {
                   </AnimatedPressable>
                 )}
 
-                <AnimatedPressable
-                  onPress={() => router.push(`/(app)/user/${report.reportedUid}`)}
-                  style={styles.metaRow}
-                >
-                  <Text style={[styles.metaLabel, { color: colors.textHint }]}>{t.adminReportsUserLabel}</Text>
-                  <Text style={[styles.metaValue, { color: colors.primary }]} numberOfLines={1}>
-                    {report.reportedUserName}
-                  </Text>
-                </AnimatedPressable>
+                {report.reportedUid && (
+                  <AnimatedPressable
+                    onPress={() => router.push(`/(app)/user/${report.reportedUid}`)}
+                    style={styles.metaRow}
+                  >
+                    <Text style={[styles.metaLabel, { color: colors.textHint }]}>{t.adminReportsUserLabel}</Text>
+                    <Text style={[styles.metaValue, { color: colors.primary }]} numberOfLines={1}>
+                      {report.reportedUserName}
+                    </Text>
+                  </AnimatedPressable>
+                )}
+
+                {!!report.description && (
+                  <View style={styles.metaRow}>
+                    <Text style={[styles.metaLabel, { color: colors.textHint }]}>{t.adminReportsDescriptionLabel}</Text>
+                    <Text style={[styles.metaValue, { color: colors.textPrimary }]}>{report.description}</Text>
+                  </View>
+                )}
+
+                {!!report.screenshotUrl && (
+                  <AnimatedPressable onPress={() => Linking.openURL(report.screenshotUrl!)} style={styles.metaRow}>
+                    <Text style={[styles.metaValue, { color: colors.primary }]}>{t.adminReportsScreenshotLabel}</Text>
+                  </AnimatedPressable>
+                )}
 
                 <View style={styles.metaRow}>
                   <Text style={[styles.metaLabel, { color: colors.textHint }]}>{t.adminReportsReporterLabel}</Text>
@@ -229,25 +254,24 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   content: { paddingHorizontal: Spacing.lg, gap: Spacing.lg },
   empty: {
-    borderWidth: 2.5,
+    borderWidth: 1,
     borderRadius: BorderRadius.lg,
     padding: Spacing.xl,
     alignItems: 'center',
     gap: Spacing.sm,
-    ...Shadow.sm,
   },
   emptyEmoji: { fontSize: 44 },
-  emptyTitle: { fontSize: FontSize.xl, fontWeight: FontWeight.extrabold, fontFamily: DrawFont },
+  emptyTitle: { fontSize: FontSize.xl, fontWeight: FontWeight.extrabold, fontFamily: TitleFont },
   emptyBody: { fontSize: FontSize.sm, textAlign: 'center', lineHeight: 20 },
   list: { gap: Spacing.md },
-  card: { borderWidth: 2.5, borderRadius: BorderRadius.lg, padding: Spacing.md, gap: 8, ...Shadow.sm },
+  card: { borderWidth: 1, borderRadius: BorderRadius.lg, padding: Spacing.md, gap: 8},
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  reason: { fontSize: FontSize.base, fontWeight: FontWeight.bold, fontFamily: DrawFont },
+  reason: { fontSize: FontSize.base, fontWeight: FontWeight.bold, fontFamily: UIFont },
   time: { fontSize: FontSize.xs },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   metaLabel: { fontSize: FontSize.xs, fontWeight: FontWeight.medium },
   metaValue: { fontSize: FontSize.sm, fontWeight: FontWeight.medium, flexShrink: 1 },
   actions: { flexDirection: 'row', gap: Spacing.sm, marginTop: 4 },
-  actionBtn: { flex: 1, borderWidth: 2, borderRadius: BorderRadius.full, paddingVertical: 10, alignItems: 'center' },
-  actionText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: DrawFont },
+  actionBtn: { flex: 1, borderWidth: 1, borderRadius: BorderRadius.full, paddingVertical: 10, alignItems: 'center' },
+  actionText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
 });

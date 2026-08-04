@@ -1,37 +1,40 @@
+// Static (light-only) copy of src/core/theme LightColors, kept for the
+// handful of consumers (Typography defaults below) that need a color value
+// outside of the useTheme() hook. Prefer useTheme() wherever dark mode matters.
 export const Colors = {
-  primary: '#C94D0A',
-  primaryLight: '#E05D18',
-  primaryDark: '#A33D07',
+  primary: '#B8482A',
+  primaryLight: '#CC5B3A',
+  primaryDark: '#96371F',
 
-  background: '#F7F3ED',
-  surface: '#FFFEF9',
-  surfaceVariant: '#EDE8DF',
-  border: '#D6CCBE',
-  borderStrong: '#1A1208',
+  background: '#FAF7F2',
+  surface: '#FFFFFF',
+  surfaceVariant: '#EDE5D9',
+  border: '#E8E0D5',
+  borderStrong: '#241F19',
 
-  textPrimary: '#1A1208',
-  textSecondary: '#5C4A38',
-  textHint: '#A08878',
+  textPrimary: '#241F19',
+  textSecondary: '#6E635A',
+  textHint: '#7A6E62',
 
-  accentPurple: '#8B3FCC',
-  accentPink: '#CC1F6E',
-  accentGreen: '#0A8A52',
-  accentBlue: '#2952CC',
-  accentAmber: '#CC6B00',
+  accentPurple: '#7E52A8',
+  accentPink: '#B2537A',
+  accentGreen: '#3F7A55',
+  accentBlue: '#3A6494',
+  accentAmber: '#A0702C',
 
-  categoryParty: '#8B3FCC',
-  categorySports: '#0A8A52',
-  categoryStudy: '#2952CC',
-  categoryChill: '#CC1F6E',
-  categoryCoffee: '#CC6B00',
-  categoryOther: '#504540',
+  categoryParty: '#7E52A8',
+  categorySports: '#3F7A55',
+  categoryStudy: '#3A6494',
+  categoryChill: '#B2537A',
+  categoryCoffee: '#A0702C',
+  categoryOther: '#7A6E62',
 
   error: '#DC2626',
   success: '#16A34A',
-  warning: '#CC6B00',
+  warning: '#A0702C',
 
   white: '#FFFFFF',
-  black: '#1A1208',
+  black: '#241F19',
 } as const;
 
 export type ColorKey = keyof typeof Colors;
