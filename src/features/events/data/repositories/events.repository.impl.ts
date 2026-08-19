@@ -31,6 +31,7 @@ import { EventEntity, ReactionType } from '../../domain/entities/event.entity';
 import { CreateEventParams, EventsRepository } from '../../domain/repositories/events.repository';
 import { eventFromFirestore, eventToFirestore } from '../models/event.model';
 import { notificationsRepository } from '@/features/notifications/notifications.repository';
+import { getTranslations } from '@/core/i18n';
 
 const EVENTS = 'events';
 const USERS = 'users';
@@ -197,6 +198,14 @@ export const eventsRepository: EventsRepository = {
       }
       return right(undefined);
     } catch (e: any) {
+      // firestore.rules rejects attendeeIds growing past maxAttendees —
+      // the client's own isEventFull() check can be stale if someone else
+      // took the last spot a moment earlier, so a permission-denied here
+      // (rather than any other failure reason) means the event just filled
+      // up, not a real error.
+      if (e.code === 'permission-denied') {
+        return left(new ServerFailure(getTranslations().eventFull));
+      }
       return left(new ServerFailure(e.message ?? 'Failed to join event.'));
     }
   },
@@ -306,7 +315,13 @@ export const eventsRepository: EventsRepository = {
 
   async getEventsByAttendee(uid: string): Promise<Either<Failure, EventEntity[]>> {
     try {
-      const q = query(collection(db, EVENTS), where('attendeeIds', 'array-contains', uid));
+      // A ceiling against unbounded growth for very long-tenured active
+      // users — no orderBy alongside it on purpose, since array-contains +
+      // orderBy on a different field needs a new composite index deployed
+      // first or the query throws at runtime; the client already re-sorts
+      // by dateTime below regardless of fetch order, so plain limit() here
+      // doesn't change today's behavior for anyone.
+      const q = query(collection(db, EVENTS), where('attendeeIds', 'array-contains', uid), limit(300));
       const snap = await getDocs(q);
       const sorted = snap.docs
         .map(eventFromFirestore)

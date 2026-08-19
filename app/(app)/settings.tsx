@@ -519,11 +519,11 @@ export default function SettingsScreen() {
 
       {/* Legal */}
       <Section title={t.settingsPrivacy}>
-        <SettingRow icon="chat" label={t.settingsFeedback} onPress={() => Linking.openURL(FEEDBACK_URL)} />
+        <SettingRow icon="chat" label={t.settingsFeedback} onPress={() => Linking.openURL(FEEDBACK_URL).catch(() => {})} />
         <Divider />
-        <SettingRow icon="shield" label={t.privacyPolicy} onPress={() => Linking.openURL(PRIVACY_POLICY_URL)} />
+        <SettingRow icon="shield" label={t.privacyPolicy} onPress={() => Linking.openURL(PRIVACY_POLICY_URL).catch(() => {})} />
         <Divider />
-        <SettingRow icon="doc" label={t.termsOfService} onPress={() => Linking.openURL(TERMS_URL)} />
+        <SettingRow icon="doc" label={t.termsOfService} onPress={() => Linking.openURL(TERMS_URL).catch(() => {})} />
       </Section>
 
       {/* Admin */}

@@ -296,11 +296,11 @@ export default function SignUpScreen() {
             </AnimatedPressable>
             <Text style={[styles.termsText, { color: colors.textSecondary }]}>
               {t.authTermsPrefix}{' '}
-              <Text style={[styles.termsLink, { color: colors.primary }]} onPress={() => Linking.openURL(TERMS_URL)}>
+              <Text style={[styles.termsLink, { color: colors.primary }]} onPress={() => Linking.openURL(TERMS_URL).catch(() => {})}>
                 {t.termsOfService}
               </Text>
               {' '}{t.authTermsAnd}{' '}
-              <Text style={[styles.termsLink, { color: colors.primary }]} onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}>
+              <Text style={[styles.termsLink, { color: colors.primary }]} onPress={() => Linking.openURL(PRIVACY_POLICY_URL).catch(() => {})}>
                 {t.privacyPolicy}
               </Text>
             </Text>
