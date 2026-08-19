@@ -107,9 +107,16 @@ service cloud.firestore {
       // state for every write in order — the second joiner's write is
       // rejected here even though their local UI still showed room.
       // Shrinking the array (leaving) is always allowed regardless of cap.
+      // Same isolated-field admin OR path as groups' isVerifiedOrganiser
+      // above, for the same reason: an admin flagging an event they didn't
+      // create must pass the first OR group too, and they're neither the
+      // creator nor touching attendeeIds/etc — without this branch the
+      // trailing isAdmin() check is unreachable for anyone but the event's
+      // own creator, defeating the point of an admin-curated flagship slot.
       allow update: if signedIn() && (
         resource.data.creatorId == request.auth.uid ||
-        onlyChangedFields(['attendeeIds', 'waitlistIds', 'reactions', 'joinRequests', 'rsvpStakes'])
+        onlyChangedFields(['attendeeIds', 'waitlistIds', 'reactions', 'joinRequests', 'rsvpStakes']) ||
+        (isAdmin() && onlyChangedFields(['isFlagship']))
       ) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['referredBy'])
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isFlagship']) || isAdmin())
         && (request.resource.data.attendeeIds.size() <= resource.data.attendeeIds.size()
@@ -247,9 +254,20 @@ service cloud.firestore {
       // above would let any group creator self-grant the verified badge via
       // a raw write, bypassing the admin-only toggle in the UI (same class
       // of bug as isFlagship on events).
+      // The admin branch below is a dedicated, isolated-field OR path (not
+      // just the trailing isAdmin() check further down) — an admin
+      // verifying/unverifying a group they didn't create must still pass
+      // *some* branch of this first OR group to be allowed to write at
+      // all, and they're neither the creator nor touching memberIds etc.
+      // A rules-unit-testing regression test (firestore-tests/rules.test.ts)
+      // caught this missing: without it, only a group's own creator could
+      // ever pass this rule, making the isAdmin() check below unreachable
+      // for the exact case (admin verifying someone else's group) it
+      // exists for.
       allow update: if signedIn() && (
         resource.data.creatorId == request.auth.uid ||
-        onlyChangedFields(['memberIds', 'invitedUserIds', 'eventIds', 'joinRequests'])
+        onlyChangedFields(['memberIds', 'invitedUserIds', 'eventIds', 'joinRequests']) ||
+        (isAdmin() && onlyChangedFields(['isVerifiedOrganiser']))
       ) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isVerifiedOrganiser']) || isAdmin());
       allow delete: if signedIn() && resource.data.creatorId == request.auth.uid;
 
