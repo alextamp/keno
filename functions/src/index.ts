@@ -2,15 +2,44 @@ import * as admin from 'firebase-admin';
 import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onObjectFinalized } from 'firebase-functions/v2/storage';
 import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
 import { Expo, ExpoPushMessage } from 'expo-server-sdk';
+import { ImageAnnotatorClient } from '@google-cloud/vision';
 
 admin.initializeApp();
 const db = admin.firestore();
 const expo = new Expo();
+const visionClient = new ImageAnnotatorClient();
 
 const RESEND_API_KEY = defineSecret('RESEND_API_KEY');
+
+// Simple per-user, per-action rate limiter for the callable functions below
+// — none of them had any cooldown before, so a scripted client could hammer
+// sendVerificationEmail (costs real money per call) or spam claimReferral/
+// claimStandInHost with no cost to the caller. Stored under
+// users/{uid}/private/rateLimits, written via the Admin SDK like everything
+// else in this file (bypasses firestore.rules, no client access needed).
+// Resets the window once windowMs has elapsed since it started; otherwise
+// increments and rejects once maxCalls is hit within the window.
+async function checkRateLimit(uid: string, action: string, maxCalls: number, windowMs: number): Promise<void> {
+  const ref = db.collection('users').doc(uid).collection('private').doc('rateLimits');
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const data = snap.exists ? (snap.data() ?? {}) : {};
+    const entry = data[action] as { count: number; windowStart: number } | undefined;
+    const now = Date.now();
+    if (!entry || now - entry.windowStart > windowMs) {
+      tx.set(ref, { [action]: { count: 1, windowStart: now } }, { merge: true });
+      return;
+    }
+    if (entry.count >= maxCalls) {
+      throw new HttpsError('resource-exhausted', 'Too many requests — please try again in a bit.');
+    }
+    tx.set(ref, { [action]: { count: entry.count + 1, windowStart: entry.windowStart } }, { merge: true });
+  });
+}
 
 // Mirrors src/core/utils/weekId.ts (Functions can't import from src/, and
 // this is the only place server-side code needs an ISO-week id). Keep the
@@ -430,13 +459,22 @@ export const onCheckInCreated = onDocumentCreated(
 
     try {
       const userSnap = await db.collection('users').doc(userId).get();
-      const following: string[] = userSnap.data()?.following ?? [];
+      const following: string[] = (userSnap.data()?.following ?? []).filter((uid: string) => uid !== userId);
       if (following.length < GROUP_BONUS_MIN_MUTUAL_FRIENDS) return;
 
-      const checkInsSnap = await db.collection(`events/${eventId}/checkIns`).get();
-      const candidateUids = checkInsSnap.docs
-        .map((d) => d.id)
-        .filter((uid) => uid !== userId && following.includes(uid));
+      // Was: fetch every checkIn doc for the whole event on every single
+      // check-in — O(event size) reads each time, O(n²) total across a
+      // large event (a real cost risk for exactly the flagship events this
+      // feature is meant to reward). Scoped instead to just the checking-in
+      // user's own following list, chunked into 'in' queries of 10 — reads
+      // now scale with the caller's own social graph, not the event's total
+      // attendance.
+      const followingChunks: string[][] = [];
+      for (let i = 0; i < following.length; i += 10) followingChunks.push(following.slice(i, i + 10));
+      const checkedInSnaps = await Promise.all(followingChunks.map((chunk) =>
+        db.collection(`events/${eventId}/checkIns`).where(admin.firestore.FieldPath.documentId(), 'in', chunk).get(),
+      ));
+      const candidateUids = checkedInSnaps.flatMap((snap) => snap.docs.map((d) => d.id));
       if (candidateUids.length < GROUP_BONUS_MIN_MUTUAL_FRIENDS) return;
 
       const candidateSnaps = await Promise.all(candidateUids.map((uid) => db.collection('users').doc(uid).get()));
@@ -565,6 +603,7 @@ export const onSwipeCreated = onDocumentCreated(
 export const sendVerificationEmail = onCall({ secrets: [RESEND_API_KEY] }, async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Sign in required.');
+  await checkRateLimit(uid, 'sendVerificationEmail', 1, 30_000);
 
   const userRecord = await admin.auth().getUser(uid);
   const email = userRecord.email;
@@ -626,6 +665,7 @@ export const sendVerificationEmail = onCall({ secrets: [RESEND_API_KEY] }, async
 export const claimStandInHost = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Sign in required.');
+  await checkRateLimit(uid, 'claimStandInHost', 5, 5 * 60_000);
 
   const eventId = request.data?.eventId;
   if (typeof eventId !== 'string' || !eventId) {
@@ -674,6 +714,7 @@ export const claimStandInHost = onCall(async (request) => {
 export const claimReferral = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Sign in required.');
+  await checkRateLimit(uid, 'claimReferral', 20, 10 * 60_000);
 
   const eventId = request.data?.eventId;
   const targetUid = request.data?.targetUid;
@@ -718,6 +759,53 @@ export const claimReferral = onCall(async (request) => {
 // XP and skip the attendanceHistory/reliability hit entirely. Otherwise
 // (host showed, or a stand-in ran check-in) attendees are judged normally
 // against the real checkIns record, same as before.
+// Automated image moderation — Apple App Review Guideline 1.2 (and Google
+// Play's UGC policy) require "a method for filtering objectionable
+// material" for any app with user-generated content; this was a real,
+// unaddressed compliance gap (text has containsBlockedContent client-side,
+// images had nothing). Runs on every image finalized in Storage, checks it
+// against Cloud Vision's SafeSearch, and deletes it immediately if it's
+// flagged for adult/violent/racy content. Scoped to paths actually shown to
+// other users — verification-photos/ and issue-reports/ are admin-only
+// submissions (ID review, bug reports) nobody else ever sees, so they're
+// out of scope for this requirement.
+const MODERATED_STORAGE_PREFIXES = ['events/', 'groups/', 'avatars/', 'dm-images/'];
+const UNSAFE_LIKELIHOODS = ['LIKELY', 'VERY_LIKELY'];
+
+export const moderateUploadedImage = onObjectFinalized(async (event) => {
+  const filePath = event.data.name;
+  const contentType = event.data.contentType;
+  if (!filePath || !contentType?.startsWith('image/')) return;
+  if (!MODERATED_STORAGE_PREFIXES.some((prefix) => filePath.startsWith(prefix))) return;
+
+  try {
+    const [result] = await visionClient.safeSearchDetection(`gs://${event.data.bucket}/${filePath}`);
+    const safeSearch = result.safeSearchAnnotation;
+    if (!safeSearch) return;
+
+    const flagged = UNSAFE_LIKELIHOODS.includes(String(safeSearch.adult ?? ''))
+      || UNSAFE_LIKELIHOODS.includes(String(safeSearch.violence ?? ''))
+      || UNSAFE_LIKELIHOODS.includes(String(safeSearch.racy ?? ''));
+
+    if (flagged) {
+      await admin.storage().bucket(event.data.bucket).file(filePath).delete().catch(() => {});
+      await db.collection('moderationLog').add({
+        filePath,
+        adult: safeSearch.adult,
+        violence: safeSearch.violence,
+        racy: safeSearch.racy,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      logger.warn('Removed an uploaded image that failed automated content moderation', { filePath });
+    }
+  } catch (err) {
+    // Fails open (image stays up) rather than closed — a Vision API outage
+    // shouldn't start silently deleting every upload. Logged so a sustained
+    // failure is visible rather than a silent gap in coverage.
+    logger.error('Image moderation check failed', { filePath, err: String(err) });
+  }
+});
+
 // Event photo walls fill Storage fast at any real scale, and nobody was
 // ever told the photos wouldn't stick around — so this bounds cost by
 // deleting both the Firestore doc and the underlying Storage object once a
