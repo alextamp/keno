@@ -13,6 +13,8 @@ import { formatMessageTime } from '@/core/utils/time';
 import { isLeft } from '@/core/utils/either';
 import { eventsRepository } from '@/features/events/data/repositories/events.repository.impl';
 import { Icon } from '@/components/ui/Icon';
+import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
+import { logAdminAction } from '@/core/utils/adminAuditLog';
 
 interface ReportItem {
   id: string;
@@ -58,6 +60,7 @@ export default function AdminReportsScreen() {
   const insets = useSafeAreaInsets();
   const t = useTranslation();
   const { language } = useLanguageStore();
+  const adminUid = useAuthStore((s) => s.user?.id);
 
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,6 +115,14 @@ export default function AdminReportsScreen() {
     setBusyId(report.id);
     try {
       await deleteDoc(doc(db, 'reports', report.id));
+      if (adminUid) {
+        logAdminAction(adminUid, 'reportDismissed', {
+          reportId: report.id,
+          reportedEventId: report.reportedEventId,
+          reportedUid: report.reportedUid,
+          reason: report.reason,
+        });
+      }
     } catch {
       Alert.alert(t.createAlertSaveError, t.authErrGeneric);
     } finally {
@@ -135,6 +146,14 @@ export default function AdminReportsScreen() {
               return;
             }
             await deleteDoc(doc(db, 'reports', report.id));
+            if (adminUid) {
+              logAdminAction(adminUid, 'reportedEventDeleted', {
+                reportId: report.id,
+                eventId: report.reportedEventId,
+                eventCreatorUid: report.reportedUid,
+                reason: report.reason,
+              });
+            }
           } catch {
             Alert.alert(t.createAlertSaveError, t.authErrGeneric);
           } finally {
@@ -211,7 +230,7 @@ export default function AdminReportsScreen() {
                 )}
 
                 {!!report.screenshotUrl && (
-                  <AnimatedPressable onPress={() => Linking.openURL(report.screenshotUrl!)} style={styles.metaRow}>
+                  <AnimatedPressable onPress={() => Linking.openURL(report.screenshotUrl!).catch(() => {})} style={styles.metaRow}>
                     <Text style={[styles.metaValue, { color: colors.primary }]}>{t.adminReportsScreenshotLabel}</Text>
                   </AnimatedPressable>
                 )}

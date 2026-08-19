@@ -9,6 +9,8 @@ import { useTheme } from '@/core/theme';
 import { UIFont, UIFontLight, TitleFont, FontSize, FontWeight, Spacing, BorderRadius } from '@/core/constants/theme';
 import { useTranslation } from '@/core/i18n';
 import { Icon } from '@/components/ui/Icon';
+import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
+import { logAdminAction } from '@/core/utils/adminAuditLog';
 
 interface PendingUser {
   id: string;
@@ -23,6 +25,7 @@ export default function AdminVerificationsScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const t = useTranslation();
+  const adminUid = useAuthStore((s) => s.user?.id);
 
   const [pending, setPending] = useState<PendingUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +59,7 @@ export default function AdminVerificationsScreen() {
     setBusyId(uid);
     try {
       await updateDoc(doc(db, 'users', uid), { idVerificationStatus: status });
+      if (adminUid) logAdminAction(adminUid, 'idVerification', { targetUid: uid, status });
     } catch {
       Alert.alert(t.createAlertSaveError, t.authErrGeneric);
     } finally {
