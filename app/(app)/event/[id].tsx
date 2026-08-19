@@ -63,28 +63,13 @@ import { XP_VALUES, HOST_GRACE_PERIOD_MS } from '@/core/constants/gamification';
 import { useReviewsStore } from '@/features/reviews/presentation/store/reviews.store';
 import { REVIEW_EMOJI, REVIEW_LABEL, ReviewType } from '@/features/reviews/domain/entities/review.entity';
 import { swipesRepository } from '@/features/swipes/data/repositories/swipes.repository.impl';
+import { queryUsersByNamePrefix } from '@/core/utils/userSearch';
 
 interface InviteUserResult { uid: string; name: string; universityName: string; avatarColor: string; }
 
-// Mirrors group/[id].tsx's own local searchUsers — same client-side
-// name-contains scan over the first 200 users, same fallback if the
-// nameLower-ordered query isn't available. Kept local rather than shared
-// since that's the existing precedent in this codebase (search.tsx and
-// group/[id].tsx each already have their own copy).
 async function searchUsersToInvite(q: string): Promise<InviteUserResult[]> {
-  if (q.trim().length < 2) return [];
-  const lower = q.trim().toLowerCase();
-  try {
-    const snap = await getDocs(query(collection(db, 'users'), orderBy('nameLower'), limit(200)));
-    return snap.docs
-      .map((d) => ({ uid: d.id, name: d.data().name ?? '', universityName: d.data().universityName ?? '', avatarColor: d.data().avatarColor ?? '#B8482A' }))
-      .filter((u) => u.name.toLowerCase().includes(lower));
-  } catch {
-    const snap = await getDocs(query(collection(db, 'users'), limit(200)));
-    return snap.docs
-      .map((d) => ({ uid: d.id, name: d.data().name ?? '', universityName: d.data().universityName ?? '', avatarColor: d.data().avatarColor ?? '#B8482A' }))
-      .filter((u) => u.name.toLowerCase().includes(lower));
-  }
+  const docs = await queryUsersByNamePrefix(q);
+  return docs.map((d) => ({ uid: d.id, name: d.data().name ?? '', universityName: d.data().universityName ?? '', avatarColor: d.data().avatarColor ?? '#B8482A' }));
 }
 
 function Avatar({ profile, size = 44 }: { profile?: UserProfile; size?: number }) {
@@ -365,7 +350,14 @@ export default function EventDetailScreen() {
     const result = attending
       ? await eventsRepository.leaveEvent(event.id, user.id)
       : await eventsRepository.joinEvent(event.id, user.id);
-    if (isLeft(result)) Alert.alert(t.createAlertSaveError, result.left.message);
+    if (isLeft(result)) {
+      Alert.alert(t.createAlertSaveError, result.left.message);
+      // A rejected join specifically means our locally-cached attendeeIds
+      // was stale (someone else took the last spot first) — refetch so the
+      // UI actually shows full/waitlist instead of an enabled Join button
+      // that would just fail again.
+      if (!attending && result.left.message === t.eventFull) loadEvent();
+    }
     else {
       const updated: EventEntity = {
         ...event,

@@ -34,6 +34,7 @@ import { fetchUserProfiles, UserProfile } from '@/core/utils/userProfiles';
 import { isLeft } from '@/core/utils/either';
 import { notificationsRepository } from '@/features/notifications/notifications.repository';
 import { isEventPast } from '@/features/events/domain/entities/event.entity';
+import { queryUsersByNamePrefix } from '@/core/utils/userSearch';
 import { haptics } from '@/core/utils/haptics';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import { ADMIN_UID } from '@/core/constants/admin';
@@ -41,19 +42,8 @@ import { ADMIN_UID } from '@/core/constants/admin';
 interface UserResult { uid: string; name: string; universityName: string; avatarColor: string; }
 
 async function searchUsers(q: string): Promise<UserResult[]> {
-  if (q.trim().length < 2) return [];
-  const lower = q.trim().toLowerCase();
-  try {
-    const snap = await getDocs(query(collection(db, 'users'), orderBy('nameLower'), limit(200)));
-    return snap.docs
-      .map((d) => ({ uid: d.id, name: d.data().name ?? '', universityName: d.data().universityName ?? '', avatarColor: d.data().avatarColor ?? '#B8482A' }))
-      .filter((u) => u.name.toLowerCase().includes(lower));
-  } catch {
-    const snap = await getDocs(query(collection(db, 'users'), limit(200)));
-    return snap.docs
-      .map((d) => ({ uid: d.id, name: d.data().name ?? '', universityName: d.data().universityName ?? '', avatarColor: d.data().avatarColor ?? '#B8482A' }))
-      .filter((u) => u.name.toLowerCase().includes(lower));
-  }
+  const docs = await queryUsersByNamePrefix(q);
+  return docs.map((d) => ({ uid: d.id, name: d.data().name ?? '', universityName: d.data().universityName ?? '', avatarColor: d.data().avatarColor ?? '#B8482A' }));
 }
 
 interface GroupMessage {

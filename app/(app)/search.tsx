@@ -4,14 +4,9 @@ import {
   ActivityIndicator, FlatList, Image,
   StyleSheet, Text, TextInput, View,
 } from 'react-native';
-import {
-  collection, getDocs, limit, orderBy,
-  query, startAt, endAt,
-} from 'firebase/firestore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTabNavigation } from '@/core/tabNavigation';
-import { db } from '@/lib/firebase';
 import { useTheme } from '@/core/theme';
 import { UIFont, UIFontLight, FontSize, FontWeight, Spacing, BorderRadius } from '@/core/constants/theme';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
@@ -21,6 +16,7 @@ import { universityLabel } from '@/core/constants/universities';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
+import { queryUsersByNamePrefix } from '@/core/utils/userSearch';
 
 interface UserResult {
   uid: string;
@@ -47,66 +43,24 @@ function isVisibleTo(result: UserResult, viewerUid: string | undefined): boolean
 }
 
 async function searchUsers(q: string): Promise<UserResult[]> {
-  if (q.trim().length < 2) return [];
-  const lower = q.trim().toLowerCase();
-  try {
-    // Try prefix search on nameLower first (for users who signed up after the field was added)
-    const prefixQ = query(
-      collection(db, 'users'),
-      orderBy('nameLower'),
-      startAt(lower),
-      endAt(lower + ''),
-      limit(30),
-    );
-    const snap = await getDocs(prefixQ);
-    if (snap.docs.length > 0) {
-      return snap.docs.map((d) => {
-        const data = d.data();
-        return {
-          uid: d.id,
-          name: data.name ?? '',
-          universityName: data.universityName ?? '',
-          department: data.department ?? '',
-          avatarColor: data.avatarColor ?? '#B8482A',
-          photoUri: data.photoUri,
-          bio: data.bio,
-          followersCount: (data.followers ?? []).length,
-          eventsCount: (data.joinedEvents ?? []).length,
-          profileVisibility: data.profileVisibility,
-          followers: data.followers ?? [],
-          following: data.following ?? [],
-        };
-      });
-    }
-  } catch {
-    // nameLower index might not exist yet — fall back to full fetch + client filter
-  }
-  // Fallback: fetch all users and filter client-side (works for small user counts)
-  const fallback = await getDocs(query(collection(db, 'users'), limit(200)));
-  return fallback.docs
-    .map((d) => {
-      const data = d.data();
-      return {
-        uid: d.id,
-        name: data.name ?? '',
-        universityName: data.universityName ?? '',
-        department: data.department ?? '',
-        avatarColor: data.avatarColor ?? '#B8482A',
-        photoUri: data.photoUri,
-        bio: data.bio,
-        followersCount: (data.followers ?? []).length,
-        eventsCount: (data.joinedEvents ?? []).length,
-        profileVisibility: data.profileVisibility,
-        followers: data.followers ?? [],
-        following: data.following ?? [],
-      };
-    })
-    .filter((u) =>
-      u.name.toLowerCase().includes(lower) ||
-      u.universityName.toLowerCase().includes(lower) ||
-      u.department.toLowerCase().includes(lower),
-    )
-    .slice(0, 30);
+  const docs = await queryUsersByNamePrefix(q, 30);
+  return docs.map((d) => {
+    const data = d.data();
+    return {
+      uid: d.id,
+      name: data.name ?? '',
+      universityName: data.universityName ?? '',
+      department: data.department ?? '',
+      avatarColor: data.avatarColor ?? '#B8482A',
+      photoUri: data.photoUri,
+      bio: data.bio,
+      followersCount: (data.followers ?? []).length,
+      eventsCount: (data.joinedEvents ?? []).length,
+      profileVisibility: data.profileVisibility,
+      followers: data.followers ?? [],
+      following: data.following ?? [],
+    };
+  });
 }
 
 function UserCard({ result, isMe, isFollowing, onPress, onFollow, followLabel, followingLabel }: {
