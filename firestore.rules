@@ -95,11 +95,20 @@ service cloud.firestore {
       // this, any creator could self-flag their own event (the app only
       // hides the toggle in the UI for non-admins, which a raw write bypasses)
       // and hijack the feed's pinned banner slot.
+      // attendeeIds can only grow up to maxAttendees. The client's own
+      // isEventFull() check can be stale (two people tapping Join on the
+      // last spot at the same moment), but Firestore serializes writes to a
+      // single document, so this check runs against the true committed
+      // state for every write in order — the second joiner's write is
+      // rejected here even though their local UI still showed room.
+      // Shrinking the array (leaving) is always allowed regardless of cap.
       allow update: if signedIn() && (
         resource.data.creatorId == request.auth.uid ||
         onlyChangedFields(['attendeeIds', 'waitlistIds', 'reactions', 'joinRequests', 'rsvpStakes'])
       ) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['referredBy'])
-        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isFlagship']) || isAdmin());
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isFlagship']) || isAdmin())
+        && (request.resource.data.attendeeIds.size() <= resource.data.attendeeIds.size()
+            || request.resource.data.attendeeIds.size() <= resource.data.get('maxAttendees', 999999));
       allow delete: if signedIn() && (resource.data.creatorId == request.auth.uid || isAdmin());
 
       // Chat messages — auto-expiring 24h after the event starts (research
@@ -228,11 +237,15 @@ service cloud.firestore {
       // Creator can edit everything; members can only join/leave or accept invites,
       // any signed-in user can attach an event they posted to the group, and
       // anyone can ask to join a private group via joinRequests.
+      // isVerifiedOrganiser is admin-only regardless of who owns the group —
+      // without this extra check, the "creator can edit everything" branch
+      // above would let any group creator self-grant the verified badge via
+      // a raw write, bypassing the admin-only toggle in the UI (same class
+      // of bug as isFlagship on events).
       allow update: if signedIn() && (
         resource.data.creatorId == request.auth.uid ||
-        onlyChangedFields(['memberIds', 'invitedUserIds', 'eventIds', 'joinRequests']) ||
-        (isAdmin() && onlyChangedFields(['isVerifiedOrganiser']))
-      );
+        onlyChangedFields(['memberIds', 'invitedUserIds', 'eventIds', 'joinRequests'])
+      ) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isVerifiedOrganiser']) || isAdmin());
       allow delete: if signedIn() && resource.data.creatorId == request.auth.uid;
 
       match /messages/{messageId} {
@@ -263,6 +276,26 @@ service cloud.firestore {
       allow create: if signedIn() && request.resource.data.reporterUid == request.auth.uid;
       allow update: if isAdmin();
       allow delete: if isAdmin();
+    }
+
+    // Append-only record of admin actions (report resolutions, event
+    // deletions, ID verification decisions) — a paper trail for what the
+    // one moderator account did and when, in case it's ever compromised or
+    // there's more than one admin someday. Never editable or deletable,
+    // even by the admin themselves — that would defeat the point.
+    match /adminAuditLog/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && request.resource.data.adminUid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Record of images automatically removed by moderateUploadedImage
+    // (Cloud Vision SafeSearch). Written only by the Admin SDK, never by a
+    // client — there's no legitimate reason a client would create one of
+    // these itself.
+    match /moderationLog/{logId} {
+      allow read: if isAdmin();
+      allow create, update, delete: if false;
     }
   }
 }
