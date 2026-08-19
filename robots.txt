@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://alextamp.github.io/keno/sitemap.xml
