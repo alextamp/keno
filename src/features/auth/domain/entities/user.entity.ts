@@ -90,4 +90,10 @@ export interface UserEntity {
    *  core/utils/weekId.ts's getSemesterId / MAX_STREAK_PAUSES_PER_SEMESTER).
    *  Count resets whenever semesterId no longer matches the current one. */
   streakPauses?: { semesterId: string; count: number };
+  /** Whether this account has an entry in the `admins` collection —
+   *  resolved once at load time (see loadUserFromFirestore), not live.
+   *  Firestore rules always check the collection directly and immediately,
+   *  regardless of this cached value, so a revoked admin loses real access
+   *  right away even if this flag doesn't update until their next launch. */
+  isAdmin?: boolean;
 }

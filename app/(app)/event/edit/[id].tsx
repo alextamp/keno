@@ -14,7 +14,7 @@ import { BorderRadius, UIFont, TitleFont, FontSize, FontWeight, Shadow, Spacing 
 import { EventCategory, GenderFilter } from '@/features/events/domain/entities/event.entity';
 import { useEventsStore } from '@/features/events/presentation/store/events.store';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
-import { ADMIN_UID } from '@/core/constants/admin';
+import { useIsAdmin } from '@/core/utils/adminRole';
 import { eventsRepository } from '@/features/events/data/repositories/events.repository.impl';
 import { isLeft } from '@/core/utils/either';
 import { containsBlockedContent } from '@/core/utils/contentModeration';
@@ -37,6 +37,7 @@ export default function EditEventScreen() {
   const insets = useSafeAreaInsets();
   const upsertEvent = useEventsStore((s) => s.upsertEvent);
   const currentUser = useAuthStore((s) => s.user);
+  const isAdmin = useIsAdmin();
   const t = useTranslation();
   const { language } = useLanguageStore();
   const GENDER_OPTIONS: { value: GenderFilter; label: string }[] = [
@@ -169,7 +170,7 @@ export default function EditEventScreen() {
       checkInInfo: (checkInInfoText.trim() || finalCheckInPhoto)
         ? { text: checkInInfoText.trim() || undefined, photoUri: finalCheckInPhoto }
         : undefined,
-      ...(currentUser?.id === ADMIN_UID ? { isFlagship } : {}),
+      ...(isAdmin ? { isFlagship } : {}),
     });
     if (isLeft(result)) Alert.alert(t.userInviteErrorTitle, result.left.message);
     else { upsertEvent(result.right); router.back(); }
@@ -334,7 +335,7 @@ export default function EditEventScreen() {
           {/* Admin-only "Keno Wednesdays" flagship pin (research doc #28) —
               not a general creator feature, since letting anyone pin their
               own event above everyone else's would just be abuse. */}
-          {currentUser?.id === ADMIN_UID && (
+          {isAdmin && (
             <AnimatedPressable
               onPress={() => setIsFlagship((v) => !v)}
               style={[

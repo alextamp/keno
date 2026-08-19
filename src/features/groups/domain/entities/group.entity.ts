@@ -18,7 +18,8 @@ export interface GroupEntity {
   createdAt: Date;
   /** Manually confirmed (by the admin) to genuinely represent a university
    *  club/society — shown as a badge next to the group name. Never
-   *  self-service; toggled only from the group screen by ADMIN_UID. */
+   *  self-service; toggled only from the group screen by an admin (see
+   *  core/utils/adminRole.ts). */
   isVerifiedOrganiser?: boolean;
 }
 

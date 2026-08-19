@@ -37,7 +37,7 @@ import { isEventPast } from '@/features/events/domain/entities/event.entity';
 import { queryUsersByNamePrefix } from '@/core/utils/userSearch';
 import { haptics } from '@/core/utils/haptics';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
-import { ADMIN_UID } from '@/core/constants/admin';
+import { useIsAdmin } from '@/core/utils/adminRole';
 
 interface UserResult { uid: string; name: string; universityName: string; avatarColor: string; }
 
@@ -65,6 +65,7 @@ export default function GroupDetailScreen() {
   const insets = useSafeAreaInsets();
   const keyboardOffset = useKeyboardOffset();
   const user = useAuthStore((s) => s.user);
+  const isAdmin = useIsAdmin();
   const events = useEventsStore((s) => s.events);
   const joinGroup = useGroupsStore((s) => s.joinGroup);
   const leaveGroup = useGroupsStore((s) => s.leaveGroup);
@@ -294,7 +295,7 @@ export default function GroupDetailScreen() {
 
   const isMember = user ? group.memberIds.includes(user.id) : false;
   const isCreator = user?.id === group.creatorId;
-  const isAdminUser = user?.id === ADMIN_UID;
+  const isAdminUser = isAdmin;
   const isInvited = user ? group.invitedUserIds.includes(user.id) : false;
   const canJoin = !group.isPrivate || isInvited;
   const groupEvents = events.filter((e) => group.eventIds.includes(e.id));

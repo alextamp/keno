@@ -21,7 +21,7 @@ import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { useLanguageStore, LANGUAGE_LABELS, AppLanguage, useTranslation } from '@/core/i18n';
 import { UIFont, UIFontLight, TitleFont, FontSize, FontWeight, Spacing, BorderRadius } from '@/core/constants/theme';
 import { INTERESTS } from '@/core/constants/interests';
-import { ADMIN_UID } from '@/core/constants/admin';
+import { useIsAdmin } from '@/core/utils/adminRole';
 import { Icon, IconName } from '@/components/ui/Icon';
 import { universityLabel } from '@/core/constants/universities';
 import { uploadIssueScreenshot } from '@/core/utils/uploadImage';
@@ -84,6 +84,7 @@ export default function SettingsScreen() {
   const setDynamicHeroEnabled = usePreferencesStore((s) => s.setDynamicHeroEnabled);
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
+  const isAdmin = useIsAdmin();
   const signOut = useAuthStore((s) => s.signOut);
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const { language, setLanguage } = useLanguageStore();
@@ -527,7 +528,7 @@ export default function SettingsScreen() {
       </Section>
 
       {/* Admin */}
-      {user?.id === ADMIN_UID && (
+      {isAdmin && (
         <Section title={t.settingsSectionAdmin}>
           <SettingRow icon="flag" label={t.settingsAdminReports} onPress={() => router.push('/(app)/admin-reports')} />
           <Divider />

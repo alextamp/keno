@@ -53,7 +53,7 @@ export function isBetaTesterUser(u: { isBetaTester?: boolean; createdAt?: Date |
 }
 
 import { IconName } from '@/components/ui/Icon';
-import { ADMIN_UID } from './admin';
+import { FOUNDER_UID } from './founder';
 
 export interface Level {
   name: string;
@@ -83,12 +83,14 @@ export const LEVELS: Level[] = [
 ];
 
 // Founder-only rung, shown at the top of the LevelsModal roadmap but never
-// reachable through XP — getLevel() only returns it for ADMIN_UID, so no
-// amount of grinding lets anyone else earn it.
+// reachable through XP — getLevel() only returns it for FOUNDER_UID, so no
+// amount of grinding lets anyone else earn it (including a future
+// moderator added to the admins collection — that's a separate, unrelated
+// system, see core/utils/adminRole.ts).
 export const CEO_LEVEL: Level = { name: 'CEO', minXP: Infinity, icon: 'crown', color: '#D4AF37' };
 
 export function getLevel(xp: number, uid?: string): Level & { next: Level | null; progress: number; xpInLevel: number; xpNeeded: number; isCEO: boolean } {
-  if (uid === ADMIN_UID) {
+  if (uid === FOUNDER_UID) {
     return { ...CEO_LEVEL, next: null, progress: 1, xpInLevel: 0, xpNeeded: 0, isCEO: true };
   }
   let idx = 0;

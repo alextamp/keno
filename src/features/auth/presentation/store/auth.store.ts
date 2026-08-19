@@ -219,7 +219,10 @@ async function ensureUserProfileExists(fbUser: { uid: string; displayName: strin
 
 async function loadUserFromFirestore(uid: string, attempt = 0): Promise<UserEntity | null> {
   try {
-  const snap = await getDoc(doc(db, 'users', uid));
+  const [snap, adminSnap] = await Promise.all([
+    getDoc(doc(db, 'users', uid)),
+    getDoc(doc(db, 'admins', uid)),
+  ]);
   if (!snap.exists()) {
     // Right after sign-up, the profile-creating write can still be in
     // flight when this fires (it's a separate listener racing the signUp
@@ -269,6 +272,7 @@ async function loadUserFromFirestore(uid: string, attempt = 0): Promise<UserEnti
     emergencyContactName: d.emergencyContactName,
     emergencyContactPhone: d.emergencyContactPhone,
     streakPauses: d.streakPauses,
+    isAdmin: adminSnap.exists(),
   };
   } catch {
     return null;

@@ -118,8 +118,9 @@ export interface EventEntity {
   endedAt?: Date;
   /** Admin-curated "Keno Wednesdays" style flagship ritual (research doc
    *  #28) — pinned above the feed's normal filters/search so it "requires
-   *  no browsing or decision." Only settable by ADMIN_UID (see edit/[id].tsx),
-   *  not a general creator feature. */
+   *  no browsing or decision." Only settable by an admin (see
+   *  core/utils/adminRole.ts and edit/[id].tsx), not a general creator
+   *  feature. */
   isFlagship?: boolean;
 }
 

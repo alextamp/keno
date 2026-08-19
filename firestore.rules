@@ -10,10 +10,15 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
-    // Keep in sync with src/core/constants/admin.ts — the one account
-    // allowed to review reports and moderate content it didn't create.
+    // Backed by the admins collection (doc id = uid) instead of a single
+    // hardcoded uid, so a second moderator can be added — or an existing
+    // one revoked — by writing/deleting a Firestore doc, no redeploy
+    // needed. That collection is server/console-only (see its own rule
+    // below); exists() here bypasses the normal allow-read check on the
+    // path it looks at, so this works even though clients can't read
+    // other users' admins docs directly.
     function isAdmin() {
-      return signedIn() && request.auth.uid == 'Ijfcvx8cqGb1WNnOZxWgGUuGD6N2';
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
     function onlyChangedFields(allowed) {
@@ -287,6 +292,16 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow create: if isAdmin() && request.resource.data.adminUid == request.auth.uid;
       allow update, delete: if false;
+    }
+
+    // Who's an admin/moderator — doc id = uid, e.g. { role: 'admin',
+    // createdAt, createdBy }. Server/console-only: no client, including an
+    // existing admin, may create/update/delete this collection through the
+    // app. Seed and manage it via the Firebase Console or the Admin SDK
+    // directly (bypasses rules entirely), never from a client write.
+    match /admins/{uid} {
+      allow read: if isAdmin();
+      allow write: if false;
     }
 
     // Record of images automatically removed by moderateUploadedImage
