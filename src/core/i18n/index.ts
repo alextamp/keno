@@ -233,6 +233,11 @@ type Translations = {
   createAlertUploadBody: string;
   createAlertSaveError: string;
 
+  // Crash fallback (top-level Error Boundary)
+  errorBoundaryTitle: string;
+  errorBoundaryBody: string;
+  errorBoundaryRetryBtn: string;
+
   // Profile
   profileTitle: string;
   profileEdit: string;
@@ -1074,6 +1079,11 @@ const en: Translations = {
   createAlertUploadTitle: 'Upload failed',
   createAlertUploadBody: 'Could not upload the cover photo. The event will be created without it.',
   createAlertSaveError: 'Error',
+
+  errorBoundaryTitle: 'Something went wrong',
+  errorBoundaryBody: "Sorry about that — the app hit an unexpected error. Give it another try, and if it keeps happening, let us know from Settings.",
+  errorBoundaryRetryBtn: 'Try again',
+
   createLabelEventOptions: 'Options',
   createPrivateLabel: 'Private Event',
   createPrivateHint: 'Only invited people can join',
@@ -1912,6 +1922,11 @@ const el: Translations = {
   createAlertUploadTitle: 'Αποτυχία ανεβάσματος',
   createAlertUploadBody: 'Δεν ήταν δυνατό το ανέβασμα εξώφυλλου. Η εκδήλωση θα δημιουργηθεί χωρίς αυτό.',
   createAlertSaveError: 'Σφάλμα',
+
+  errorBoundaryTitle: 'Κάτι πήγε στραβά',
+  errorBoundaryBody: 'Συγγνώμη — η εφαρμογή συνάντησε ένα απρόσμενο σφάλμα. Δοκίμασε ξανά, και αν συνεχίσει να συμβαίνει, ενημέρωσέ μας από τις Ρυθμίσεις.',
+  errorBoundaryRetryBtn: 'Δοκίμασε ξανά',
+
   createLabelEventOptions: 'Ρυθμίσεις',
   createPrivateLabel: 'Ιδιωτική Εκδήλωση',
   createPrivateHint: 'Μόνο με πρόσκληση',

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BackHandler, Platform } from 'react-native';
+import { BackHandler, Platform, StyleSheet, Text, View } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -11,11 +11,38 @@ import { Inter_400Regular, Inter_700Bold } from '@expo-google-fonts/inter';
 import { useTheme } from '@/core/theme';
 import { useThemeStore } from '@/core/theme/theme.store';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
-import { useLanguageStore } from '@/core/i18n';
+import { getTranslations, useLanguageStore } from '@/core/i18n';
 import { useEventsStore } from '@/features/events/presentation/store/events.store';
 import { syncEventReminders, ensureAndroidNotificationChannel } from '@/core/utils/eventReminders';
 import { usePreferencesStore } from '@/core/store/preferences.store';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
+import { FontSize, FontWeight, Spacing, UIFont, TitleFont } from '@/core/constants/theme';
+
+// Top-level crash net — without this, any unhandled render error anywhere
+// in the tree takes the whole app down to a blank white screen with no
+// recovery path. Sentry still gets the report either way; this just gives
+// the person holding the phone something better than a dead screen.
+function ErrorFallback({ resetError }: { resetError: () => void }) {
+  const { colors } = useTheme();
+  const t = getTranslations();
+  return (
+    <View style={[fallbackStyles.root, { backgroundColor: colors.background }]}>
+      <Icon name="alert" size={40} color={colors.error} />
+      <Text style={[fallbackStyles.title, { color: colors.textPrimary }]}>{t.errorBoundaryTitle}</Text>
+      <Text style={[fallbackStyles.body, { color: colors.textSecondary }]}>{t.errorBoundaryBody}</Text>
+      <Button label={t.errorBoundaryRetryBtn} onPress={resetError} variant="primary" style={fallbackStyles.btn} />
+    </View>
+  );
+}
+
+const fallbackStyles = StyleSheet.create({
+  root: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl, gap: Spacing.sm },
+  title: { fontSize: FontSize.xl, fontWeight: FontWeight.extrabold, fontFamily: TitleFont, marginTop: Spacing.sm, textAlign: 'center' },
+  body: { fontSize: FontSize.sm, fontFamily: UIFont, textAlign: 'center', lineHeight: 20 },
+  btn: { marginTop: Spacing.md, minWidth: 160 },
+});
 
 const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
 if (sentryDsn) {
@@ -138,11 +165,13 @@ function RootLayout() {
   if (isInitializing || !fontsLoaded) return <LoadingScreen />;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-      <AuthGate />
-      <Stack screenOptions={{ headerShown: false }} />
-    </GestureHandlerRootView>
+    <Sentry.ErrorBoundary fallback={({ resetError }) => <ErrorFallback resetError={resetError} />}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+        <AuthGate />
+        <Stack screenOptions={{ headerShown: false }} />
+      </GestureHandlerRootView>
+    </Sentry.ErrorBoundary>
   );
 }
 
