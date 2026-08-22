@@ -461,10 +461,10 @@ export default function EventDetailScreen() {
     const success = await submitReview(user.id, toUid, event.id, 'recommend');
     if (success) {
       haptics.success();
-      Alert.alert('Recommended!', 'You recommended this person.');
+      Alert.alert(t.eventRecommendedAlertTitle, t.eventRecommendedAlertBody);
     } else {
       setReviewedUids((prev) => prev.filter((uid) => uid !== toUid));
-      Alert.alert('Error', 'Could not submit review.');
+      Alert.alert(t.createAlertSaveError, t.eventReviewSubmitError);
     }
   };
 
@@ -499,11 +499,11 @@ export default function EventDetailScreen() {
         }
       }
       haptics.success();
-      Alert.alert('Success', `Checked in ${checkedInUids.length} attendees`);
+      Alert.alert(t.eventCheckInSuccessTitle, t.eventCheckInSuccessBody(checkedInUids.length));
       setShowCheckInModal(false);
       setCheckedInUids([]);
     } catch (e) {
-      Alert.alert('Error', 'Failed to save check-ins');
+      Alert.alert(t.createAlertSaveError, t.eventCheckInSaveError);
     } finally {
       setActionLoading(false);
     }
@@ -1235,7 +1235,7 @@ export default function EventDetailScreen() {
         {canHostCheckIn && eventHasStarted && (
           <View style={styles.quickActionsRow}>
             <Button
-              label="Check In Attendees"
+              label={t.rollCallModalTitle}
               onPress={() => { markHostArrivedIfNeeded(); setShowCheckInModal(true); }}
               variant="primary"
               fullWidth
@@ -1465,7 +1465,7 @@ export default function EventDetailScreen() {
                       onPress={(e) => { e?.stopPropagation?.(); handleSubmitReview(uid); }}
                       style={{ marginTop: 6, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: colors.primary + '20' }}
                     >
-                      <Text style={{ fontSize: 11, color: colors.primary, fontWeight: 'bold' }}>Review</Text>
+                      <Text style={{ fontSize: 11, color: colors.primary, fontWeight: 'bold' }}>{t.eventRecommendBtn}</Text>
                     </Pressable>
                   )}
 
@@ -1880,7 +1880,7 @@ export default function EventDetailScreen() {
                 before start), just on the other side: assume the event is
                 over ASSUMED_EVENT_DURATION_MS after it started. */}
             {eventIsOver && (
-              <Button label="Connect" onPress={() => router.push(`/(app)/swipes/${event.id}`)} variant="primary" fullWidth />
+              <Button label={t.eventReconnectCta} onPress={() => router.push(`/(app)/swipes/${event.id}`)} variant="primary" fullWidth />
             )}
             {!isCreator && !eventIsOver && (
               <Button label={t.eventBtnLeave} onPress={handleJoinLeave} variant="outline" loading={actionLoading} fullWidth />

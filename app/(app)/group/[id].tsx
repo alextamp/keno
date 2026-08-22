@@ -596,7 +596,7 @@ export default function GroupDetailScreen() {
               <Image source={{ uri: chatSelectedImage }} style={styles.chatPreviewImg} />
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Icon name="camera" size={15} color={colors.textPrimary} />
-                <Text style={{ color: colors.textPrimary, fontWeight: FontWeight.bold, fontFamily: UIFont }}>Photo</Text>
+                <Text style={{ color: colors.textPrimary, fontWeight: FontWeight.bold, fontFamily: UIFont }}>{t.chatPhotoLabel}</Text>
                 {uploadingChatImage && <ActivityIndicator color={colors.primary} />}
               </View>
               <AnimatedPressable
@@ -612,7 +612,7 @@ export default function GroupDetailScreen() {
           <View style={[styles.chatInputRow, { backgroundColor: colors.surface, borderColor: colors.border, marginBottom: insets.bottom + 8 }]}>
             {chatSelectedImage ? (
               <Button
-                label={uploadingChatImage ? '...' : 'Send ✈️'}
+                label={uploadingChatImage ? '...' : `${t.chatSendBtn} ✈️`}
                 onPress={handleSendChatImage}
                 disabled={uploadingChatImage}
                 style={{ backgroundColor: group.coverColor, borderColor: colors.border, flex: 1 }}

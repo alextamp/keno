@@ -374,7 +374,7 @@ export default function EventChatScreen() {
               <Image source={{ uri: chatSelectedImage }} style={styles.previewImg} />
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Icon name="camera" size={15} color={colors.textPrimary} />
-                <Text style={{ color: colors.textPrimary, fontWeight: FontWeight.bold, fontFamily: UIFont }}>Photo</Text>
+                <Text style={{ color: colors.textPrimary, fontWeight: FontWeight.bold, fontFamily: UIFont }}>{t.chatPhotoLabel}</Text>
                 {uploadingChatImage && <ActivityIndicator color={colors.primary} />}
               </View>
               <AnimatedPressable
@@ -399,7 +399,7 @@ export default function EventChatScreen() {
                 ) : (
                   <>
                     <Icon name="send" size={16} color="#fff" />
-                    <Text style={{ color: '#fff', fontWeight: FontWeight.bold, fontFamily: UIFont }}>Send</Text>
+                    <Text style={{ color: '#fff', fontWeight: FontWeight.bold, fontFamily: UIFont }}>{t.chatSendBtn}</Text>
                   </>
                 )}
               </AnimatedPressable>

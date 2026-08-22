@@ -244,6 +244,26 @@ type Translations = {
   rollCallModalAllDone: string;
   rollCallModalCheckInBtn: (count: number) => string;
 
+  // Chat/DM/event strings found hardcoded in English during an i18n sweep
+  // (2026-08-19) — bypassed the translation system entirely.
+  chatPhotoLabel: string;
+  chatSendBtn: string;
+  dmMessageDeleted: string;
+  dmBlockedAlertTitle: string;
+  dmSendImageError: string;
+  eventRecommendBtn: string;
+  eventReconnectCta: string;
+  eventRecommendedAlertTitle: string;
+  eventRecommendedAlertBody: string;
+  eventReviewSubmitError: string;
+  eventCheckInSuccessTitle: string;
+  eventCheckInSuccessBody: (count: number) => string;
+  eventCheckInSaveError: string;
+  swipesEventNotFound: string;
+  swipesLoadError: string;
+  createPinRequiredTitle: string;
+  createPinRequiredBody: string;
+
   // Profile
   profileTitle: string;
   profileEdit: string;
@@ -1095,6 +1115,24 @@ const en: Translations = {
   rollCallModalAllDone: "Everyone's checked in!",
   rollCallModalCheckInBtn: (count) => `Check In ${count}`,
 
+  chatPhotoLabel: 'Photo',
+  chatSendBtn: 'Send',
+  dmMessageDeleted: 'Message deleted',
+  dmBlockedAlertTitle: 'Blocked',
+  dmSendImageError: 'Failed to send image',
+  eventRecommendBtn: 'Review',
+  eventReconnectCta: 'Connect',
+  eventRecommendedAlertTitle: 'Recommended!',
+  eventRecommendedAlertBody: 'You recommended this person.',
+  eventReviewSubmitError: 'Could not submit review.',
+  eventCheckInSuccessTitle: 'Success',
+  eventCheckInSuccessBody: (count) => `Checked in ${count} attendees`,
+  eventCheckInSaveError: 'Failed to save check-ins',
+  swipesEventNotFound: 'Event not found',
+  swipesLoadError: 'Failed to load event',
+  createPinRequiredTitle: 'Pin required',
+  createPinRequiredBody: 'Tap the map to drop a pin for the exact location.',
+
   createLabelEventOptions: 'Options',
   createPrivateLabel: 'Private Event',
   createPrivateHint: 'Only invited people can join',
@@ -1942,6 +1980,24 @@ const el: Translations = {
   rollCallModalHint: 'Πάτησε τους συμμετέχοντες για να τους σημειώσεις ως check-in',
   rollCallModalAllDone: 'Όλοι έχουν κάνει check-in!',
   rollCallModalCheckInBtn: (count) => `Check-in ${count}`,
+
+  chatPhotoLabel: 'Φωτογραφία',
+  chatSendBtn: 'Αποστολή',
+  dmMessageDeleted: 'Το μήνυμα διαγράφηκε',
+  dmBlockedAlertTitle: 'Αποκλεισμός',
+  dmSendImageError: 'Αποτυχία αποστολής εικόνας',
+  eventRecommendBtn: 'Αξιολόγηση',
+  eventReconnectCta: 'Σύνδεση',
+  eventRecommendedAlertTitle: 'Έγινε η σύσταση!',
+  eventRecommendedAlertBody: 'Σύστησες αυτό το άτομο.',
+  eventReviewSubmitError: 'Δεν ήταν δυνατή η υποβολή της αξιολόγησης.',
+  eventCheckInSuccessTitle: 'Επιτυχία',
+  eventCheckInSuccessBody: (count) => `Έγινε check-in σε ${count} συμμετέχοντες`,
+  eventCheckInSaveError: 'Αποτυχία αποθήκευσης check-in',
+  swipesEventNotFound: 'Η εκδήλωση δεν βρέθηκε',
+  swipesLoadError: 'Αποτυχία φόρτωσης εκδήλωσης',
+  createPinRequiredTitle: 'Απαιτείται καρφίτσα',
+  createPinRequiredBody: 'Πάτησε στον χάρτη για να τοποθετήσεις καρφίτσα στην ακριβή τοποθεσία.',
 
   createLabelEventOptions: 'Ρυθμίσεις',
   createPrivateLabel: 'Ιδιωτική Εκδήλωση',

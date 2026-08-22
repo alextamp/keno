@@ -49,7 +49,7 @@ export default function SwipesScreen() {
     try {
       const eventSnap = await getDoc(doc(db, 'events', eventId));
       if (!eventSnap.exists()) {
-        Alert.alert('Error', 'Event not found');
+        Alert.alert(t.createAlertSaveError, t.swipesEventNotFound);
         router.back();
         return;
       }
@@ -66,7 +66,7 @@ export default function SwipesScreen() {
       const loaded = await fetchUserProfiles(others);
       setProfiles(loaded);
     } catch (e) {
-      Alert.alert('Error', 'Failed to load event');
+      Alert.alert(t.createAlertSaveError, t.swipesLoadError);
       router.back();
     } finally {
       setLoading(false);
@@ -83,10 +83,10 @@ export default function SwipesScreen() {
       if (isRight(result)) {
         setAlreadySwiped((prev) => new Set([...prev, uid]));
       } else {
-        Alert.alert('Error', t.reconnectError);
+        Alert.alert(t.createAlertSaveError, t.reconnectError);
       }
     } catch (e) {
-      Alert.alert('Error', t.reconnectError);
+      Alert.alert(t.createAlertSaveError, t.reconnectError);
     } finally {
       setPendingUid(null);
     }

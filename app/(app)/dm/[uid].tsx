@@ -191,7 +191,7 @@ export default function DmScreen() {
   const handleSendImage = async () => {
     if (!user || !selectedImage || !convoId) return;
     if (isBlockedEitherWay) {
-      Alert.alert('Blocked', iBlockedThem ? t.dmBlockedByMe : t.dmBlockedByThem);
+      Alert.alert(t.dmBlockedAlertTitle, iBlockedThem ? t.dmBlockedByMe : t.dmBlockedByThem);
       return;
     }
     setUploadingImage(true);
@@ -218,7 +218,7 @@ export default function DmScreen() {
       }).catch(() => {});
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (e) {
-      Alert.alert(t.createAlertSaveError, 'Failed to send image');
+      Alert.alert(t.createAlertSaveError, t.dmSendImageError);
     }
     setUploadingImage(false);
   };
@@ -271,7 +271,7 @@ export default function DmScreen() {
           if (item.isDeleted) {
             return (
               <View style={[styles.msgRow, isMe && styles.msgRowMe]}>
-                <Text style={[styles.deletedText, { color: colors.textHint }]}>Message deleted</Text>
+                <Text style={[styles.deletedText, { color: colors.textHint }]}>{t.dmMessageDeleted}</Text>
               </View>
             );
           }
@@ -375,7 +375,7 @@ export default function DmScreen() {
               <Image source={{ uri: selectedImage }} style={styles.previewImg} />
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Icon name="camera" size={15} color={colors.textPrimary} />
-                <Text style={{ color: colors.textPrimary, fontWeight: FontWeight.bold, fontFamily: UIFont }}>Photo</Text>
+                <Text style={{ color: colors.textPrimary, fontWeight: FontWeight.bold, fontFamily: UIFont }}>{t.chatPhotoLabel}</Text>
                 {uploadingImage && <ActivityIndicator color={colors.primary} />}
               </View>
               <AnimatedPressable
@@ -400,7 +400,7 @@ export default function DmScreen() {
                 ) : (
                   <>
                     <Icon name="send" size={16} color="#fff" />
-                    <Text style={[styles.sendLabel, { color: '#fff' }]}>Send</Text>
+                    <Text style={[styles.sendLabel, { color: '#fff' }]}>{t.chatSendBtn}</Text>
                   </>
                 )}
               </AnimatedPressable>
@@ -457,16 +457,16 @@ export default function DmScreen() {
               style={styles.actionButton}
             >
               <Icon name="edit" size={17} color={colors.textPrimary} />
-              <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
+              <Text style={[styles.actionText, { color: colors.textPrimary }]}>{t.editAction}</Text>
             </AnimatedPressable>
           )}
           <AnimatedPressable
             onPress={() => {
               setSelectedMessage(null);
-              Alert.alert('Delete message?', 'This cannot be undone.', [
-                { text: 'Cancel' },
+              Alert.alert(t.eventDeleteMsgTitle, t.eventDeleteMsgBody, [
+                { text: t.cancel },
                 {
-                  text: 'Delete',
+                  text: t.eventDeleteBtn,
                   onPress: () => {
                     if (selectedMessage) handleDeleteMessage(selectedMessage.id);
                   },
@@ -476,7 +476,7 @@ export default function DmScreen() {
             style={styles.actionButton}
           >
             <Icon name="trash" size={17} color={colors.error} />
-            <Text style={[styles.actionText, { color: colors.error }]}>Delete</Text>
+            <Text style={[styles.actionText, { color: colors.error }]}>{t.eventDeleteBtn}</Text>
           </AnimatedPressable>
         </View>
       </Modal>
@@ -499,12 +499,12 @@ export default function DmScreen() {
           }}
         >
           <View style={[styles.editModal, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.editTitle, { color: colors.textPrimary }]}>Edit message</Text>
+            <Text style={[styles.editTitle, { color: colors.textPrimary }]}>{t.editAction}</Text>
             <TextInput
               style={[styles.editInput, { color: colors.textPrimary, borderColor: colors.border }]}
               value={editingText}
               onChangeText={setEditingText}
-              placeholder="Type message..."
+              placeholder={t.dmPlaceholder}
               placeholderTextColor={colors.textHint}
               multiline
               maxLength={500}
@@ -524,7 +524,7 @@ export default function DmScreen() {
                 disabled={!editingText.trim()}
                 style={[styles.editBtn, { backgroundColor: editingText.trim() ? colors.primary : colors.surfaceVariant }]}
               >
-                <Text style={[styles.editBtnLabel, { color: editingText.trim() ? '#fff' : colors.textHint }]}>Save</Text>
+                <Text style={[styles.editBtnLabel, { color: editingText.trim() ? '#fff' : colors.textHint }]}>{t.eventEditSave}</Text>
               </AnimatedPressable>
             </View>
           </View>

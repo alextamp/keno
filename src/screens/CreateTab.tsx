@@ -176,7 +176,7 @@ export default function CreateEventScreen() {
       return;
     }
     if (locationMode === 'map' && !pinCoords) {
-      Alert.alert('Pin required', 'Tap the map to drop a pin for the exact location.');
+      Alert.alert(t.createPinRequiredTitle, t.createPinRequiredBody);
       return;
     }
     if (dateTime <= new Date()) {
