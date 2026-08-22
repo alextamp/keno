@@ -92,7 +92,7 @@ export default function OnboardingScreen() {
     // Step 0: Welcome
     <View key="welcome" style={styles.stepContent}>
       <View style={[styles.mk, { backgroundColor: colors.primary }]}>
-        <Text style={styles.mkLetter}>κ</Text>
+        <Text style={styles.mkLetter}>k.</Text>
       </View>
       <Text style={[styles.welcomeTitle, { color: colors.textPrimary }]}>
         {t.onboardingWelcome(user?.name?.split(' ')[0] ?? '')}

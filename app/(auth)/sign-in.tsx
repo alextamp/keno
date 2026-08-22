@@ -65,7 +65,7 @@ export default function SignInScreen() {
       >
         <View style={styles.brand}>
           <View style={[styles.mk, { backgroundColor: colors.primary }]}>
-            <Text style={styles.mkLetter}>κ</Text>
+            <Text style={styles.mkLetter}>k.</Text>
           </View>
           <Text style={[styles.wordmark, { color: colors.textPrimary }]}>
             keno<Text style={{ color: colors.primary }}>.</Text>

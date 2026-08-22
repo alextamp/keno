@@ -21,7 +21,7 @@ export default function WelcomeScreen() {
     <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top + 24, paddingBottom: insets.bottom + 20 }]}>
       <View style={styles.center}>
         <View style={[styles.mark, { backgroundColor: colors.primary }]}>
-          <Text style={styles.markLetter}>κ</Text>
+          <Text style={styles.markLetter}>k.</Text>
         </View>
 
         <Text style={[styles.wordmark, { color: colors.textPrimary }]}>
