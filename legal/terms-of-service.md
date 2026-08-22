@@ -56,4 +56,4 @@ We may update these terms from time to time. If we make material changes, we'll 
 
 ## 11. Contact
 
-Questions about these terms: [alextampdias@gmail.com](mailto:alextampdias@gmail.com)
+Questions about these terms: [keno.app.official@gmail.com](mailto:keno.app.official@gmail.com)

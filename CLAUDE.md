@@ -93,7 +93,7 @@ Hyper-local events app for Greek university students (iOS + Android). Students d
 **North-star metric:** real-world meetups per weekly-active user. Time-in-app is explicitly NOT a goal.
 
 ## Founder & setup
-- Alexandros (Alex) Tampakis — solo founder, ΟΠΑ (AUEB) Statistics student. Support email: alextampdias@gmail.com
+- Alexandros (Alex) Tampakis — solo founder, ΟΠΑ (AUEB) Statistics student. Support email: keno.app.official@gmail.com
 - Builds with Claude Code + Antigravity (AI-speed dev, weekly ship cycles)
 - ~6h/day available until universities reopen (late Sept 2026); growth budget €300
 - Tech: Firebase (Auth, Firestore, Storage), Sentry crash reporting, .gr university-email verification (+ ID fallback)

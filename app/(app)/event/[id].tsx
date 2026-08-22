@@ -1753,7 +1753,7 @@ export default function EventDetailScreen() {
             <ScrollView style={{ marginVertical: 12, maxHeight: 300 }} showsVerticalScrollIndicator>
               {pendingCheckInAttendees.length === 0 && (
                 <Text style={[styles.requestModalHint, { color: colors.textHint, textAlign: 'center', paddingVertical: 16 }]}>
-                  Everyone's checked in!
+                  Everyone&apos;s checked in!
                 </Text>
               )}
               {pendingCheckInAttendees.map((uid) => {

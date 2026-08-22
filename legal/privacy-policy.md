@@ -6,7 +6,7 @@ Keno ("we," "us," "the App") is a hyper-local event-sharing app for university s
 
 ## Who we are
 
-Keno is operated by Alex Tamp ([alextampdias@gmail.com](mailto:alextampdias@gmail.com)). For any privacy question or request, contact us at that address.
+Keno is operated by Alex Tamp ([keno.app.official@gmail.com](mailto:keno.app.official@gmail.com)). For any privacy question or request, contact us at that address.
 
 ## Information we collect
 
@@ -81,7 +81,7 @@ Depending on where you live (including under the EU/UK GDPR, which applies to us
 - **Object to or restrict** certain processing, such as location-based features (you can deny or revoke location/notification permissions at any time in your device settings)
 - **Data portability** — request a copy of your data in a portable format
 
-To exercise any of these rights, email [alextampdias@gmail.com](mailto:alextampdias@gmail.com).
+To exercise any of these rights, email [keno.app.official@gmail.com](mailto:keno.app.official@gmail.com).
 
 ## Children's privacy
 
@@ -97,4 +97,4 @@ If we make material changes to this policy, we'll update the "Last updated" date
 
 ## Contact
 
-Questions about this policy or your data: [alextampdias@gmail.com](mailto:alextampdias@gmail.com)
+Questions about this policy or your data: [keno.app.official@gmail.com](mailto:keno.app.official@gmail.com)
