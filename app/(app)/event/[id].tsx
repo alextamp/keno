@@ -1745,15 +1745,15 @@ export default function EventDetailScreen() {
       <Modal visible={showCheckInModal} transparent animationType="fade" onRequestClose={() => setShowCheckInModal(false)}>
         <View style={styles.requestModalBackdrop}>
           <View style={[styles.requestModalCard, { backgroundColor: colors.surface, borderColor: colors.border, maxHeight: '80%' }]}>
-            <Text style={[styles.requestModalTitle, { color: colors.textPrimary }]}>Check In Attendees</Text>
+            <Text style={[styles.requestModalTitle, { color: colors.textPrimary }]}>{t.rollCallModalTitle}</Text>
             <Text style={[styles.requestModalHint, { color: colors.textSecondary }]}>
-              Tap attendees to mark them as checked in
+              {t.rollCallModalHint}
             </Text>
 
             <ScrollView style={{ marginVertical: 12, maxHeight: 300 }} showsVerticalScrollIndicator>
               {pendingCheckInAttendees.length === 0 && (
                 <Text style={[styles.requestModalHint, { color: colors.textHint, textAlign: 'center', paddingVertical: 16 }]}>
-                  Everyone&apos;s checked in!
+                  {t.rollCallModalAllDone}
                 </Text>
               )}
               {pendingCheckInAttendees.map((uid) => {
@@ -1793,7 +1793,7 @@ export default function EventDetailScreen() {
                 style={{ flex: 1 }}
               />
               <Button
-                label={`Check In ${checkedInUids.length}`}
+                label={t.rollCallModalCheckInBtn(checkedInUids.length)}
                 onPress={handleSaveCheckIns}
                 disabled={actionLoading || checkedInUids.length === 0}
                 loading={actionLoading}

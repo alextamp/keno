@@ -238,6 +238,12 @@ type Translations = {
   errorBoundaryBody: string;
   errorBoundaryRetryBtn: string;
 
+  // Roll-call check-in modal (event/[id].tsx, creator manual check-in fallback)
+  rollCallModalTitle: string;
+  rollCallModalHint: string;
+  rollCallModalAllDone: string;
+  rollCallModalCheckInBtn: (count: number) => string;
+
   // Profile
   profileTitle: string;
   profileEdit: string;
@@ -1084,6 +1090,11 @@ const en: Translations = {
   errorBoundaryBody: "Sorry about that — the app hit an unexpected error. Give it another try, and if it keeps happening, let us know from Settings.",
   errorBoundaryRetryBtn: 'Try again',
 
+  rollCallModalTitle: 'Check In Attendees',
+  rollCallModalHint: 'Tap attendees to mark them as checked in',
+  rollCallModalAllDone: "Everyone's checked in!",
+  rollCallModalCheckInBtn: (count) => `Check In ${count}`,
+
   createLabelEventOptions: 'Options',
   createPrivateLabel: 'Private Event',
   createPrivateHint: 'Only invited people can join',
@@ -1926,6 +1937,11 @@ const el: Translations = {
   errorBoundaryTitle: 'Κάτι πήγε στραβά',
   errorBoundaryBody: 'Συγγνώμη — η εφαρμογή συνάντησε ένα απρόσμενο σφάλμα. Δοκίμασε ξανά, και αν συνεχίσει να συμβαίνει, ενημέρωσέ μας από τις Ρυθμίσεις.',
   errorBoundaryRetryBtn: 'Δοκίμασε ξανά',
+
+  rollCallModalTitle: 'Check-in συμμετεχόντων',
+  rollCallModalHint: 'Πάτησε τους συμμετέχοντες για να τους σημειώσεις ως check-in',
+  rollCallModalAllDone: 'Όλοι έχουν κάνει check-in!',
+  rollCallModalCheckInBtn: (count) => `Check-in ${count}`,
 
   createLabelEventOptions: 'Ρυθμίσεις',
   createPrivateLabel: 'Ιδιωτική Εκδήλωση',
