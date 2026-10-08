@@ -145,8 +145,18 @@ export default function CreateEventScreen() {
       const results = await Location.reverseGeocodeAsync({ latitude, longitude });
       if (results.length > 0) {
         const r = results[0];
-        const parts = [r.name, r.street, r.district, r.city].filter(Boolean);
-        if (parts.length) setLocation(parts.slice(0, 2).join(', '));
+        // r.name often duplicates r.street verbatim when the pin isn't on a
+        // named place (no POI at that spot) — naively taking the first two
+        // of [name, street, district, city] then produced "Street N, Street"
+        // instead of "Street N, District". Dedupe case-insensitively instead
+        // of blindly slicing.
+        const candidates = [r.name, r.street, r.district, r.city].filter((p): p is string => !!p);
+        const parts: string[] = [];
+        for (const c of candidates) {
+          if (parts.length >= 2) break;
+          if (!parts.some((p) => p.toLowerCase() === c.toLowerCase())) parts.push(c);
+        }
+        if (parts.length) setLocation(parts.join(', '));
       }
     } catch {}
   };
@@ -423,7 +433,7 @@ export default function CreateEventScreen() {
                 <>
                   <View style={[styles.mapWrap, { borderColor: colors.border }]}>
                     <MapView
-                      style={StyleSheet.absoluteFillObject}
+                      style={StyleSheet.absoluteFill}
                       initialRegion={{ latitude: 37.98, longitude: 23.73, latitudeDelta: 0.15, longitudeDelta: 0.15 }}
                       onPress={handleMapPress}
                     >

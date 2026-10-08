@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import {
-  Platform, ScrollView, StyleSheet, Text, View,
+  PanResponder, Platform, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import MapView, { Marker, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -124,6 +124,27 @@ export default function MapScreen() {
   const mapRef = useRef<MapView>(null);
   const focusLocation = useTabNavigation((s) => s.focusLocation);
   const clearFocusLocation = useTabNavigation((s) => s.clearFocusLocation);
+  const goToTab = useTabNavigation((s) => s.goToTab);
+
+  // MapView's own native pan gesture claims horizontal drags anywhere over
+  // it, so the tab pager's swipe-to-change-tab never gets a chance here —
+  // the map just pans instead. Two narrow strips pinned to the screen edges
+  // (clear of the filter chips up top and the locate/count buttons down
+  // low) restore that swipe without touching normal map panning anywhere
+  // else, same idea as an OS edge-swipe-to-go-back gesture.
+  const SWIPE_THRESHOLD = 50;
+  const leftEdgePan = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+      onPanResponderRelease: (_, g) => { if (g.dx > SWIPE_THRESHOLD) goToTab(0); },
+    }),
+  ).current;
+  const rightEdgePan = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+      onPanResponderRelease: (_, g) => { if (g.dx < -SWIPE_THRESHOLD) goToTab(2); },
+    }),
+  ).current;
 
   const [selected, setSelected] = useState<EventCategory | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
@@ -348,6 +369,19 @@ export default function MapScreen() {
         </AnimatedPressable>
       )}
 
+      {/* Edge-swipe strips — restore swipe-to-change-tab without
+          interfering with map panning or the filter/locate/count controls. */}
+      <View
+        pointerEvents="box-only"
+        style={[styles.swipeEdge, { left: 0, top: insets.top + 100, bottom: TAB_BAR_BASE_HEIGHT + insets.bottom + 70 }]}
+        {...leftEdgePan.panHandlers}
+      />
+      <View
+        pointerEvents="box-only"
+        style={[styles.swipeEdge, { right: 0, top: insets.top + 100, bottom: TAB_BAR_BASE_HEIGHT + insets.bottom + 70 }]}
+        {...rightEdgePan.panHandlers}
+      />
+
       <FilterSheet
         visible={filterSheetVisible}
         onClose={() => setFilterSheetVisible(false)}
@@ -401,6 +435,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.base, paddingVertical: 7,
   },
   countText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
+  swipeEdge: { position: 'absolute', width: 24 },
   // Location button
   locBtn: {
     position: 'absolute', left: Spacing.gutter,

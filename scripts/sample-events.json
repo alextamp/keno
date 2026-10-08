@@ -1,0 +1,22 @@
+[
+  {
+    "title": "Βραδιά επιτραπέζιων στο ΟΠΑ",
+    "description": "Board game night ανοιχτό σε όλους τους φοιτητές, φέρτε φίλους.",
+    "category": "Άλλο",
+    "dateTime": "2026-11-12T19:00:00+02:00",
+    "location": "Φοιτητική Λέσχη ΟΠΑ, Κεφαλληνίας 46, Αθήνα",
+    "latitude": 37.9995,
+    "longitude": 23.7435,
+    "source": "https://example.com/events/board-game-night",
+    "needsReview": []
+  },
+  {
+    "title": "Πεζοπορία στον Υμηττό",
+    "description": "Εύκολη διαδρομή, συνάντηση στην είσοδο του μονοπατιού.",
+    "category": "Πεζοπορία",
+    "dateTime": "2026-11-15T09:00:00+02:00",
+    "location": "Καισαριανή, είσοδος μονοπατιού Υμηττού",
+    "source": "https://example.com/events/ymittos-hike",
+    "needsReview": ["time"]
+  }
+]

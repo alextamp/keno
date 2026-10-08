@@ -1,0 +1,56 @@
+[
+  {
+    "title": "Αφηγήσεις της Ιστορίας στον Ταύρο",
+    "description": "Έκτη συνάντηση του κύκλου «Αφηγήσεις της Ιστορίας», με θέμα «Μαθήματα Ιστορίας, και στην τηλεόραση». Αν σου αρέσει η ιστορία και η καλή κουβέντα, πέρνα και κάτσε. Δωρεάν σύμφωνα με τη λίστα δωρεάν εκδηλώσεων της εβδομάδας.",
+    "category": "Πολιτισμός",
+    "dateTime": "2026-10-09T17:30:00+03:00",
+    "location": "ΠΙΟΠ, Ταύρος, Αθήνα",
+    "source": "https://www.culturenow.gr/dorean-ekdiloseis-stin-athina-tin-evdomada-5-11-oktovrioy/",
+    "needsReview": ["cost", "location"]
+  },
+  {
+    "title": "Printed Athens: τυπωμένη τέχνη στην Κυψέλη",
+    "description": "Σαββατοκύριακο με πάνω από 60 δημιουργούς (εικονογράφοι, graphic designers, screen printers) στη Δημοτική Αγορά Κυψέλης. Δωρεάν είσοδος και καφέδες στη Φωκίωνος Νέγρη για μετά. Τρέχει Σάββατο 10 και Κυριακή 11 Οκτωβρίου, το Σάββατο 14:00–22:00.",
+    "category": "Πολιτισμός",
+    "dateTime": "2026-10-10T14:00:00+03:00",
+    "location": "Δημοτική Αγορά Κυψέλης, Φωκίωνος Νέγρη 42, Κυψέλη, Αθήνα",
+    "source": "https://www.epolitical.gr/dorean-ekdiloseis-stin-athina-5-11-oktovriou-2026/",
+    "needsReview": ["date"]
+  },
+  {
+    "title": "Εγκαίνια έκθεσης στη MOMO Athens",
+    "description": "Εγκαίνια της ατομικής έκθεσης «DELUSIONS // In the Arena of the World» της Βαρβάρας Λιακουνάκου. Το opening τρέχει 19:00–22:00 και η έκθεση συνεχίζεται έως 29 Νοεμβρίου. Μια χαλαρή βραδιά για όποιον θέλει να δει κάτι διαφορετικό.",
+    "category": "Πολιτισμός",
+    "dateTime": "2026-10-10T19:00:00+03:00",
+    "location": "MOMO Athens Art Gallery, Καλλέργη 4, Αθήνα",
+    "source": "https://www.epolitical.gr/dorean-ekdiloseis-stin-athina-5-11-oktovriou-2026/",
+    "needsReview": ["cost", "source"]
+  },
+  {
+    "title": "Τρέξιμο 4,2 χλμ. στο Κορωπί",
+    "description": "Δωρεάν βραδινός αγώνας 4,2 χλμ. με ηλεκτρονική χρονομέτρηση, μπροστά από το Δημαρχείο Κορωπίου. Υπάρχουν και αγώνες 500 μ. για παιδιά και ΑμεΑ. Η ώρα εκκίνησης διαφέρει ανά πηγή (17:00 σε μία), άρα προς επιβεβαίωση.",
+    "category": "Μπάλα/Αθλητικά",
+    "dateTime": "2026-10-11T17:00:00+03:00",
+    "location": "Δημαρχείο Κορωπίου, Λ. Βασιλέως Κωνσταντίνου 47, Κορωπί",
+    "source": "https://running.life/el/event/koropi-mnimi-run",
+    "needsReview": ["time", "registration"]
+  },
+  {
+    "title": "Φεστιβάλ μπύρας στη ΔΕΘ",
+    "description": "Το Thessaloniki Beer Festival στο περίπτερο 16 της ΔΕΘ, κάθε μέρα 16:00–00:00 έως την Κυριακή 11/10. Η είσοδος είναι €5. Καλή αφορμή για έξοδο με την παρέα ή για να γνωρίσεις κόσμο στην πόλη.",
+    "category": "Πάρτι",
+    "dateTime": "2026-10-09T16:00:00+03:00",
+    "location": "Περίπτερο 16, ΔΕΘ-Helexpo, Θεσσαλονίκη",
+    "source": "https://www.olakala.gr/2026/09/thessaloniki-beer-festival-2026-deth-programma-eisitiria.html",
+    "needsReview": ["cost"]
+  },
+  {
+    "title": "Δωρεάν βόλτα στην Άνω Πόλη",
+    "description": "Δωρεάν ξενάγηση στην Άνω Πόλη το Σάββατο το πρωί. Ωραίος τρόπος να γνωρίσεις τη γειτονιά και κόσμο που αγαπά την πόλη. Το σημείο συνάντησης και ο διοργανωτής είναι προς επιβεβαίωση.",
+    "category": "Πολιτισμός",
+    "dateTime": "2026-10-10T10:30:00+03:00",
+    "location": "Άνω Πόλη, Θεσσαλονίκη (σημείο συνάντησης προς επιβεβαίωση)",
+    "source": "https://www.thessalonikiguide.gr/event/",
+    "needsReview": ["location", "source"]
+  }
+]

@@ -8,8 +8,6 @@ import { pickImage } from '@/core/utils/imagePicker';
 import { usePressAnimation } from '@/core/hooks/usePressAnimation';
 import { useKeyboardOffset } from '@/core/hooks/useKeyboardOffset';
 import { AnimatedPressable as ListItemPressable } from '@/components/ui/AnimatedPressable';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -38,6 +36,8 @@ import { queryUsersByNamePrefix } from '@/core/utils/userSearch';
 import { haptics } from '@/core/utils/haptics';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import { useIsAdmin } from '@/core/utils/adminRole';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 interface UserResult { uid: string; name: string; universityName: string; avatarColor: string; }
 
@@ -79,6 +79,7 @@ export default function GroupDetailScreen() {
   const { language } = useLanguageStore();
   const [group, setGroup] = useState<GroupEntity | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [joining, setJoining] = useState(false);
   const [activeTab, setActiveTab] = useState<'events' | 'chat'>('events');
   const [messages, setMessages] = useState<GroupMessage[]>([]);
@@ -118,7 +119,11 @@ export default function GroupDetailScreen() {
   useEffect(() => {
     if (!id) return;
     groupsRepository.getGroup(id).then((res) => {
-      if (res._tag === 'Right') setGroup(res.right);
+      // A deleted group (e.g. via a stale invite notification) resolves to
+      // Left here — without this, `group` just stays null forever and the
+      // screen sits on the loading spinner permanently instead of telling
+      // the person what happened.
+      if (res._tag === 'Right') setGroup(res.right); else setNotFound(true);
       setLoading(false);
     });
     const unsub = groupsRepository.subscribeToGroup(id, setGroup);
@@ -285,10 +290,21 @@ export default function GroupDetailScreen() {
     if (ok) setInvitedUids((prev) => new Set([...prev, target.uid]));
   }, [user, group, inviteToGroup]);
 
-  if (loading || !group) {
+  if (loading) {
     return (
       <View style={[styles.loader, { backgroundColor: colors.background }]}>
         <ActivityIndicator color={colors.primary} size="large" />
+      </View>
+    );
+  }
+
+  if (notFound || !group) {
+    return (
+      <View style={[styles.loader, { backgroundColor: colors.background, gap: Spacing.md, paddingHorizontal: Spacing.xl }]}>
+        <Icon name="users" size={40} color={colors.textDecor} />
+        <Text style={[styles.notFoundTitle, { color: colors.textPrimary }]}>{t.groupNotFoundTitle}</Text>
+        <Text style={[styles.notFoundBody, { color: colors.textSecondary }]}>{t.groupNotFoundBody}</Text>
+        <Button label={t.editEventBack} onPress={() => router.back()} variant="outline" />
       </View>
     );
   }
@@ -432,8 +448,10 @@ export default function GroupDetailScreen() {
             )}
           </View>
           <Text style={[styles.groupName, { color: colors.textPrimary }]}>{group.name}</Text>
-          {group.universityName && (
-            <Text style={[styles.groupUniText, { color: colors.textSecondary }]}>🎓 {universityLabel(group.universityName, language)}</Text>
+          {!!group.allowedUniversities?.length && (
+            <Text style={[styles.groupUniText, { color: colors.textSecondary }]} numberOfLines={1}>
+              🎓 {group.allowedUniversities.map((u) => universityLabel(u, language)).join(', ')}
+            </Text>
           )}
           {group.isVerifiedOrganiser && (
             <View style={{ marginTop: 6 }}>
@@ -1000,12 +1018,14 @@ export default function GroupDetailScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  notFoundTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, fontFamily: TitleFont, textAlign: 'center' },
+  notFoundBody: { fontSize: FontSize.sm, fontFamily: UIFont, textAlign: 'center', lineHeight: 19 },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.lg },
   headerBtn: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   headerBtnText: { fontSize: FontSize.lg, fontWeight: FontWeight.bold },
   iconSection: { alignItems: 'center', gap: 4, paddingTop: Spacing.md, paddingBottom: Spacing.sm },
   groupIcon: { width: 88, height: 88, borderRadius: 44, borderWidth: 3, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  groupIconPhoto: { ...StyleSheet.absoluteFillObject },
+  groupIconPhoto: { ...StyleSheet.absoluteFill },
   groupIconEmoji: { fontSize: 40 },
   groupName: { fontSize: FontSize.xxl, fontWeight: FontWeight.extrabold, fontFamily: TitleFont, marginTop: Spacing.sm, textAlign: 'center' },
   groupUniText: { fontSize: FontSize.sm, fontFamily: UIFont },

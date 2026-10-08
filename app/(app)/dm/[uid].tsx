@@ -63,6 +63,31 @@ export default function DmScreen() {
   const listRef = useRef<FlatList>(null);
 
   const convoId = user ? conversationId(user.id, otherUid) : '';
+  const [otherLastReadAt, setOtherLastReadAt] = useState<Date | null>(null);
+
+  // Instagram-style read receipts: conversations/{id}.lastReadAt is a
+  // {uid: Timestamp} map. Stamping mine on mount and whenever a new message
+  // lands (while I'm sitting in the thread) is what makes "Seen" appear on
+  // the other person's screen. The doc only exists once a message has been
+  // sent by either side, so guard on messages.length to avoid a create-time
+  // permission error (the create rule requires participantIds on the doc).
+  useEffect(() => {
+    if (!convoId || !user || messages.length === 0) return;
+    updateDoc(doc(db, 'conversations', convoId), {
+      [`lastReadAt.${user.id}`]: serverTimestamp(),
+    }).catch(() => {});
+  }, [convoId, user?.id, messages.length]);
+
+  // Live-subscribe to the other participant's read timestamp so "Seen"
+  // updates in real time, like Instagram.
+  useEffect(() => {
+    if (!convoId || !otherUid) return;
+    const unsub = onSnapshot(doc(db, 'conversations', convoId), (snap) => {
+      const readAt = snap.data()?.lastReadAt?.[otherUid] as Timestamp | undefined;
+      setOtherLastReadAt(readAt ? readAt.toDate() : null);
+    }, () => {});
+    return unsub;
+  }, [convoId, otherUid]);
 
   useEffect(() => {
     if (!otherUid) return;
@@ -94,7 +119,6 @@ export default function DmScreen() {
         isDeleted: d.data().isDeleted as boolean | undefined,
         reactions: d.data().reactions ?? {},
       })));
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 80);
     }, () => {});
     return unsub;
   }, [convoId]);
@@ -110,18 +134,25 @@ export default function DmScreen() {
     const text = draft.trim();
     setDraft('');
     try {
-      // Ensure conversation document exists
+      // Ensure conversation document exists. hiddenFor resets on every new
+      // message — a "deleted" thread (see messages.tsx) is really just
+      // hidden from one side's list, and a fresh message should surface it
+      // again, Instagram-style.
       await setDoc(doc(db, 'conversations', convoId), {
         participantIds: [user.id, otherUid],
         lastMessage: text,
+        lastSenderId: user.id,
         lastAt: serverTimestamp(),
+        hiddenFor: [],
       }, { merge: true });
       await addDoc(collection(db, 'conversations', convoId, 'messages'), {
         senderId: user.id,
         text,
         createdAt: serverTimestamp(),
       });
-      // Send notification to recipient
+      // Send notification to recipient — messagePreview carries the actual
+      // text into the push notification body (Instagram-style), instead of
+      // a generic "sent you a message".
       notificationsRepository.create({
         toUid: otherUid,
         fromUid: user.id,
@@ -129,6 +160,7 @@ export default function DmScreen() {
         fromAvatarColor: user.avatarColor,
         fromPhotoUri: user.photoUri,
         type: 'dm_message',
+        messagePreview: text,
       }).catch(() => {});
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
     } catch {
@@ -200,7 +232,9 @@ export default function DmScreen() {
       await setDoc(doc(db, 'conversations', convoId), {
         participantIds: [user.id, otherUid],
         lastMessage: '📷 Photo',
+        lastSenderId: user.id,
         lastAt: serverTimestamp(),
+        hiddenFor: [],
       }, { merge: true });
       await addDoc(collection(db, 'conversations', convoId, 'messages'), {
         senderId: user.id,
@@ -215,6 +249,7 @@ export default function DmScreen() {
         fromAvatarColor: user.avatarColor,
         fromPhotoUri: user.photoUri,
         type: 'dm_message',
+        messagePreview: '📷 Photo',
       }).catch(() => {});
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (e) {
@@ -259,15 +294,18 @@ export default function DmScreen() {
         keyExtractor={(m) => m.id}
         contentContainerStyle={[styles.msgList, { paddingBottom: 16 }]}
         showsVerticalScrollIndicator={false}
+        onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Icon name="chat" size={36} color={colors.textDecor} />
             <Text style={[styles.emptyText, { color: colors.textHint }]}>{t.dmPlaceholder}</Text>
           </View>
         }
-        renderItem={({ item }) => {
+        renderItem={({ item, index }) => {
           const isMe = item.senderId === user?.id;
           const hasImage = item.imageUri;
+          const isLast = index === messages.length - 1;
+          const isSeen = isMe && !item.isDeleted && !!otherLastReadAt && otherLastReadAt.getTime() >= item.createdAt.getTime();
           if (item.isDeleted) {
             return (
               <View style={[styles.msgRow, isMe && styles.msgRowMe]}>
@@ -354,6 +392,9 @@ export default function DmScreen() {
                     );
                   })}
                 </View>
+              )}
+              {isLast && isSeen && (
+                <Text style={[styles.seenText, { color: colors.textHint }]}>{t.dmSeenLabel}</Text>
               )}
             </View>
           );
@@ -555,6 +596,7 @@ const styles = StyleSheet.create({
   bubbleRadius: { borderRadius: BorderRadius.lg },
   bubbleText: { fontSize: FontSize.base, fontFamily: UIFontLight, lineHeight: 19 },
   bubbleTime: { fontSize: FontSize.xs, fontFamily: UIFontLight },
+  seenText: { alignSelf: 'flex-end', fontSize: FontSize.xs, fontFamily: UIFontLight, marginTop: 2, marginRight: 4 },
   inputBar: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
     paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm,

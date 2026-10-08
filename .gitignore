@@ -25,3 +25,19 @@ functions/lib/
 *.aab
 *.apk
 *.bak
+
+# Service account keys for scripts/import-events.js — these must only ever
+# come from GOOGLE_APPLICATION_CREDENTIALS / FIREBASE_SERVICE_ACCOUNT_JSON
+# env vars, never a file checked into the repo.
+*serviceAccount*.json
+*-firebase-adminsdk-*.json
+.env.scripts
+
+# Design source + exports (~20MB) — kept out of git; they live on disk and in
+# the design canvas, not in the app repo.
+design/
+keno_designs /
+keno_design_kit.zip
+
+# Throwaway dev-server QR, regenerated on every `expo start --tunnel`.
+expo-tunnel-qr.png

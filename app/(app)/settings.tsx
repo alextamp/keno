@@ -10,10 +10,6 @@ import { useRouter } from 'expo-router';
 import { deleteUser, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { addDoc, collection, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-
-const PRIVACY_POLICY_URL = 'https://alextamp.github.io/keno/docs/privacy/';
-const TERMS_URL = 'https://alextamp.github.io/keno/docs/terms/';
-const FEEDBACK_URL = 'https://alextamp.github.io/keno/feedback.html';
 import { useTheme } from '@/core/theme';
 import { useThemeStore, ThemeMode } from '@/core/theme/theme.store';
 import { usePreferencesStore } from '@/core/store/preferences.store';
@@ -22,10 +18,15 @@ import { useLanguageStore, LANGUAGE_LABELS, AppLanguage, useTranslation } from '
 import { UIFont, UIFontLight, TitleFont, FontSize, FontWeight, Spacing, BorderRadius } from '@/core/constants/theme';
 import { INTERESTS } from '@/core/constants/interests';
 import { useIsAdmin } from '@/core/utils/adminRole';
+import { KENO_EVENTS_UID } from '@/core/constants/eventsAccount';
 import { Icon, IconName } from '@/components/ui/Icon';
 import { universityLabel } from '@/core/constants/universities';
 import { uploadIssueScreenshot } from '@/core/utils/uploadImage';
 import { pickImage } from '@/core/utils/imagePicker';
+
+const PRIVACY_POLICY_URL = 'https://alextamp.github.io/keno/docs/privacy/';
+const TERMS_URL = 'https://alextamp.github.io/keno/docs/terms/';
+const FEEDBACK_URL = 'https://alextamp.github.io/keno/feedback.html';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   const { colors } = useTheme();
@@ -85,6 +86,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const isAdmin = useIsAdmin();
+  const isEventsManager = useAuthStore((s) => s.user?.id === KENO_EVENTS_UID);
   const signOut = useAuthStore((s) => s.signOut);
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const { language, setLanguage } = useLanguageStore();
@@ -533,6 +535,16 @@ export default function SettingsScreen() {
           <SettingRow icon="flag" label={t.settingsAdminReports} onPress={() => router.push('/(app)/admin-reports')} />
           <Divider />
           <SettingRow icon="shield" label={t.settingsAdminVerifications} onPress={() => router.push('/(app)/admin-verifications' as any)} />
+        </Section>
+      )}
+
+      {/* Events review — lives on the "keno" account's own Settings, not the
+          admin account's, since that's the account auto-imported events are
+          attributed to (KENO_EVENTS_UID). Deliberately separate from isAdmin
+          above — this account doesn't get report/verification access. */}
+      {isEventsManager && (
+        <Section title={t.settingsSectionEvents}>
+          <SettingRow icon="cal" label={t.settingsAdminEvents} onPress={() => router.push('/(app)/admin-events' as any)} />
         </Section>
       )}
 

@@ -16,6 +16,7 @@
     ".expo/types/**/*.ts"
   ],
   "exclude": [
-    "firestore-tests"
+    "firestore-tests",
+    "**/__tests__/**"
   ]
 }

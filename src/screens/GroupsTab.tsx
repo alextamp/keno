@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTabNavigation } from '@/core/tabNavigation';
 import { useTheme } from '@/core/theme';
 import { UIFontLight, TitleFont, FontSize, FontWeight, Spacing, BorderRadius } from '@/core/constants/theme';
 import { useGroupsStore } from '@/features/groups/presentation/store/groups.store';
@@ -19,8 +20,10 @@ import { Card } from '@/components/ui/Card';
 import { FadeInView } from '@/components/ui/FadeInView';
 import { Tag } from '@/components/ui/Tag';
 import { SectionLabel } from '@/components/ui/SectionLabel';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
+import { PeopleSearchView } from './PeopleSearchView';
 
 // Groups keep their own user-chosen emoji + coverColor as the cover visual
 // (not a DuotoneScene illustration) — that's user-generated content per
@@ -32,7 +35,7 @@ import { Icon } from '@/components/ui/Icon';
 function GroupThumb({ group, size = 50 }: { group: GroupEntity; size?: number }) {
   return (
     <View style={[styles.thumb, { width: size, height: size, backgroundColor: group.coverColor, overflow: 'hidden' }]}>
-      {group.coverPhotoUri && <Image source={{ uri: group.coverPhotoUri }} style={StyleSheet.absoluteFillObject} />}
+      {group.coverPhotoUri && <Image source={{ uri: group.coverPhotoUri }} style={StyleSheet.absoluteFill} />}
       {!group.coverPhotoUri && <Text style={{ fontSize: size * 0.44 }}>{group.emoji}</Text>}
     </View>
   );
@@ -46,7 +49,7 @@ function GroupHeroCard({ group, onPress }: { group: GroupEntity; onPress: () => 
       <Card style={styles.heroCard}>
         <View style={[styles.heroBanner, { backgroundColor: group.coverColor }]}>
           {group.coverPhotoUri ? (
-            <Image source={{ uri: group.coverPhotoUri }} style={StyleSheet.absoluteFillObject} />
+            <Image source={{ uri: group.coverPhotoUri }} style={StyleSheet.absoluteFill} />
           ) : (
             <Text style={styles.heroEmoji}>{group.emoji}</Text>
           )}
@@ -87,6 +90,7 @@ function GroupRow({
 
 export default function GroupsScreen() {
   const router = useRouter();
+  const { goToTab } = useTabNavigation();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
@@ -98,6 +102,12 @@ export default function GroupsScreen() {
   const joinGroup = useGroupsStore((s) => s.joinGroup);
   const t = useTranslation();
 
+  // Tab 0: existing communities list. Tab 1: search for a specific person —
+  // there was previously no reachable way to do that at all (the standalone
+  // /(app)/search screen existed but nothing linked to it), so it's exposed
+  // here the same way Leaderboard splits "top students" / "universities"
+  // into tabs on one screen rather than separate routes.
+  const [tab, setTab] = useState(0);
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [joiningId, setJoiningId] = useState<string | null>(null);
@@ -140,7 +150,7 @@ export default function GroupsScreen() {
     !query ||
     g.name.toLowerCase().includes(query) ||
     g.description.toLowerCase().includes(query) ||
-    (g.universityName ?? '').toLowerCase().includes(query);
+    (g.allowedUniversities ?? []).some((u) => u.toLowerCase().includes(query));
 
   const myGroupIds = new Set(myGroups.map((g) => g.id));
   const filteredMine = myGroups.filter(matches);
@@ -162,7 +172,7 @@ export default function GroupsScreen() {
       <View style={[styles.head, { paddingTop: insets.top + 14 }]}>
         <ScreenHeader
           title={t.groupsTitle}
-          right={user ? (
+          right={tab === 0 && user ? (
             <AnimatedPressable
               onPress={() => router.push('/(app)/group/create' as any)}
               style={[styles.createBtn, { backgroundColor: colors.primary }]}
@@ -171,24 +181,41 @@ export default function GroupsScreen() {
             </AnimatedPressable>
           ) : undefined}
         />
-        <View style={[styles.searchBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Icon name="search" size={16} color={colors.textHint} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.textPrimary }]}
-            placeholder={t.groupsSearchPlaceholder}
-            placeholderTextColor={colors.textHint}
-            value={search}
-            onChangeText={setSearch}
-          />
-          {search.length > 0 && (
-            <AnimatedPressable onPress={() => setSearch('')} hitSlop={8}>
-              <Icon name="x" size={15} color={colors.textHint} />
-            </AnimatedPressable>
-          )}
-        </View>
+        <SegmentedTabs
+          tabs={[t.groupsTitle, t.searchPeopleLabel]}
+          activeIndex={tab}
+          onChange={setTab}
+          style={styles.tabs}
+        />
+        {tab === 0 && (
+          <View style={[styles.searchBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Icon name="search" size={16} color={colors.textHint} />
+            <TextInput
+              style={[styles.searchInput, { color: colors.textPrimary }]}
+              placeholder={t.groupsSearchPlaceholder}
+              placeholderTextColor={colors.textHint}
+              value={search}
+              onChangeText={setSearch}
+            />
+            {search.length > 0 && (
+              <AnimatedPressable onPress={() => setSearch('')} hitSlop={8}>
+                <Icon name="x" size={15} color={colors.textHint} />
+              </AnimatedPressable>
+            )}
+          </View>
+        )}
       </View>
 
-      {isLoading && !refreshing ? (
+      {tab === 1 ? (
+        <PeopleSearchView
+          onPressUser={(uid) => {
+            if (uid === user?.id) {
+              router.navigate('/(app)');
+              setTimeout(() => goToTab(4), 50);
+            } else router.push(`/(app)/user/${uid}` as any);
+          }}
+        />
+      ) : isLoading && !refreshing ? (
         <View style={styles.loader}>
           <ActivityIndicator color={colors.primary} size="large" />
         </View>
@@ -208,6 +235,28 @@ export default function GroupsScreen() {
               landing a finger on a row promotes it, instead of it always
               being filteredMine[0]. ── */}
           {filteredMine.length > 0 && (() => {
+            // With dynamic-hero off, nothing should ever get a bigger card —
+            // not even a default "first group" one — so every group in this
+            // section renders as a plain, uniform row.
+            if (!dynamicHeroEnabled) {
+              return (
+                <View style={styles.section}>
+                  <SectionLabel label={t.groupsMySection} style={styles.sectionLabel} />
+                  <Card style={styles.rowsCard}>
+                    {filteredMine.map((g, i) => (
+                      <FadeInView key={g.id}>
+                        <GroupRow
+                          group={g}
+                          isFirst={i === 0}
+                          onPress={() => router.push(`/(app)/group/${g.id}` as any)}
+                        />
+                      </FadeInView>
+                    ))}
+                  </Card>
+                </View>
+              );
+            }
+
             const heroIndex = filteredMine.findIndex((g) => g.id === heroId);
             const heroGroup = heroIndex === -1 ? filteredMine[0] : filteredMine[heroIndex];
             // Rows keep their original position relative to the hero (same
@@ -294,6 +343,7 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   head: { paddingHorizontal: Spacing.gutter, paddingBottom: Spacing.sm, gap: Spacing.base },
   createBtn: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  tabs: { marginTop: Spacing.xs },
   searchBox: {
     flexDirection: 'row', alignItems: 'center',
     borderRadius: BorderRadius.md, borderWidth: 1,

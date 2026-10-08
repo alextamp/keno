@@ -13,9 +13,12 @@ import { useGroupsStore } from '@/features/groups/presentation/store/groups.stor
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { groupsRepository } from '@/features/groups/data/repositories/groups.repository.impl';
 import { GroupEntity, GROUP_COVER_COLORS, GROUP_EMOJI_OPTIONS } from '@/features/groups/domain/entities/group.entity';
+import { GREEK_UNIVERSITIES, universityLabel } from '@/core/constants/universities';
 import { containsBlockedContent } from '@/core/utils/contentModeration';
 import { uploadGroupCoverPhoto } from '@/core/utils/uploadImage';
-import { useTranslation } from '@/core/i18n';
+import { useTranslation, useLanguageStore } from '@/core/i18n';
+
+const UNIVERSITIES = ['Any', ...GREEK_UNIVERSITIES];
 
 export default function EditGroupScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -26,6 +29,7 @@ export default function EditGroupScreen() {
   const updateGroup = useGroupsStore((s) => s.updateGroup);
   const deleteGroup = useGroupsStore((s) => s.deleteGroup);
   const t = useTranslation();
+  const { language } = useLanguageStore();
 
   const [group, setGroup] = useState<GroupEntity | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,7 +42,7 @@ export default function EditGroupScreen() {
   const [emoji, setEmoji] = useState('🎓');
   const [coverColor, setCoverColor] = useState(GROUP_COVER_COLORS[0]);
   const [coverPhoto, setCoverPhoto] = useState<string | undefined>(undefined);
-  const [universityName, setUniversityName] = useState('');
+  const [selectedUniversities, setSelectedUniversities] = useState<string[]>(['Any']);
   const [isPrivate, setIsPrivate] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
@@ -53,7 +57,7 @@ export default function EditGroupScreen() {
         setEmoji(g.emoji);
         setCoverColor(g.coverColor);
         setCoverPhoto(g.coverPhotoUri);
-        setUniversityName(g.universityName ?? '');
+        setSelectedUniversities(g.allowedUniversities?.length ? g.allowedUniversities : ['Any']);
         setIsPrivate(g.isPrivate);
       }
       setLoading(false);
@@ -62,6 +66,12 @@ export default function EditGroupScreen() {
 
   const canSubmit = name.trim().length >= 3 && description.trim().length >= 10 && !saving;
   const isCreator = !!user && !!group && user.id === group.creatorId;
+
+  const toggleUniversity = (u: string) => {
+    if (u === 'Any') { setSelectedUniversities(['Any']); return; }
+    const without = selectedUniversities.filter((x) => x !== 'Any');
+    setSelectedUniversities(without.includes(u) ? without.filter((x) => x !== u).length ? without.filter((x) => x !== u) : ['Any'] : [...without, u]);
+  };
 
   const pickPhoto = async () => {
     const uri = await pickImage({ aspect: [16, 9] });
@@ -93,7 +103,7 @@ export default function EditGroupScreen() {
       emoji,
       coverColor,
       coverPhotoUri: finalCoverPhoto,
-      universityName: universityName.trim() || undefined,
+      allowedUniversities: selectedUniversities.includes('Any') ? undefined : selectedUniversities,
       isPrivate,
     });
     setSaving(false);
@@ -223,17 +233,23 @@ export default function EditGroupScreen() {
           numberOfLines={3}
           maxLength={300}
         />
+        <Text style={[styles.hint, { color: description.trim().length < 10 ? colors.error : colors.textHint }]}>
+          {description.trim().length}/300 · {t.groupDescriptionMinHint}
+        </Text>
 
-        {/* University (optional) */}
-        <Text style={[styles.label, { color: colors.textPrimary }]}>{t.groupLabelUniversity}</Text>
-        <TextInput
-          style={[styles.input, { backgroundColor: colors.surfaceVariant, borderColor: colors.border, color: colors.textPrimary }]}
-          placeholder={t.groupUniversityPlaceholder}
-          placeholderTextColor={colors.textHint}
-          value={universityName}
-          onChangeText={setUniversityName}
-          maxLength={80}
-        />
+        {/* Which universities are allowed — same multi-select chips as event creation */}
+        <Text style={[styles.label, { color: colors.textPrimary }]}>{t.createLabelUniversity}</Text>
+        <View style={styles.uniGrid}>
+          {UNIVERSITIES.map((u) => {
+            const sel = selectedUniversities.includes(u);
+            return (
+              <AnimatedPressable key={u} onPress={() => toggleUniversity(u)}
+                style={[styles.uniChip, { borderColor: sel ? colors.primary : colors.border, backgroundColor: sel ? colors.accentSoft : colors.surface }]}>
+                <Text style={[styles.uniLabel, { color: sel ? colors.accentInk : colors.textSecondary }]}>{u === 'Any' ? t.createGenderAny : universityLabel(u, language)}</Text>
+              </AnimatedPressable>
+            );
+          })}
+        </View>
 
         {/* Private toggle */}
         <View style={[styles.toggleRow, { borderColor: colors.border }]}>
@@ -300,11 +316,15 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 4,
     overflow: 'hidden',
   },
-  previewPhoto: { ...StyleSheet.absoluteFillObject },
-  previewOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.32)' },
+  previewPhoto: { ...StyleSheet.absoluteFill },
+  previewOverlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.32)' },
   previewEmoji: { fontSize: 32 },
   previewName: { color: '#fff', fontSize: FontSize.md, fontWeight: FontWeight.extrabold, fontFamily: UIFont },
   label: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont, marginBottom: -4 },
+  hint: { fontSize: FontSize.xs, marginTop: -6 },
+  uniGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  uniChip: { paddingHorizontal: Spacing.md, paddingVertical: 9, borderRadius: BorderRadius.md, borderWidth: 1 },
+  uniLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.medium, fontFamily: UIFont },
   photoRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   photoBtn: {
     paddingHorizontal: Spacing.md, paddingVertical: 10, borderRadius: BorderRadius.md, borderWidth: 1,

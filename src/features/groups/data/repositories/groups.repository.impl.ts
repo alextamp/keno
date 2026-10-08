@@ -25,7 +25,10 @@ function groupFromFirestore(snap: DocumentSnapshot): GroupEntity {
     creatorId: d.creatorId,
     memberIds: d.memberIds ?? [],
     eventIds: d.eventIds ?? [],
-    universityName: d.universityName,
+    // Falls back to the old single-university field for groups created
+    // before this became a multi-select restriction, so existing data isn't
+    // silently dropped.
+    allowedUniversities: d.allowedUniversities ?? (d.universityName ? [d.universityName] : undefined),
     isPrivate: d.isPrivate ?? false,
     invitedUserIds: d.invitedUserIds ?? [],
     joinRequests: d.joinRequests ?? {},
@@ -47,7 +50,7 @@ export const groupsRepository: GroupsRepository = {
         memberIds: [params.creatorId],
         eventIds: [],
         invitedUserIds: [],
-        universityName: params.universityName ?? null,
+        allowedUniversities: params.allowedUniversities ?? null,
         isPrivate: params.isPrivate,
         createdAt: Timestamp.now(),
       });
@@ -147,7 +150,7 @@ export const groupsRepository: GroupsRepository = {
         emoji: params.emoji,
         coverColor: params.coverColor,
         coverPhotoUri: params.coverPhotoUri ?? null,
-        universityName: params.universityName ?? null,
+        allowedUniversities: params.allowedUniversities ?? null,
         isPrivate: params.isPrivate,
       });
       return right(undefined);

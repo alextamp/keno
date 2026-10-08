@@ -136,7 +136,7 @@ type NotifType =
   | 'friend_going'
   | 'referral_reward';
 
-function buildPushMessage(type: NotifType, fromName: string, eventTitle?: string): { title: string; body: string } {
+function buildPushMessage(type: NotifType, fromName: string, eventTitle?: string, messagePreview?: string): { title: string; body: string } {
   switch (type) {
     case 'follow':
       return { title: '👤 New follower', body: `${fromName} started following you` };
@@ -200,11 +200,17 @@ function buildPushMessage(type: NotifType, fromName: string, eventTitle?: string
         title: '💬 Group message',
         body: eventTitle ? `${fromName} sent a message in "${eventTitle}"` : `${fromName} sent a group message`,
       };
-    case 'dm_message':
+    case 'dm_message': {
+      // Instagram-style: show what they actually sent instead of a generic
+      // "sent you a message" — messagePreview is the raw text (or "📷
+      // Photo" for an image), truncated defensively since chat input has no
+      // hard length cap of its own.
+      const preview = messagePreview?.trim();
       return {
-        title: '💬 New message',
-        body: `${fromName} sent you a message`,
+        title: `💬 ${fromName}`,
+        body: preview ? (preview.length > 120 ? `${preview.slice(0, 120)}…` : preview) : `${fromName} sent you a message`,
       };
+    }
     case 'buddy_match':
       return {
         title: '👥 Buddy matched!',
@@ -242,51 +248,66 @@ export const onNotificationCreated = onDocumentCreated(
     if (!notif) return;
 
     const { userId } = event.params;
-
-    // Get recipient's push token
-    const userSnap = await db.doc(`users/${userId}`).get();
-    if (!userSnap.exists) return;
-
-    const pushToken: string | undefined = userSnap.data()?.pushToken;
-    if (!pushToken || !Expo.isExpoPushToken(pushToken)) return;
-
-    const { title, body } = buildPushMessage(
-      notif.type as NotifType,
-      notif.fromName ?? 'Someone',
-      notif.eventTitle,
-    );
-
-    const message: ExpoPushMessage = {
-      to: pushToken,
-      sound: 'default',
-      title,
-      body,
-      data: {
-        type: notif.type,
-        eventId: notif.eventId ?? null,
-        fromUid: notif.fromUid ?? null,
-      },
-    };
+    const isDmMessage = notif.type === 'dm_message';
 
     try {
-      const chunks = expo.chunkPushNotifications([message]);
-      for (const chunk of chunks) {
-        const receipts = await expo.sendPushNotificationsAsync(chunk);
-        // Clean up invalid tokens, and log everything else so failures (e.g.
-        // missing/misconfigured Android FCM credentials on the Expo project)
-        // are visible in Cloud Functions logs instead of vanishing silently.
-        for (const receipt of receipts) {
-          if (receipt.status === 'error') {
-            if (receipt.details?.error === 'DeviceNotRegistered') {
-              await db.doc(`users/${userId}`).update({ pushToken: admin.firestore.FieldValue.delete() });
-            } else {
-              logger.error('Push send failed', { userId, error: receipt.message, details: receipt.details });
+      // Get recipient's push token
+      const userSnap = await db.doc(`users/${userId}`).get();
+      if (!userSnap.exists) return;
+
+      const pushToken: string | undefined = userSnap.data()?.pushToken;
+      if (!pushToken || !Expo.isExpoPushToken(pushToken)) return;
+
+      const { title, body } = buildPushMessage(
+        notif.type as NotifType,
+        notif.fromName ?? 'Someone',
+        notif.eventTitle,
+        notif.messagePreview,
+      );
+
+      const message: ExpoPushMessage = {
+        to: pushToken,
+        sound: 'default',
+        title,
+        body,
+        data: {
+          type: notif.type,
+          eventId: notif.eventId ?? null,
+          fromUid: notif.fromUid ?? null,
+        },
+      };
+
+      try {
+        const chunks = expo.chunkPushNotifications([message]);
+        for (const chunk of chunks) {
+          const receipts = await expo.sendPushNotificationsAsync(chunk);
+          // Clean up invalid tokens, and log everything else so failures (e.g.
+          // missing/misconfigured Android FCM credentials on the Expo project)
+          // are visible in Cloud Functions logs instead of vanishing silently.
+          for (const receipt of receipts) {
+            if (receipt.status === 'error') {
+              if (receipt.details?.error === 'DeviceNotRegistered') {
+                await db.doc(`users/${userId}`).update({ pushToken: admin.firestore.FieldValue.delete() });
+              } else {
+                logger.error('Push send failed', { userId, error: receipt.message, details: receipt.details });
+              }
             }
           }
         }
+      } catch (err) {
+        logger.error('Push send threw', { userId, err: String(err) });
       }
-    } catch (err) {
-      logger.error('Push send threw', { userId, err: String(err) });
+    } finally {
+      // DMs only ever create this doc to trigger the push above — unlike
+      // every other notification type, they're never meant to sit in the
+      // general in-app notifications list (Instagram keeps messages
+      // entirely separate from its activity feed too), so there's nothing
+      // left for it to do once the push attempt — successful or not — is
+      // done. The client also filters dm_message out of that list itself,
+      // so this is belt-and-braces rather than the only thing preventing it.
+      if (isDmMessage) {
+        await event.data?.ref.delete().catch(() => {});
+      }
     }
   },
 );
@@ -917,6 +938,82 @@ export const sweepStreaks = onSchedule('every 24 hours', async () => {
   }));
 
   logger.log(`sweepStreaks: protected ${protectedCount}, reset ${resetCount}`);
+});
+
+// keep in sync with isEventPast()'s grace period in event.entity.ts
+const EVENT_INVITE_PAST_GRACE_MS = 24 * 60 * 60 * 1000;
+
+// An "X invited you to Y" notification stops being anything but dead weight
+// once the event it points to has already happened — tapping it either
+// dead-ends or invites someone to join something that's over. Rather than
+// have the client silently swallow that (and leave everyone else's copy of
+// the same notification sitting there), sweep it server-side so it's gone
+// for good the same way it disappeared for the person who tapped it.
+export const sweepExpiredEventInvites = onSchedule('every 1 hours', async () => {
+  const notifSnap = await db.collectionGroup('notifications').where('type', '==', 'event_invite').get();
+  if (notifSnap.empty) return;
+
+  const now = Date.now();
+  const endedCache = new Map<string, boolean>();
+  const toDelete: FirebaseFirestore.DocumentReference[] = [];
+
+  for (const notifDoc of notifSnap.docs) {
+    const eventId = notifDoc.data().eventId as string | undefined;
+    if (!eventId) continue;
+    let ended = endedCache.get(eventId);
+    if (ended === undefined) {
+      const eventSnap = await db.collection('events').doc(eventId).get();
+      const ed = eventSnap.data();
+      const dateTimeMs = (ed?.dateTime as admin.firestore.Timestamp | undefined)?.toMillis() ?? 0;
+      ended = !eventSnap.exists || !!ed?.endedAt || now >= dateTimeMs + EVENT_INVITE_PAST_GRACE_MS;
+      endedCache.set(eventId, ended);
+    }
+    if (ended) toDelete.push(notifDoc.ref);
+  }
+  if (toDelete.length === 0) return;
+
+  // Firestore batches cap at 500 writes.
+  for (let i = 0; i < toDelete.length; i += 450) {
+    const batch = db.batch();
+    toDelete.slice(i, i + 450).forEach((ref) => batch.delete(ref));
+    await batch.commit();
+  }
+  logger.log(`sweepExpiredEventInvites: deleted ${toDelete.length} expired invite notification(s)`);
+});
+
+// Same dead-link problem as sweepExpiredEventInvites above, but for a group
+// that got deleted outright rather than just ending — tapping any of these
+// used to leave the group screen stuck on its loading spinner forever
+// (group/[id].tsx now handles that client-side too), so the notification
+// itself is just as useless once the group it points to is gone.
+const GROUP_NOTIF_TYPES = ['group_invite', 'group_join_request', 'group_join_accepted', 'group_message'];
+
+export const sweepOrphanedGroupNotifications = onSchedule('every 1 hours', async () => {
+  const notifSnap = await db.collectionGroup('notifications').where('type', 'in', GROUP_NOTIF_TYPES).get();
+  if (notifSnap.empty) return;
+
+  const existsCache = new Map<string, boolean>();
+  const toDelete: FirebaseFirestore.DocumentReference[] = [];
+
+  for (const notifDoc of notifSnap.docs) {
+    const groupId = notifDoc.data().eventId as string | undefined;
+    if (!groupId) continue;
+    let exists = existsCache.get(groupId);
+    if (exists === undefined) {
+      const groupSnap = await db.collection('groups').doc(groupId).get();
+      exists = groupSnap.exists;
+      existsCache.set(groupId, exists);
+    }
+    if (!exists) toDelete.push(notifDoc.ref);
+  }
+  if (toDelete.length === 0) return;
+
+  for (let i = 0; i < toDelete.length; i += 450) {
+    const batch = db.batch();
+    toDelete.slice(i, i + 450).forEach((ref) => batch.delete(ref));
+    await batch.commit();
+  }
+  logger.log(`sweepOrphanedGroupNotifications: deleted ${toDelete.length} notification(s) pointing at a deleted group`);
 });
 
 export const markNoShows = onSchedule('every 30 minutes', async () => {

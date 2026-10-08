@@ -1,6 +1,7 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   onSnapshot,
   orderBy,
@@ -20,6 +21,10 @@ export interface CreateNotifParams {
   type: NotifType;
   eventId?: string;
   eventTitle?: string;
+  /** Only used by 'dm_message' — the actual text (or a placeholder like
+   *  "📷 Photo") shown in the push notification body, Instagram-style,
+   *  instead of a generic "sent you a message". */
+  messagePreview?: string;
 }
 
 function notifCol(uid: string) {
@@ -36,6 +41,7 @@ export const notificationsRepository = {
       type: params.type,
       eventId: params.eventId ?? null,
       eventTitle: params.eventTitle ?? null,
+      messagePreview: params.messagePreview ?? null,
       read: false,
       createdAt: Timestamp.now(),
     });
@@ -69,6 +75,19 @@ export const notificationsRepository = {
     const batch = writeBatch(db);
     notifIds.forEach((id) => {
       batch.update(doc(db, 'users', uid, 'notifications', id), { read: true });
+    });
+    await batch.commit();
+  },
+
+  async delete(uid: string, notifId: string): Promise<void> {
+    await deleteDoc(doc(db, 'users', uid, 'notifications', notifId));
+  },
+
+  async deleteMany(uid: string, notifIds: string[]): Promise<void> {
+    if (notifIds.length === 0) return;
+    const batch = writeBatch(db);
+    notifIds.forEach((id) => {
+      batch.delete(doc(db, 'users', uid, 'notifications', id));
     });
     await batch.commit();
   },

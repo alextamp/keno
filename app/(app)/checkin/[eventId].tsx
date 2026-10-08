@@ -84,7 +84,7 @@ export default function CheckInScannerScreen() {
 
       {permission?.granted ? (
         <CameraView
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
           facing="back"
           barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
           onBarcodeScanned={scannedRef.current ? undefined : handleBarcodeScanned}
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
   },
   permissionTitle: { color: '#fff', fontSize: FontSize.xl, fontFamily: TitleFont, fontWeight: FontWeight.semibold, marginTop: Spacing.sm, textAlign: 'center' },
   permissionBody: { color: '#B9AA99', fontSize: FontSize.base, textAlign: 'center', lineHeight: 20 },
-  frameWrap: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', zIndex: 2 },
+  frameWrap: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', zIndex: 2 },
   frame: { width: FRAME_SIZE, height: FRAME_SIZE },
   corner: { position: 'absolute', width: 32, height: 32, borderColor: '#D9603C', borderWidth: 3 },
   cornerTL: { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0, borderTopLeftRadius: 8 },

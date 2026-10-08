@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SectionLabel } from '@/components/ui/SectionLabel';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, SectionList, StyleSheet, Text, View } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { isToday, isYesterday } from 'date-fns';
@@ -38,7 +39,7 @@ const NOTIF_ICONS: Record<NotifType, IconName> = {
 };
 
 // Screen 26: notifications grouped into ΣΗΜΕΡΑ / ΧΘΕΣ / ΠΑΛΙΟΤΕΡΑ sections.
-function groupByDay(notifications: NotificationEntity[]): { label: string; items: NotificationEntity[] }[] {
+function groupByDay(notifications: NotificationEntity[]): { label: string; data: NotificationEntity[] }[] {
   const today: NotificationEntity[] = [];
   const yesterday: NotificationEntity[] = [];
   const earlier: NotificationEntity[] = [];
@@ -48,10 +49,10 @@ function groupByDay(notifications: NotificationEntity[]): { label: string; items
     else earlier.push(n);
   }
   return [
-    { label: 'today', items: today },
-    { label: 'yesterday', items: yesterday },
-    { label: 'earlier', items: earlier },
-  ].filter((s) => s.items.length > 0);
+    { label: 'today', data: today },
+    { label: 'yesterday', data: yesterday },
+    { label: 'earlier', data: earlier },
+  ].filter((s) => s.data.length > 0);
 }
 
 function NotifAvatar({ name, color, photoUri }: { name: string; color?: string; photoUri?: string }) {
@@ -66,6 +67,18 @@ function NotifAvatar({ name, color, photoUri }: { name: string; color?: string; 
   );
 }
 
+// Instagram-style swipe: dragging the row left reveals a trash button
+// underneath instead of deleting immediately on the swipe itself — tapping
+// that button is the actual delete action.
+function DeleteAction({ onPress }: { onPress: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <AnimatedPressable onPress={onPress} style={[styles.deleteAction, { backgroundColor: colors.error }]}>
+      <Icon name="trash" size={19} color="#fff" />
+    </AnimatedPressable>
+  );
+}
+
 export default function NotificationsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
@@ -73,14 +86,31 @@ export default function NotificationsScreen() {
   const user = useAuthStore((s) => s.user);
   const notifications = useNotificationsStore((s) => s.notifications);
   const markAllRead = useNotificationsStore((s) => s.markAllRead);
+  const deleteNotification = useNotificationsStore((s) => s.deleteNotification);
+  const deleteNotifications = useNotificationsStore((s) => s.deleteNotifications);
   const t = useTranslation();
   const { language } = useLanguageStore();
+
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (user) markAllRead(user.id);
   }, [user?.id]);
 
+  // Leaving the screen with an active selection shouldn't leave it armed
+  // for next time.
+  useEffect(() => () => { setSelectionMode(false); setSelectedIds(new Set()); }, []);
+
   const handleTap = (notif: NotificationEntity) => {
+    if (selectionMode) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(notif.id)) next.delete(notif.id); else next.add(notif.id);
+        return next;
+      });
+      return;
+    }
     if ((notif.type === 'group_invite' || notif.type === 'group_join_request' || notif.type === 'group_join_accepted' || notif.type === 'group_message') && notif.eventId) {
       router.push(`/(app)/group/${notif.eventId}`);
     } else if (notif.type === 'event_message' && notif.eventId) {
@@ -90,6 +120,45 @@ export default function NotificationsScreen() {
     } else if (notif.type === 'follow') {
       router.push(`/(app)/user/${notif.fromUid}`);
     }
+    // dm_message is deliberately unreachable here — the store filters it
+    // out of this list entirely (see notifications.store.ts).
+  };
+
+  const handleSwipeDelete = (id: string) => {
+    if (!user) return;
+    deleteNotification(user.id, id);
+  };
+
+  const handleLongPressDelete = (notif: NotificationEntity) => {
+    if (!user || selectionMode) return;
+    Alert.alert(t.notifDeleteConfirmTitle, t.notifDeleteConfirmBody, [
+      { text: t.cancel, style: 'cancel' },
+      { text: t.notifDeleteBtn, style: 'destructive', onPress: () => deleteNotification(user.id, notif.id) },
+    ]);
+  };
+
+  const allIds = useMemo(() => notifications.map((n) => n.id), [notifications]);
+  const allSelected = selectedIds.size > 0 && selectedIds.size === allIds.length;
+
+  const toggleSelectAll = () => {
+    setSelectedIds(allSelected ? new Set() : new Set(allIds));
+  };
+
+  const handleDeleteSelected = () => {
+    if (!user || selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    Alert.alert(t.notifDeleteSelectedConfirmTitle(ids.length), t.notifDeleteConfirmBody, [
+      { text: t.cancel, style: 'cancel' },
+      {
+        text: t.notifDeleteBtn,
+        style: 'destructive',
+        onPress: () => {
+          deleteNotifications(user.id, ids);
+          setSelectionMode(false);
+          setSelectedIds(new Set());
+        },
+      },
+    ]);
   };
 
   const getLabel = (notif: NotificationEntity): string => {
@@ -120,58 +189,109 @@ export default function NotificationsScreen() {
     earlier: t.notifSectionEarlier,
   };
 
+  const headerRight = notifications.length > 0 ? (
+    <AnimatedPressable
+      onPress={() => {
+        setSelectionMode((v) => !v);
+        setSelectedIds(new Set());
+      }}
+      hitSlop={10}
+      style={styles.headerActionBtn}
+    >
+      <Text style={[styles.headerActionText, { color: colors.primary }]}>
+        {selectionMode ? t.cancel : t.notifSelectBtn}
+      </Text>
+    </AnimatedPressable>
+  ) : undefined;
+
   return (
-    <ScrollView
+    <SectionList
       style={[styles.root, { backgroundColor: colors.background }]}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 }]}
       showsVerticalScrollIndicator={false}
-    >
-      <ScreenHeader title={t.notifTitle} />
-
-      {notifications.length === 0 ? (
+      stickySectionHeadersEnabled={false}
+      sections={sections}
+      keyExtractor={(notif) => notif.id}
+      ListHeaderComponent={
+        <>
+          <ScreenHeader title={t.notifTitle} right={headerRight} />
+          {selectionMode && (
+            <View style={styles.selectionBar}>
+              <AnimatedPressable onPress={toggleSelectAll} style={styles.toggleLink}>
+                <Text style={[styles.toggleLinkText, { color: colors.primary }]}>
+                  {allSelected ? t.notifDeselectAllBtn : t.notifSelectAllBtn}
+                </Text>
+              </AnimatedPressable>
+              <Text style={[styles.selectionCount, { color: colors.textHint }]}>{t.notifSelectedCount(selectedIds.size)}</Text>
+              <AnimatedPressable
+                onPress={handleDeleteSelected}
+                disabled={selectedIds.size === 0}
+                hitSlop={10}
+                style={[styles.deleteSelectedBtn, { opacity: selectedIds.size === 0 ? 0.4 : 1 }]}
+              >
+                <Icon name="trash" size={22} color={colors.error} />
+              </AnimatedPressable>
+            </View>
+          )}
+        </>
+      }
+      ListEmptyComponent={
         <View style={styles.empty}>
           <Icon name="bell" size={40} color={colors.textDecor} />
           <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>{t.notifEmptyTitle}</Text>
           <Text style={[styles.emptyBody, { color: colors.textHint }]}>{t.notifEmptyBody}</Text>
         </View>
-      ) : (
-        <View>
-          {sections.map((section) => (
-            <View key={section.label}>
-              <SectionLabel label={sectionLabels[section.label]} style={styles.sectionLabel} />
-              {section.items.map((notif, i) => {
-                const icon = NOTIF_ICONS[notif.type];
-                const label = getLabel(notif);
-                return (
-                  <AnimatedPressable
-                    key={notif.id}
-                    onPress={() => handleTap(notif)}
-                    style={[
-                      styles.row,
-                      { borderTopColor: colors.border, borderTopWidth: i === 0 ? 0 : 1 },
-                    ]}
-                  >
-                    <NotifAvatar name={notif.fromName} color={notif.fromAvatarColor} photoUri={notif.fromPhotoUri} />
-                    <View style={styles.rowBody}>
-                      <View style={styles.rowLabelRow}>
-                        <Icon name={icon} size={13} color={colors.textSecondary} />
-                        <Text style={[styles.rowLabel, { color: colors.textPrimary }]} numberOfLines={2}>
-                          {label}
-                        </Text>
-                      </View>
-                      <Text style={[styles.rowTime, { color: colors.textHint }]}>
-                        {formatMessageTime(notif.createdAt, language)}
-                      </Text>
-                    </View>
-                    {!notif.read && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
-                  </AnimatedPressable>
-                );
-              })}
-            </View>
-          ))}
-        </View>
+      }
+      renderSectionHeader={({ section }) => (
+        <SectionLabel label={sectionLabels[section.label]} style={styles.sectionLabel} />
       )}
-    </ScrollView>
+      renderItem={({ item: notif, index: i }) => {
+        const icon = NOTIF_ICONS[notif.type];
+        const label = getLabel(notif);
+        const selected = selectedIds.has(notif.id);
+        const row = (
+          <AnimatedPressable
+            onPress={() => handleTap(notif)}
+            onLongPress={() => handleLongPressDelete(notif)}
+            style={[
+              styles.row,
+              { borderTopColor: colors.border, borderTopWidth: i === 0 ? 0 : 1 },
+            ]}
+          >
+            {selectionMode && (
+              <View style={[
+                styles.checkCircle,
+                { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primary : 'transparent' },
+              ]}>
+                {selected && <Icon name="check" size={12} color="#fff" />}
+              </View>
+            )}
+            <NotifAvatar name={notif.fromName} color={notif.fromAvatarColor} photoUri={notif.fromPhotoUri} />
+            <View style={styles.rowBody}>
+              <View style={styles.rowLabelRow}>
+                <Icon name={icon} size={13} color={colors.textSecondary} />
+                <Text style={[styles.rowLabel, { color: colors.textPrimary }]} numberOfLines={2}>
+                  {label}
+                </Text>
+              </View>
+              <Text style={[styles.rowTime, { color: colors.textHint }]}>
+                {formatMessageTime(notif.createdAt, language)}
+              </Text>
+            </View>
+            {!notif.read && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
+          </AnimatedPressable>
+        );
+        if (selectionMode) return row;
+        return (
+          <Swipeable
+            renderRightActions={() => <DeleteAction onPress={() => handleSwipeDelete(notif.id)} />}
+            overshootRight={false}
+          >
+            {row}
+          </Swipeable>
+        );
+      }}
+    />
   );
 }
 
@@ -199,4 +319,21 @@ const styles = StyleSheet.create({
   rowLabelRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 7 },
   rowLabel: { flex: 1, fontSize: FontSize.sm, fontFamily: UIFontLight, lineHeight: 19 },
   rowTime: { fontSize: FontSize.xs, marginLeft: 20 },
+  headerActionBtn: { minWidth: 32, minHeight: 32, alignItems: 'flex-end', justifyContent: 'center', paddingHorizontal: 4 },
+  headerActionText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
+  selectionBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: Spacing.sm, marginTop: Spacing.sm,
+  },
+  toggleLink: { paddingVertical: 4 },
+  toggleLinkText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
+  selectionCount: { fontSize: FontSize.xs },
+  deleteSelectedBtn: { padding: 6 },
+  checkCircle: {
+    width: 20, height: 20, borderRadius: 10, borderWidth: 1.5,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  deleteAction: {
+    width: 64, alignItems: 'center', justifyContent: 'center',
+  },
 });

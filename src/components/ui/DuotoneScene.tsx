@@ -3,6 +3,8 @@ import { View, ViewStyle } from 'react-native';
 import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
 import { useTheme } from '@/core/theme';
 
+import { EventCategory } from '@/features/events/domain/entities/event.entity';
+
 // Warm Paper duotone illustration scenes — ported from design/screens.html
 // sc-* symbols. Used wherever an event/group has no photo: feed cards, hero
 // headers, thumbs. Two fixed brand tones (duoA background / duoB shapes),
@@ -13,8 +15,6 @@ export type SceneName =
 
 const DUO_LIGHT = { a: '#F3E3CF', b: '#8A4026' };
 const DUO_DARK = { a: '#B4714A', b: '#22120A' };
-
-import { EventCategory } from '@/features/events/domain/entities/event.entity';
 
 export const CATEGORY_SCENES: Record<EventCategory, SceneName> = {
   [EventCategory.Sports]: 'volley',

@@ -25,6 +25,8 @@ import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { ProgressTrack } from '@/components/ui/ProgressTrack';
 import { fetchUserProfiles, UserProfile } from '@/core/utils/userProfiles';
+import { getChallengeDefs } from '@/core/constants/challenges';
+import { ChallengeRow } from '@/components/ui/ChallengeRow';
 
 const AVATAR_COLORS = ['#B8482A','#7C3AED','#059669','#2563EB','#DB2777','#D97706','#DC2626','#0891B2'];
 
@@ -64,18 +66,7 @@ export default function ProfileScreen() {
   // "Rendered fewer hooks than expected." Every hook must run on every
   // render; guard clauses that change what gets *rendered* have to come
   // after all of them, not before.
-  const challenges: { id: string; emoji: string; title: string; desc: string; xp: number; current: number; target: number }[] = user ? [
-    { id: 'join_1',    emoji: '🎯', title: t.challengeJoin1Title,    desc: t.challengeJoin1Desc,    xp: 10,  current: Math.min(user.joinedEvents.length, 1),    target: 1  },
-    { id: 'join_5',    emoji: '⭐', title: t.challengeJoin5Title,    desc: t.challengeJoin5Desc,    xp: 50,  current: Math.min(user.joinedEvents.length, 5),    target: 5  },
-    { id: 'join_10',   emoji: '🏆', title: t.challengeJoin10Title,   desc: t.challengeJoin10Desc,   xp: 100, current: Math.min(user.joinedEvents.length, 10),   target: 10 },
-    { id: 'join_25',   emoji: '👑', title: t.challengeJoin25Title,   desc: t.challengeJoin25Desc,   xp: 250, current: Math.min(user.joinedEvents.length, 25),   target: 25 },
-    { id: 'create_1',  emoji: '📣', title: t.challengeCreate1Title,  desc: t.challengeCreate1Desc,  xp: 25,  current: Math.min(user.createdEvents.length, 1),   target: 1  },
-    { id: 'create_5',  emoji: '🎪', title: t.challengeCreate5Title,  desc: t.challengeCreate5Desc,  xp: 125, current: Math.min(user.createdEvents.length, 5),   target: 5  },
-    { id: 'streak_3',  emoji: '🔥', title: t.challengeStreak3Title,  desc: t.challengeStreak3Desc,  xp: 15,  current: Math.min(user.currentStreak ?? 0, 3),     target: 3  },
-    { id: 'streak_7',  emoji: '💥', title: t.challengeStreak7Title,  desc: t.challengeStreak7Desc,  xp: 30,  current: Math.min(user.currentStreak ?? 0, 7),     target: 7  },
-    { id: 'follow_5',  emoji: '👥', title: t.challengeFollow5Title,  desc: t.challengeFollow5Desc,  xp: 15,  current: Math.min(user.following?.length ?? 0, 5),  target: 5  },
-    { id: 'follow_10', emoji: '🌐', title: t.challengeFollow10Title, desc: t.challengeFollow10Desc, xp: 25,  current: Math.min(user.following?.length ?? 0, 10), target: 10 },
-  ] : [];
+  const challenges = getChallengeDefs(user, t);
   // claimedChallengeIds is built with arrayUnion (auth.store's claimChallenge),
   // which only ever appends — so its order already is completion order. Sort
   // done challenges by it so whichever one you *just* finished sinks to the
@@ -102,7 +93,6 @@ export default function ProfileScreen() {
   const [draftColor, setDraftColor] = useState(user?.avatarColor ?? '#B8482A');
   const [draftPhoto, setDraftPhoto] = useState<string | undefined>(user?.photoUri);
   const [isSaving, setIsSaving] = useState(false);
-  const [showAllChallenges, setShowAllChallenges] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<{ emoji: string; label: string; description: string; earned: boolean } | null>(null);
   const [showLevelModal, setShowLevelModal] = useState(false);
   const [followList, setFollowList] = useState<'followers' | 'following' | 'connections' | null>(null);
@@ -152,7 +142,7 @@ export default function ProfileScreen() {
   // challenges/claimOrder/doneChallenges are computed above, before the
   // !user guard (Rules of Hooks — see the comment up there).
   const activeChallenges = challenges.filter((c) => c.current < c.target);
-  const visibleChallenges = showAllChallenges ? [...activeChallenges, ...doneChallenges] : [...activeChallenges.slice(0, 3), ...doneChallenges.slice(0, 1)];
+  const visibleChallenges = [...activeChallenges.slice(0, 3), ...doneChallenges.slice(0, 1)];
 
   const badges: { emoji: string; label: string; description: string; earned: boolean }[] = [
     { emoji: '🎯', label: t.badgeFirstStep,  description: t.badgeFirstStepDesc,  earned: user.joinedEvents.length >= 1 },
@@ -395,7 +385,7 @@ export default function ProfileScreen() {
       {!editing && (
         <View style={[styles.badgesCard, { backgroundColor: colors.surface, borderColor: bs }]}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t.profileBadgesTitle}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.badgesRow}>
+          <View style={styles.badgesRow}>
             {badges.map((b) => (
               <AnimatedPressable key={b.label} onPress={() => setSelectedBadge(b)}
                 style={[styles.badge, { opacity: b.earned ? 1 : 0.28 }]}>
@@ -403,7 +393,7 @@ export default function ProfileScreen() {
                 <Text style={[styles.badgeLabel, { color: b.earned ? colors.textPrimary : colors.textHint }]} numberOfLines={1}>{b.label}</Text>
               </AnimatedPressable>
             ))}
-          </ScrollView>
+          </View>
         </View>
       )}
 
@@ -411,39 +401,15 @@ export default function ProfileScreen() {
       {/* ── Challenges ── */}
       {!editing && (
         <View style={[styles.challengesCard, { backgroundColor: colors.surface, borderColor: bs }]}>
-          <View style={styles.challengesHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>⚡ Challenges</Text>
-            <Text style={[styles.challengesSub, { color: colors.textHint }]}>{doneChallenges.length}/{challenges.length} done</Text>
-          </View>
-          {visibleChallenges.map((c) => {
-            const done = c.current >= c.target;
-            const pct = done ? 1 : c.current / c.target;
-            return (
-              <View key={c.id} style={[styles.challengeRow, { opacity: done ? 0.5 : 1 }]}>
-                <Text style={styles.challengeEmoji}>{c.emoji}</Text>
-                <View style={styles.challengeBody}>
-                  <View style={styles.challengeTitleRow}>
-                    <Text style={[styles.challengeTitle, { color: colors.textPrimary }]}>{c.title}</Text>
-                    <View style={[styles.xpPill, { backgroundColor: done ? colors.success : colors.primary + '22', borderColor: done ? colors.success : colors.primary }]}>
-                      <Text style={[styles.xpPillText, { color: done ? '#fff' : colors.primary }]}>{done ? '✓' : `+${c.xp} XP`}</Text>
-                    </View>
-                  </View>
-                  <Text style={[styles.challengeDesc, { color: colors.textHint }]}>{c.desc}</Text>
-                  <View style={[styles.challengeTrack, { backgroundColor: colors.surfaceVariant, borderColor: bs }]}>
-                    <View style={[styles.challengeFill, { width: `${pct * 100}%` as any, backgroundColor: done ? colors.success : colors.primary }]} />
-                  </View>
-                  <Text style={[styles.challengeProgress, { color: colors.textHint }]}>{c.current}/{c.target}</Text>
-                </View>
-              </View>
-            );
-          })}
-          {challenges.length > visibleChallenges.length || showAllChallenges ? (
-            <AnimatedPressable onPress={() => setShowAllChallenges((v) => !v)} style={styles.showMoreBtn}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t.profileChallengesTitle}</Text>
+          {visibleChallenges.map((c) => <ChallengeRow key={c.id} challenge={c} />)}
+          {challenges.length > visibleChallenges.length && (
+            <AnimatedPressable onPress={() => router.push('/(app)/challenges' as any)} style={styles.showMoreBtn}>
               <Text style={[styles.showMoreText, { color: colors.primary }]}>
-                {showAllChallenges ? 'Show less' : `Show all ${challenges.length} challenges`}
+                {t.profileChallengesSeeAll}
               </Text>
             </AnimatedPressable>
-          ) : null}
+          )}
         </View>
       )}
 
@@ -492,27 +458,21 @@ export default function ProfileScreen() {
             </View>
             <Icon name="fwd" size={16} color={colors.textHint} />
           </AnimatedPressable>
+          <AnimatedPressable onPress={() => router.push('/(app)/profile/tickets' as any)} style={[styles.settingRow, { backgroundColor: colors.surface, borderColor: bs }]}>
+            <View style={styles.settingLeft}>
+              <Icon name="ticket" size={18} color={colors.textPrimary} />
+              <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>{t.profileTicketsPhotosBtn}</Text>
+            </View>
+            <Icon name="fwd" size={16} color={colors.textHint} />
+          </AnimatedPressable>
+          <AnimatedPressable onPress={() => router.push('/(app)/settings' as any)} style={[styles.settingRow, { backgroundColor: colors.surface, borderColor: bs }]}>
+            <View style={styles.settingLeft}>
+              <Icon name="settings" size={18} color={colors.textPrimary} />
+              <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>{t.profileSettings}</Text>
+            </View>
+            <Icon name="fwd" size={16} color={colors.textHint} />
+          </AnimatedPressable>
         </View>
-      )}
-
-      {!editing && (
-        <AnimatedPressable onPress={() => router.push('/(app)/profile/tickets' as any)} style={[styles.settingRow,{backgroundColor:colors.surface,borderColor: bs, marginBottom: 10}]}>
-          <View style={styles.settingLeft}>
-            <Icon name="ticket" size={18} color={colors.textPrimary} />
-            <Text style={[styles.settingLabel,{color:colors.textPrimary}]}>{t.profileTicketsPhotosBtn}</Text>
-          </View>
-          <Icon name="fwd" size={16} color={colors.textHint} />
-        </AnimatedPressable>
-      )}
-
-      {!editing && (
-        <AnimatedPressable onPress={() => router.push('/(app)/settings' as any)} style={[styles.settingRow,{backgroundColor:colors.surface,borderColor: bs, marginBottom: 10}]}>
-          <View style={styles.settingLeft}>
-            <Icon name="settings" size={18} color={colors.textPrimary} />
-            <Text style={[styles.settingLabel,{color:colors.textPrimary}]}>{t.profileSettings}</Text>
-          </View>
-          <Icon name="fwd" size={16} color={colors.textHint} />
-        </AnimatedPressable>
       )}
     </ScrollView>
   );
@@ -534,7 +494,7 @@ const styles = StyleSheet.create({
   avatar: { width: 96, height: 96, borderRadius: 48, alignItems: 'center', justifyContent: 'center' },
   avatarPhoto: { width: 96, height: 96, borderRadius: 48 },
   avatarText: { color: '#fff', fontSize: 34, fontWeight: FontWeight.bold },
-  photoOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  photoOverlay: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
   colorRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap', justifyContent: 'center', marginTop: 4 },
   colorDot: { width: 34, height: 34, borderRadius: 17, borderWidth: 1 },
   colorDotSelected: { borderWidth: 3, borderColor: '#fff', transform: [{ scale: 1.18 }] },
@@ -573,10 +533,10 @@ const styles = StyleSheet.create({
   // Badges
   badgesCard: { borderWidth: 1, borderRadius: BorderRadius.lg, padding: Spacing.md, gap: Spacing.sm},
   sectionTitle: { fontSize: FontSize.md, fontWeight: FontWeight.extrabold, fontFamily: UIFont },
-  badgesRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
-  badge: { alignItems: 'center', gap: 3, width: 50 },
-  badgeEmoji: { fontSize: 26 },
-  badgeLabel: { fontSize: 9, fontFamily: UIFont, textAlign: 'center' },
+  badgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4, justifyContent: 'space-between' },
+  badge: { alignItems: 'center', gap: 2, width: 44 },
+  badgeEmoji: { fontSize: 22 },
+  badgeLabel: { fontSize: 8.5, fontFamily: UIFont, textAlign: 'center' },
   // Badge modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
   modalCard: { width: '100%', maxWidth: 300, borderWidth: 1, borderRadius: BorderRadius.xl, padding: Spacing.xl, alignItems: 'center', gap: Spacing.md},
@@ -587,19 +547,6 @@ const styles = StyleSheet.create({
   modalStatusText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
   // Challenges
   challengesCard: { borderWidth: 1, borderRadius: BorderRadius.lg, padding: Spacing.md, gap: Spacing.md},
-  challengesHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  challengesSub: { fontSize: FontSize.xs, fontWeight: FontWeight.semibold },
-  challengeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
-  challengeEmoji: { fontSize: 22, marginTop: 2 },
-  challengeBody: { flex: 1, gap: 3 },
-  challengeTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  challengeTitle: { fontSize: FontSize.sm, fontWeight: FontWeight.extrabold, fontFamily: UIFont, flex: 1 },
-  xpPill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: BorderRadius.full, borderWidth: 1.5 },
-  xpPillText: { fontSize: 10, fontWeight: FontWeight.extrabold, fontFamily: UIFont },
-  challengeDesc: { fontSize: FontSize.xs, lineHeight: 16 },
-  challengeTrack: { height: 5, borderRadius: 3, overflow: 'hidden', borderWidth: 1, marginTop: 2 },
-  challengeFill: { height: 5, borderRadius: 3 },
-  challengeProgress: { fontSize: 9, fontWeight: FontWeight.bold, textAlign: 'right' },
   showMoreBtn: { alignItems: 'center', paddingTop: 4 },
   showMoreText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
   // Events section

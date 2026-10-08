@@ -149,7 +149,9 @@ function RootLayout() {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as Record<string, string> | undefined;
       if (!data) return;
-      if (data.type === 'follow' && data.fromUid) {
+      if (data.type === 'dm_message' && data.fromUid) {
+        router.push(`/(app)/dm/${data.fromUid}` as any);
+      } else if (data.type === 'follow' && data.fromUid) {
         router.push(`/(app)/user/${data.fromUid}` as any);
       } else if (data.type === 'group_invite' && data.eventId) {
         router.push(`/(app)/group/${data.eventId}` as any);

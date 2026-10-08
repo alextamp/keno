@@ -180,7 +180,7 @@ export default function OnboardingScreen() {
       <Text style={[styles.fieldLabel, { color: colors.textDecor }]}>{t.onboardingBioLabel}</Text>
       <TextInput
         style={[styles.bioInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.textPrimary }]}
-        placeholder={t.onboardingBioPlaceholder(user?.department ?? 'Student', user?.universityName ?? 'University')}
+        placeholder={t.onboardingBioPlaceholder()}
         placeholderTextColor={colors.textHint}
         value={bio}
         onChangeText={setBio}

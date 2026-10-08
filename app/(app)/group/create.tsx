@@ -6,15 +6,19 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Icon } from '@/components/ui/Icon';
 import { useTheme } from '@/core/theme';
 import { UIFont, TitleFont, FontSize, FontWeight, Spacing, BorderRadius } from '@/core/constants/theme';
 import { useGroupsStore } from '@/features/groups/presentation/store/groups.store';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { GROUP_COVER_COLORS, GROUP_EMOJI_OPTIONS } from '@/features/groups/domain/entities/group.entity';
+import { GREEK_UNIVERSITIES, universityLabel } from '@/core/constants/universities';
 import { containsBlockedContent } from '@/core/utils/contentModeration';
 import { uploadGroupCoverPhoto } from '@/core/utils/uploadImage';
 import { pickImage } from '@/core/utils/imagePicker';
-import { useTranslation } from '@/core/i18n';
+import { useTranslation, useLanguageStore } from '@/core/i18n';
+
+const UNIVERSITIES = ['Any', ...GREEK_UNIVERSITIES];
 
 export default function CreateGroupScreen() {
   const router = useRouter();
@@ -25,17 +29,32 @@ export default function CreateGroupScreen() {
   const isLoading = useGroupsStore((s) => s.isLoading);
   const error = useGroupsStore((s) => s.error);
   const t = useTranslation();
+  const { language } = useLanguageStore();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [emoji, setEmoji] = useState('🎓');
   const [coverColor, setCoverColor] = useState(GROUP_COVER_COLORS[0]);
   const [coverPhoto, setCoverPhoto] = useState<string | undefined>(undefined);
-  const [universityName, setUniversityName] = useState(user?.universityName ?? '');
+  // Same "Any" + multi-select pattern as event creation's university filter.
+  const [selectedUniversities, setSelectedUniversities] = useState<string[]>(
+    user?.universityName ? [user.universityName] : ['Any'],
+  );
   const [isPrivate, setIsPrivate] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  // Nothing below is removed — the form is just long enough that it always
+  // needed a scroll to see everything. Name/description (the two required
+  // fields) stay up top; photo/emoji/colour/university/private collapse
+  // behind this toggle so the whole form can fit without sliding down.
+  const [showMore, setShowMore] = useState(false);
 
   const canSubmit = name.trim().length >= 3 && description.trim().length >= 10 && !isLoading;
+
+  const toggleUniversity = (u: string) => {
+    if (u === 'Any') { setSelectedUniversities(['Any']); return; }
+    const without = selectedUniversities.filter((x) => x !== 'Any');
+    setSelectedUniversities(without.includes(u) ? without.filter((x) => x !== u).length ? without.filter((x) => x !== u) : ['Any'] : [...without, u]);
+  };
 
   const pickPhoto = async () => {
     const uri = await pickImage({ aspect: [16, 9] });
@@ -66,7 +85,7 @@ export default function CreateGroupScreen() {
       coverColor,
       coverPhotoUri: finalCoverPhoto,
       creatorId: user.id,
-      universityName: universityName.trim() || undefined,
+      allowedUniversities: selectedUniversities.includes('Any') ? undefined : selectedUniversities,
       isPrivate,
     });
     if (group) router.replace(`/(app)/group/${group.id}` as any);
@@ -95,48 +114,6 @@ export default function CreateGroupScreen() {
           <Text style={styles.previewName}>{name || t.groupPreviewName}</Text>
         </View>
 
-        {/* Cover photo picker */}
-        <Text style={[styles.label, { color: colors.textPrimary }]}>{t.groupLabelPhoto}</Text>
-        <View style={styles.photoRow}>
-          <AnimatedPressable
-            onPress={pickPhoto}
-            style={[styles.photoBtn, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}
-          >
-            <Text style={[styles.photoBtnText, { color: colors.textPrimary }]}>{t.groupAddPhoto}</Text>
-          </AnimatedPressable>
-          {coverPhoto && (
-            <AnimatedPressable onPress={() => setCoverPhoto(undefined)} style={styles.photoRemoveBtn}>
-              <Text style={[styles.photoRemoveText, { color: colors.textHint }]}>{t.groupRemovePhoto}</Text>
-            </AnimatedPressable>
-          )}
-        </View>
-
-        {/* Emoji picker */}
-        <Text style={[styles.label, { color: colors.textPrimary }]}>{t.groupLabelIcon}</Text>
-        <View style={styles.emojiRow}>
-          {GROUP_EMOJI_OPTIONS.map((e) => (
-            <AnimatedPressable
-              key={e}
-              onPress={() => setEmoji(e)}
-              style={[styles.emojiBtn, emoji === e && { backgroundColor: colors.surfaceVariant, borderColor: colors.primary }]}
-            >
-              <Text style={styles.emojiOpt}>{e}</Text>
-            </AnimatedPressable>
-          ))}
-        </View>
-
-        {/* Color picker */}
-        <Text style={[styles.label, { color: colors.textPrimary }]}>{t.groupLabelColour}</Text>
-        <View style={styles.colorRow}>
-          {GROUP_COVER_COLORS.map((c) => (
-            <AnimatedPressable
-              key={c}
-              onPress={() => setCoverColor(c)}
-              style={[styles.colorDot, { backgroundColor: c, borderWidth: coverColor === c ? 3 : 0, borderColor: '#fff' }]}
-            />
-          ))}
-        </View>
-
         {/* Name */}
         <Text style={[styles.label, { color: colors.textPrimary }]}>{t.groupLabelName}</Text>
         <TextInput
@@ -160,30 +137,92 @@ export default function CreateGroupScreen() {
           numberOfLines={3}
           maxLength={300}
         />
+        <Text style={[styles.hint, { color: description.trim().length < 10 ? colors.error : colors.textHint }]}>
+          {description.trim().length}/300 · {t.groupDescriptionMinHint}
+        </Text>
 
-        {/* University (optional) */}
-        <Text style={[styles.label, { color: colors.textPrimary }]}>{t.groupLabelUniversity}</Text>
-        <TextInput
-          style={[styles.input, { backgroundColor: colors.surfaceVariant, borderColor: colors.border, color: colors.textPrimary }]}
-          placeholder={t.groupUniversityPlaceholder}
-          placeholderTextColor={colors.textHint}
-          value={universityName}
-          onChangeText={setUniversityName}
-          maxLength={80}
-        />
-
-        {/* Private toggle */}
-        <View style={[styles.toggleRow, { borderColor: colors.border }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.toggleLabel, { color: colors.textPrimary }]}>{t.groupPrivateLabel}</Text>
-            <Text style={[styles.toggleSub, { color: colors.textSecondary }]}>{t.groupPrivateSub}</Text>
+        {/* More options toggle */}
+        <AnimatedPressable onPress={() => setShowMore((v) => !v)} style={[styles.moreToggle, { borderColor: colors.border }]}>
+          <Text style={[styles.moreToggleText, { color: colors.primary }]}>
+            {showMore ? t.groupFewerOptions : t.groupMoreOptions}
+          </Text>
+          <View style={{ transform: [{ rotate: showMore ? '-90deg' : '90deg' }] }}>
+            <Icon name="fwd" size={14} color={colors.primary} />
           </View>
-          <Switch
-            value={isPrivate}
-            onValueChange={setIsPrivate}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
+        </AnimatedPressable>
+
+        {showMore && (
+          <>
+            {/* Cover photo picker */}
+            <Text style={[styles.label, { color: colors.textPrimary }]}>{t.groupLabelPhoto}</Text>
+            <View style={styles.photoRow}>
+              <AnimatedPressable
+                onPress={pickPhoto}
+                style={[styles.photoBtn, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}
+              >
+                <Text style={[styles.photoBtnText, { color: colors.textPrimary }]}>{t.groupAddPhoto}</Text>
+              </AnimatedPressable>
+              {coverPhoto && (
+                <AnimatedPressable onPress={() => setCoverPhoto(undefined)} style={styles.photoRemoveBtn}>
+                  <Text style={[styles.photoRemoveText, { color: colors.textHint }]}>{t.groupRemovePhoto}</Text>
+                </AnimatedPressable>
+              )}
+            </View>
+
+            {/* Emoji picker */}
+            <Text style={[styles.label, { color: colors.textPrimary }]}>{t.groupLabelIcon}</Text>
+            <View style={styles.emojiRow}>
+              {GROUP_EMOJI_OPTIONS.map((e) => (
+                <AnimatedPressable
+                  key={e}
+                  onPress={() => setEmoji(e)}
+                  style={[styles.emojiBtn, emoji === e && { backgroundColor: colors.surfaceVariant, borderColor: colors.primary }]}
+                >
+                  <Text style={styles.emojiOpt}>{e}</Text>
+                </AnimatedPressable>
+              ))}
+            </View>
+
+            {/* Color picker */}
+            <Text style={[styles.label, { color: colors.textPrimary }]}>{t.groupLabelColour}</Text>
+            <View style={styles.colorRow}>
+              {GROUP_COVER_COLORS.map((c) => (
+                <AnimatedPressable
+                  key={c}
+                  onPress={() => setCoverColor(c)}
+                  style={[styles.colorDot, { backgroundColor: c, borderWidth: coverColor === c ? 3 : 0, borderColor: '#fff' }]}
+                />
+              ))}
+            </View>
+
+            {/* Which universities are allowed — same multi-select chips as event creation */}
+            <Text style={[styles.label, { color: colors.textPrimary }]}>{t.createLabelUniversity}</Text>
+            <View style={styles.uniGrid}>
+              {UNIVERSITIES.map((u) => {
+                const sel = selectedUniversities.includes(u);
+                return (
+                  <AnimatedPressable key={u} onPress={() => toggleUniversity(u)}
+                    style={[styles.uniChip, { borderColor: sel ? colors.primary : colors.border, backgroundColor: sel ? colors.accentSoft : colors.surface }]}>
+                    <Text style={[styles.uniLabel, { color: sel ? colors.accentInk : colors.textSecondary }]}>{u === 'Any' ? t.createGenderAny : universityLabel(u, language)}</Text>
+                  </AnimatedPressable>
+                );
+              })}
+            </View>
+
+            {/* Private toggle */}
+            <View style={[styles.toggleRow, { borderColor: colors.border }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.toggleLabel, { color: colors.textPrimary }]}>{t.groupPrivateLabel}</Text>
+                <Text style={[styles.toggleSub, { color: colors.textSecondary }]}>{t.groupPrivateSub}</Text>
+              </View>
+              <Switch
+                value={isPrivate}
+                onValueChange={setIsPrivate}
+                trackColor={{ false: colors.border, true: colors.primary }}
+              />
+            </View>
+          </>
+        )}
 
         {error && (
           <Text style={[styles.error, { color: colors.error }]}>{error}</Text>
@@ -224,11 +263,20 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 4,
     overflow: 'hidden',
   },
-  previewPhoto: { ...StyleSheet.absoluteFillObject },
-  previewOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.32)' },
+  previewPhoto: { ...StyleSheet.absoluteFill },
+  previewOverlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.32)' },
   previewEmoji: { fontSize: 32 },
   previewName: { color: '#fff', fontSize: FontSize.md, fontWeight: FontWeight.extrabold, fontFamily: UIFont },
   label: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont, marginBottom: -4 },
+  hint: { fontSize: FontSize.xs, marginTop: -6 },
+  moreToggle: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 10, borderRadius: BorderRadius.md, borderWidth: 1, borderStyle: 'dashed',
+  },
+  moreToggleText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
+  uniGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  uniChip: { paddingHorizontal: Spacing.md, paddingVertical: 9, borderRadius: BorderRadius.md, borderWidth: 1 },
+  uniLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.medium, fontFamily: UIFont },
   photoRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   photoBtn: {
     paddingHorizontal: Spacing.md, paddingVertical: 10, borderRadius: BorderRadius.md, borderWidth: 1,

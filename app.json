@@ -7,11 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "keno",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/images/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#FAF7F2"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.alextamp.keno",
@@ -79,12 +74,23 @@
           "photosPermission": "Keno needs access to your photos to save photos from an event's photo wall.",
           "savePhotosPermission": "Keno needs permission to save photos to your library.",
           "isAccessMediaLocationEnabled": false,
-          "granularPermissions": ["photo"]
+          "granularPermissions": [
+            "photo"
+          ]
         }
       ],
       "expo-font",
       "expo-audio",
-      "@sentry/react-native"
+      "@sentry/react-native",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#FAF7F2"
+        }
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true

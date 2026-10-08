@@ -1,3 +1,6 @@
+import { IconName } from '@/components/ui/Icon';
+import { FOUNDER_UID } from './founder';
+
 export const XP_VALUES = {
   joinEvent: 10,
   createEvent: 25,
@@ -51,9 +54,6 @@ export const BETA_CUTOFF_DATE = new Date('2026-07-28T00:00:00Z');
 export function isBetaTesterUser(u: { isBetaTester?: boolean; createdAt?: Date | null }): boolean {
   return !!u.isBetaTester || (!!u.createdAt && u.createdAt.getTime() < BETA_CUTOFF_DATE.getTime());
 }
-
-import { IconName } from '@/components/ui/Icon';
-import { FOUNDER_UID } from './founder';
 
 export interface Level {
   name: string;

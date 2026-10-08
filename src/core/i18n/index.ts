@@ -69,7 +69,7 @@ export function getDateLocale(language: AppLanguage) {
 
 // ── Full translations ─────────────────────────────────────────────────────────
 
-type Translations = {
+export type Translations = {
   // Tab bar
   tabFeed: string;
   tabCreate: string;
@@ -87,6 +87,7 @@ type Translations = {
 
   // Feed
   feedFriends: string;
+  feedFilters: string;
   feedForYouHint: string;
   feedFindPeople: string;
   profileErrorTitle: string;
@@ -112,7 +113,6 @@ type Translations = {
   leaderboardYourUniversityScope: (universityName: string) => string;
   leaderboardAllGreece: string;
   leaderboardNoUniData: string;
-  leaderboardQuests: string;
   questsStreakLine: (weeks: number) => string;
   questsStreakBest: (best: number) => string;
   questsFreezeNote: string;
@@ -331,6 +331,9 @@ type Translations = {
   challengeFollow5Desc: string;
   challengeFollow10Title: string;
   challengeFollow10Desc: string;
+  profileChallengesTitle: string;
+  profileChallengesSeeAll: string;
+  profileChallengesSectionLabel: string;
   profileTabUpcoming: (n: number) => string;
   profileTabPast: (n: number) => string;
   profileTabSaved: (n: number) => string;
@@ -438,6 +441,7 @@ type Translations = {
 
   // Admin (only shown to the admin account)
   settingsSectionAdmin: string;
+  settingsSectionEvents: string;
   settingsAdminReports: string;
   adminReportsTitle: string;
   adminReportsEmpty: string;
@@ -457,6 +461,15 @@ type Translations = {
   adminVerificationsEmptyBody: string;
   adminVerificationsApprove: string;
   adminVerificationsReject: string;
+  settingsAdminEvents: string;
+  adminEventsTitle: string;
+  adminEventsEmpty: string;
+  adminEventsEmptyBody: string;
+  adminEventsLoadErrorTitle: string;
+  adminEventsApprove: string;
+  adminEventsReject: string;
+  adminEventsSource: string;
+  adminEventsNeedsReview: string;
 
   // Search
   searchPlaceholder: string;
@@ -649,14 +662,17 @@ type Translations = {
   dmEventEmpty: string;
   dmGroupEmpty: string;
   dmRequestsEmpty: string;
+  dmSeenLabel: string;
+  dmDeleteConfirmTitle: string;
+  dmDeleteConfirmBody: string;
+  dmDeleteSelectedConfirmTitle: (count: number) => string;
   dmPlaceholder: string;
   dmBlockedByMe: string;
   dmBlockedByThem: string;
   dmNewMessage: string;
   searchUserMeta: (followers: number, events: number) => string;
-  onboardingBioPlaceholder: (dept: string, uni: string) => string;
+  onboardingBioPlaceholder: () => string;
   groupNamePlaceholder: string;
-  groupUniversityPlaceholder: string;
 
   // Validation errors
   validNameRequired: string;
@@ -709,6 +725,14 @@ type Translations = {
   notifSectionToday: string;
   notifSectionYesterday: string;
   notifSectionEarlier: string;
+  notifSelectBtn: string;
+  notifSelectAllBtn: string;
+  notifDeselectAllBtn: string;
+  notifDeleteBtn: string;
+  notifSelectedCount: (n: number) => string;
+  notifDeleteConfirmTitle: string;
+  notifDeleteConfirmBody: string;
+  notifDeleteSelectedConfirmTitle: (n: number) => string;
 
   // Notification-permission screen (shown once, after first event join)
   notifPermTitle: string;
@@ -730,6 +754,8 @@ type Translations = {
   // User public profile
   userProfileTitle: string;
   userNotFound: string;
+  groupNotFoundTitle: string;
+  groupNotFoundBody: string;
   userFollowing: string;
   userFollow: string;
   userInvite: string;
@@ -894,9 +920,11 @@ type Translations = {
   groupLabelName: string;
   groupLabelDescription: string;
   groupDescriptionPlaceholder: string;
-  groupLabelUniversity: string;
+  groupDescriptionMinHint: string;
   groupPrivateLabel: string;
   groupPrivateSub: string;
+  groupMoreOptions: string;
+  groupFewerOptions: string;
   groupCreateBtn: string;
   groupEditTitle: string;
   groupSaveBtn: string;
@@ -965,6 +993,32 @@ type Translations = {
   reconnectSendBtn: string;
   reconnectSkipBtn: string;
   reconnectError: string;
+
+  // Progressive signup — app/(auth)/start/*
+  startUniversityTitle: string;
+  startUniversitySubtitle: string;
+  startUniversityExpectation: (domain: string) => string;
+  startDepartmentTitle: string;
+  startDepartmentSubtitle: string;
+  startNameTitle: string;
+  startNameSubtitle: string;
+  startAgeTitle: string;
+  startAgeSubtitle: string;
+  startAccountTitle: string;
+  startAccountSubtitle: string;
+  startContinueBtn: string;
+  startPersonalisePhotoBtn: string;
+  startNoAcademicEmailLink: string;
+  startUniMismatchError: (domain: string) => string;
+  startUniMismatchChangeLink: string;
+  startDepartmentManualLink: string;
+  startDepartmentPickLink: string;
+  startUniversityOtherOption: string;
+  startUniversityOtherNote: string;
+  startUniversityFallbackNote: string;
+  startAccountIdPhotoNote: string;
+  startAccountEmailDeclinedNote: string;
+  genericEmailLabel: string;
 };
 
 const en: Translations = {
@@ -982,6 +1036,7 @@ const en: Translations = {
   catOther: 'Other',
 
   feedFriends: 'Friends',
+  feedFilters: 'Filters',
   feedForYouHint: 'Add interests in your profile to get personalized events',
   feedFindPeople: 'Find people →',
   profileErrorTitle: 'Something went wrong',
@@ -1007,7 +1062,6 @@ const en: Translations = {
   leaderboardYourUniversityScope: (universityName) => `YOUR UNIVERSITY · ${universityName.toUpperCase()}`,
   leaderboardAllGreece: 'ALL OF GREECE',
   leaderboardNoUniData: 'Add your university in Settings to see this',
-  leaderboardQuests: 'Quests',
   questsStreakLine: (weeks) => `${weeks}-week streak`,
   questsStreakBest: (best) => `Best: ${best}`,
   questsFreezeNote: 'A freeze token automatically covers a missed week, so your streak doesn’t break.',
@@ -1219,6 +1273,9 @@ const en: Translations = {
   challengeFollow5Desc: 'Follow 5 people',
   challengeFollow10Title: 'Networker',
   challengeFollow10Desc: 'Follow 10 people',
+  profileChallengesTitle: '⚡ Challenges',
+  profileChallengesSeeAll: 'See all challenges',
+  profileChallengesSectionLabel: 'Lifetime challenges',
   profileTabUpcoming: (n) => `📅 Upcoming (${n})`,
   profileTabPast: (n) => `🗂️ Past (${n})`,
   profileTabSaved: (n) => `🔖 Saved (${n})`,
@@ -1322,6 +1379,7 @@ const en: Translations = {
   adminReportsScreenshotLabel: 'View screenshot',
 
   settingsSectionAdmin: 'Admin',
+  settingsSectionEvents: 'Events',
   settingsAdminReports: 'Review reports',
   adminReportsTitle: 'Reports',
   adminReportsEmpty: 'All clear',
@@ -1341,6 +1399,15 @@ const en: Translations = {
   adminVerificationsEmptyBody: 'No pending student ID verifications right now.',
   adminVerificationsApprove: 'Approve',
   adminVerificationsReject: 'Reject',
+  settingsAdminEvents: 'Review events',
+  adminEventsTitle: 'Pending events',
+  adminEventsEmpty: 'All clear',
+  adminEventsEmptyBody: 'No auto-imported events waiting for review right now.',
+  adminEventsLoadErrorTitle: "Couldn't load pending events",
+  adminEventsApprove: 'Approve',
+  adminEventsReject: 'Reject',
+  adminEventsSource: 'Source',
+  adminEventsNeedsReview: 'Needs review',
 
   searchPlaceholder: 'Search by name or university...',
   searchPeopleLabel: 'People',
@@ -1531,14 +1598,17 @@ const en: Translations = {
   dmEventEmpty: 'No event chats yet — join an event to start one',
   dmGroupEmpty: 'No group chats yet — join a group to start one',
   dmRequestsEmpty: 'No pending requests',
+  dmSeenLabel: 'Seen',
+  dmDeleteConfirmTitle: 'Delete conversation?',
+  dmDeleteConfirmBody: "It'll be removed from your list. If they message you again, it'll reappear.",
+  dmDeleteSelectedConfirmTitle: (count) => `Delete ${count} conversation${count === 1 ? '' : 's'}?`,
   dmPlaceholder: 'Message...',
   dmBlockedByMe: "You've blocked this user. Unblock them from their profile to send messages.",
   dmBlockedByThem: 'You can no longer message this user.',
   dmNewMessage: '+ New',
   searchUserMeta: (followers, events) => `${followers} followers · ${events} events`,
-  onboardingBioPlaceholder: (dept, uni) => `${dept} @ ${uni}. So, who are you?`,
+  onboardingBioPlaceholder: () => 'Besides being behind on classes, what else do you do?',
   groupNamePlaceholder: 'e.g. AUEB Basketball Crew',
-  groupUniversityPlaceholder: 'e.g. AUEB',
 
   validNameRequired: 'Name is required.',
   validNameMin: 'Name must be at least 2 characters.',
@@ -1587,6 +1657,14 @@ const en: Translations = {
   notifSectionToday: 'Today',
   notifSectionYesterday: 'Yesterday',
   notifSectionEarlier: 'Earlier',
+  notifSelectBtn: 'Select',
+  notifSelectAllBtn: 'Select all',
+  notifDeselectAllBtn: 'Deselect all',
+  notifDeleteBtn: 'Delete',
+  notifSelectedCount: (n) => `${n} selected`,
+  notifDeleteConfirmTitle: 'Delete notification?',
+  notifDeleteConfirmBody: "This can't be undone.",
+  notifDeleteSelectedConfirmTitle: (n) => `Delete ${n} notification${n === 1 ? '' : 's'}?`,
 
   notifPermTitle: "We'll keep you posted?",
   notifPermBody: 'Just two things: a reminder 2 hours before your event, and when someone messages the event chat.',
@@ -1605,6 +1683,8 @@ const en: Translations = {
 
   userProfileTitle: 'Profile',
   userNotFound: 'User not found',
+  groupNotFoundTitle: "This community doesn't exist anymore",
+  groupNotFoundBody: 'It may have been deleted by its creator.',
   userFollowing: '✓ Following',
   userFollow: '+ Follow',
   userInvite: '✉️ Invite',
@@ -1688,7 +1768,7 @@ const en: Translations = {
   authSignUpTitle: 'Create account',
   authSignUpSubtitle: 'Only verified university students can join',
   welcomeTagline: 'Less scrolling,\nmore living.',
-  welcomeBody: "See what's happening near you today and go. With students from your own university.",
+  welcomeBody: 'Make your student years count — together.',
   welcomeGetStarted: 'Get started',
   welcomeHaveAccount: 'I already have an account',
   welcomeTermsNotice: 'By continuing you agree to our terms of use',
@@ -1764,9 +1844,11 @@ const en: Translations = {
   groupLabelName: 'Name *',
   groupLabelDescription: 'Description *',
   groupDescriptionPlaceholder: "What's this community about?",
-  groupLabelUniversity: 'University (optional)',
+  groupDescriptionMinHint: 'At least 10 characters.',
   groupPrivateLabel: 'Private community',
   groupPrivateSub: 'Only visible to invited members',
+  groupMoreOptions: 'More options',
+  groupFewerOptions: 'Fewer options',
   groupCreateBtn: 'Create community 🎉',
   groupEditTitle: 'Edit community',
   groupSaveBtn: 'Save changes',
@@ -1779,8 +1861,8 @@ const en: Translations = {
   groupKickBtn: 'Remove',
 
   verifyTitle: 'Check your inbox',
-  verifyBody: "We sent a verification link to your university email. Tap it to activate your keno. account, then come back here.",
-  verifySpamHint: "Don't see it? Check your spam/junk folder — verification emails sometimes end up there.",
+  verifyBody: 'Tap the link we sent you (or paste it into your browser, e.g. Chrome) to activate your account.',
+  verifySpamHint: "Can't find the email? Check your spam folder.",
   verifyResent: '✓  Email resent — check your inbox.',
   verifyResendError: "Couldn't resend the email — you may be sending too many requests. Try again in a bit.",
   verifyBtnCheck: "I've verified my email",
@@ -1831,6 +1913,31 @@ const en: Translations = {
   reconnectSendBtn: 'Send the invite',
   reconnectSkipBtn: 'Not now',
   reconnectError: 'Failed to record your pick',
+
+  startUniversityTitle: 'Which university are you at?',
+  startUniversitySubtitle: "We'll show you what's happening near your campus first.",
+  startUniversityExpectation: (domain) => `You'll need your @${domain} email at the end — keep it handy.`,
+  startDepartmentTitle: 'Which department? (optional)',
+  startDepartmentSubtitle: 'So people from your school can find you more easily.',
+  startNameTitle: "What's your name?",
+  startNameSubtitle: 'This is how others will see you at events.',
+  startAgeTitle: 'How old are you? (optional)',
+  startAgeSubtitle: 'It only matters for events with an age limit.',
+  startAccountTitle: 'Last step',
+  startAccountSubtitle: "Your academic email proves you're a student. Nobody else sees it.",
+  startContinueBtn: 'Continue',
+  startPersonalisePhotoBtn: 'Photo',
+  startNoAcademicEmailLink: "I don't have an academic email",
+  startUniMismatchError: (domain) => `This email doesn't look like it's from ${domain}. Want to change your university?`,
+  startUniMismatchChangeLink: 'Change university',
+  startDepartmentManualLink: "Can't find my department",
+  startDepartmentPickLink: 'Pick from the list instead',
+  startUniversityOtherOption: 'Other',
+  startUniversityOtherNote: "You'll need to use your own email (not an academic one) and upload a photo of your student ID or enrollment certificate, so we can confirm you're a student.",
+  startUniversityFallbackNote: "Don't have an academic email (or it isn't working)? You can use your regular email and a photo of your student ID or enrollment certificate instead.",
+  startAccountIdPhotoNote: 'Reviewed manually, usually within a day.',
+  startAccountEmailDeclinedNote: "That didn't look like an academic email.",
+  genericEmailLabel: 'Email',
 };
 
 const el: Translations = {
@@ -1848,6 +1955,7 @@ const el: Translations = {
   catOther: 'Άλλο',
 
   feedFriends: 'Φίλοι',
+  feedFilters: 'Φίλτρα',
   feedForYouHint: 'Πρόσθεσε ενδιαφέροντα στο προφίλ σου για εξατομικευμένες εκδηλώσεις',
   feedFindPeople: 'Βρες κόσμο →',
   profileErrorTitle: 'Κάτι πήγε στραβά',
@@ -1873,7 +1981,6 @@ const el: Translations = {
   leaderboardYourUniversityScope: (universityName) => `ΤΟ ΠΑΝΕΠΙΣΤΗΜΙΟ ΣΟΥ · ${universityName.toUpperCase()}`,
   leaderboardAllGreece: 'ΟΛΗ Η ΕΛΛΑΔΑ',
   leaderboardNoUniData: 'Πρόσθεσε το πανεπιστήμιό σου στις Ρυθμίσεις για να το δεις',
-  leaderboardQuests: 'Αποστολές',
   questsStreakLine: (weeks) => `${weeks} εβδομάδες σερί`,
   questsStreakBest: (best) => `Το καλύτερό σου: ${best}`,
   questsFreezeNote: 'Ένα token παγώματος καλύπτει αυτόματα μία εβδομάδα που έχασες, ώστε το σερί σου να μη σπάσει.',
@@ -2085,6 +2192,9 @@ const el: Translations = {
   challengeFollow5Desc: 'Ακολούθησε 5 άτομα',
   challengeFollow10Title: 'Δικτυωμένος',
   challengeFollow10Desc: 'Ακολούθησε 10 άτομα',
+  profileChallengesTitle: '⚡ Αποστολές',
+  profileChallengesSeeAll: 'Δες όλες τις αποστολές',
+  profileChallengesSectionLabel: 'Διαχρονικές αποστολές',
   profileTabUpcoming: (n) => `📅 Επερχόμενα (${n})`,
   profileTabPast: (n) => `🗂️ Παλαιά (${n})`,
   profileTabSaved: (n) => `🔖 Αποθηκευμένα (${n})`,
@@ -2188,6 +2298,7 @@ const el: Translations = {
   adminReportsScreenshotLabel: 'Προβολή screenshot',
 
   settingsSectionAdmin: 'Διαχείριση',
+  settingsSectionEvents: 'Εκδηλώσεις',
   settingsAdminReports: 'Έλεγχος αναφορών',
   adminReportsTitle: 'Αναφορές',
   adminReportsEmpty: 'Όλα καθαρά',
@@ -2207,6 +2318,15 @@ const el: Translations = {
   adminVerificationsEmptyBody: 'Δεν υπάρχουν εκκρεμείς επαληθεύσεις φοιτητικής ταυτότητας.',
   adminVerificationsApprove: 'Έγκριση',
   adminVerificationsReject: 'Απόρριψη',
+  settingsAdminEvents: 'Έγκριση εκδηλώσεων',
+  adminEventsTitle: 'Εκκρεμείς εκδηλώσεις',
+  adminEventsEmpty: 'Όλα καθαρά',
+  adminEventsEmptyBody: 'Δεν υπάρχουν αυτόματες εκδηλώσεις που περιμένουν έγκριση.',
+  adminEventsLoadErrorTitle: 'Αποτυχία φόρτωσης εκκρεμών εκδηλώσεων',
+  adminEventsApprove: 'Έγκριση',
+  adminEventsReject: 'Απόρριψη',
+  adminEventsSource: 'Πηγή',
+  adminEventsNeedsReview: 'Χρειάζεται έλεγχο',
 
   searchPlaceholder: 'Αναζήτηση ονόματος ή πανεπιστημίου...',
   searchPeopleLabel: 'Άτομα',
@@ -2391,20 +2511,23 @@ const el: Translations = {
   dmTitle: 'Μηνύματα',
   dmEmpty: 'Δεν υπάρχουν συνομιλίες ακόμα',
   dmTabEvents: 'Εκδηλώσεις',
-  dmTabGroups: 'Ομάδες',
+  dmTabGroups: 'Κοινότητες',
   dmTabPersonal: 'Προσωπικά',
   dmTabRequests: (count) => (count > 0 ? `Αιτήματα · ${count}` : 'Αιτήματα'),
   dmEventEmpty: 'Δεν υπάρχουν συνομιλίες εκδηλώσεων ακόμα — συμμετέχεις σε μια εκδήλωση για να ξεκινήσεις',
   dmGroupEmpty: 'Δεν υπάρχουν ομαδικές συζητήσεις ακόμα — γίνε μέλος σε μια ομάδα για να ξεκινήσεις',
   dmRequestsEmpty: 'Δεν υπάρχουν εκκρεμή αιτήματα',
+  dmSeenLabel: 'Είδε',
+  dmDeleteConfirmTitle: 'Διαγραφή συνομιλίας;',
+  dmDeleteConfirmBody: 'Θα αφαιρεθεί από τη λίστα σου. Αν σου ξαναστείλει μήνυμα, θα ξαναεμφανιστεί.',
+  dmDeleteSelectedConfirmTitle: (count) => `Διαγραφή ${count} συνομιλιών;`,
   dmPlaceholder: 'Μήνυμα...',
   dmBlockedByMe: 'Έχεις αποκλείσει αυτόν τον χρήστη. Άρσε τον αποκλεισμό από το προφίλ του για να στείλεις μηνύματα.',
   dmBlockedByThem: 'Δεν μπορείς πλέον να στείλεις μήνυμα σε αυτόν τον χρήστη.',
   dmNewMessage: '+ Νέο',
   searchUserMeta: (followers, events) => `${followers} ακόλουθοι · ${events} εκδηλώσεις`,
-  onboardingBioPlaceholder: (dept, uni) => `${dept} @ ${uni}. Λοιπόν, ποιος είσαι;`,
+  onboardingBioPlaceholder: () => 'Εκτός από το να χρωστάς μαθήματα, τι άλλο κάνεις;',
   groupNamePlaceholder: 'π.χ. Ομάδα ΑΣΟΕΕ',
-  groupUniversityPlaceholder: 'π.χ. ΑΣΟΕΕ',
 
   validNameRequired: 'Το όνομα είναι υποχρεωτικό.',
   validNameMin: 'Το όνομα πρέπει να έχει τουλάχιστον 2 χαρακτήρες.',
@@ -2420,7 +2543,7 @@ const el: Translations = {
   reminderTitle: (title) => `Ξεκινά σύντομα: ${title}`,
   reminderBody: (location) => `📌 ${location} — σε 1 ώρα`,
 
-  groupsTitle: 'Κοινότητες',
+  groupsTitle: 'Παρέες',
   groupsNewBtn: '+ Νέα',
   groupsTabDiscover: '🔍 Ανακάλυψη',
   groupsTabMine: (n) => `👥 Δικές μου (${n})`,
@@ -2453,6 +2576,14 @@ const el: Translations = {
   notifSectionToday: 'ΣΗΜΕΡΑ',
   notifSectionYesterday: 'ΧΘΕΣ',
   notifSectionEarlier: 'ΠΑΛΙΟΤΕΡΑ',
+  notifSelectBtn: 'Επιλογή',
+  notifSelectAllBtn: 'Επιλογή όλων',
+  notifDeselectAllBtn: 'Αποεπιλογή όλων',
+  notifDeleteBtn: 'Διαγραφή',
+  notifSelectedCount: (n) => `${n} επιλεγμένα`,
+  notifDeleteConfirmTitle: 'Διαγραφή ειδοποίησης;',
+  notifDeleteConfirmBody: 'Δεν μπορεί να αναιρεθεί.',
+  notifDeleteSelectedConfirmTitle: (n) => `Διαγραφή ${n} ειδοποιήσεων;`,
 
   notifPermTitle: 'Θα σου θυμίζουμε;',
   notifPermBody: 'Μόνο δύο πράγματα: μία υπενθύμιση 2 ώρες πριν το event και όταν κάποιος γράφει στο chat της παρέας.',
@@ -2471,6 +2602,8 @@ const el: Translations = {
 
   userProfileTitle: 'Προφίλ',
   userNotFound: 'Ο χρήστης δεν βρέθηκε',
+  groupNotFoundTitle: 'Αυτή η κοινότητα δεν υπάρχει πια',
+  groupNotFoundBody: 'Μπορεί να διαγράφηκε από τον δημιουργό της.',
   userFollowing: '✓ Ακολουθείς',
   userFollow: '+ Ακολούθησε',
   userInvite: '✉️ Πρόσκληση',
@@ -2532,8 +2665,8 @@ const el: Translations = {
   onboardingInterestsSub: 'Επίλεξε τουλάχιστον 3 ενδιαφέροντα και θα σου δείξουμε πιο σχετικές εκδηλώσεις.',
   onboardingInterestsPick: (n) => `Επίλεξε ${n} ακόμα για να συνεχίσεις`,
   onboardingInterestsCount: (n) => `${n} επιλεγμένα`,
-  onboardingPersonaliseTitle: 'Κάνε το δικό σου',
-  onboardingPersonaliseSub: 'Επίλεξε χρώμα προφίλ και γράψε ένα μικρό βιογραφικό.',
+  onboardingPersonaliseTitle: 'Ποιος είσαι, όχι ότι μας νοιάζει',
+  onboardingPersonaliseSub: 'Πες μας μερικά λόγια για σένα αν θες.',
   onboardingPickColor: 'Επίλεξε χρώμα',
   onboardingBioLabel: 'Βιογραφικό (προαιρετικό)',
   onboardingDoneTitle: 'Είσαι έτοιμος!',
@@ -2554,7 +2687,7 @@ const el: Translations = {
   authSignUpTitle: 'Δημιουργία λογαριασμού',
   authSignUpSubtitle: 'Μόνο επαληθευμένοι φοιτητές μπορούν να γίνουν μέλη',
   welcomeTagline: 'Λιγότερο scrolling,\nπερισσότερη ζωή.',
-  welcomeBody: 'Δες τι γίνεται σήμερα κοντά σου και πήγαινε. Με φοιτητές από τη σχολή σου.',
+  welcomeBody: 'Απόλαυσε τα φοιτητικά σου χρόνια — με παρέα.',
   welcomeGetStarted: 'Ξεκίνα',
   welcomeHaveAccount: 'Έχω ήδη λογαριασμό',
   welcomeTermsNotice: 'Συνεχίζοντας αποδέχεσαι τους όρους χρήσης',
@@ -2568,7 +2701,7 @@ const el: Translations = {
   authEmailDeclinedTryAgain: 'Δοκίμασε διαφορετικό πανεπιστημιακό email',
   authGenericEmailHint: 'Οποιοδήποτε email έχεις πρόσβαση — θα το χρειαστείς για να επιβεβαιώσεις τον λογαριασμό σου.',
   authUseUniEmailLink: 'Έχω πανεπιστημιακό email',
-  authIdPhotoLabel: 'Φωτογραφία φοιτητικής ταυτότητας (πάσο)',
+  authIdPhotoLabel: 'Φωτογραφία φοιτητικής ταυτότητας (πάσο) ή βεβαίωση σπουδών',
   authIdPhotoHint: 'Θα την ελέγξουμε χειροκίνητα πριν σου δώσουμε πλήρη πρόσβαση — συνήθως μέσα σε μία μέρα.',
   authIdPhotoRequired: 'Χρειάζεται φωτογραφία της φοιτητικής σου ταυτότητας.',
   authTermsRequired: 'Πρέπει να αποδεχτείς τους Όρους Χρήσης και την Πολιτική Απορρήτου για να συνεχίσεις.',
@@ -2630,9 +2763,11 @@ const el: Translations = {
   groupLabelName: 'Όνομα *',
   groupLabelDescription: 'Περιγραφή *',
   groupDescriptionPlaceholder: 'Για τι πρόκειται αυτή η κοινότητα;',
-  groupLabelUniversity: 'Πανεπιστήμιο (προαιρετικό)',
+  groupDescriptionMinHint: 'Τουλάχιστον 10 χαρακτήρες.',
   groupPrivateLabel: 'Ιδιωτική κοινότητα',
   groupPrivateSub: 'Ορατή μόνο σε προσκεκλημένα μέλη',
+  groupMoreOptions: 'Περισσότερες επιλογές',
+  groupFewerOptions: 'Λιγότερες επιλογές',
   groupCreateBtn: 'Δημιουργία κοινότητας 🎉',
   groupEditTitle: 'Επεξεργασία κοινότητας',
   groupSaveBtn: 'Αποθήκευση αλλαγών',
@@ -2645,8 +2780,8 @@ const el: Translations = {
   groupKickBtn: 'Αφαίρεση',
 
   verifyTitle: 'Έλεγξε το inbox σου',
-  verifyBody: 'Στείλαμε σύνδεσμο επαλήθευσης στο πανεπιστημιακό σου email. Πάτησέ τον για να ενεργοποιήσεις τον λογαριασμό σου στο keno..',
-  verifySpamHint: 'Δεν το βλέπεις; Έλεγξε τον φάκελο ανεπιθύμητης αλληλογραφίας (spam) — μερικές φορές τα emails επαλήθευσης καταλήγουν εκεί.',
+  verifyBody: 'Πάτα τον σύνδεσμο που σου στείλαμε (ή επικόλλησέ τον στο πρόγραμμα περιήγησής σου, π.χ. Chrome) για να ενεργοποιήσεις τον λογαριασμό σου.',
+  verifySpamHint: 'Αν δεν βρίσκεις το email, τσέκαρε τα spam.',
   verifyResent: '✓  Email απεστάλη — έλεγξε το inbox σου.',
   verifyResendError: 'Δεν στάλθηκε το email — ίσως έστειλες πολλά αιτήματα. Δοκίμασε ξανά σε λίγο.',
   verifyBtnCheck: 'Επαλήθευσα το email μου',
@@ -2697,6 +2832,31 @@ const el: Translations = {
   reconnectSendBtn: 'Στείλε την πρόταση',
   reconnectSkipBtn: 'Όχι τώρα',
   reconnectError: 'Αποτυχία καταγραφής της επιλογής σου',
+
+  startUniversityTitle: 'Σε ποιο πανεπιστήμιο είσαι;',
+  startUniversitySubtitle: 'Θα σου δείξουμε πρώτα τι γίνεται κοντά στη σχολή σου.',
+  startUniversityExpectation: (domain) => `Θα χρειαστείς το @${domain} email σου στο τέλος — κράτα το πρόχειρο.`,
+  startDepartmentTitle: 'Σε ποιο τμήμα; (προαιρετικό)',
+  startDepartmentSubtitle: 'Για να σε βρίσκουν πιο εύκολα άτομα από τη σχολή σου.',
+  startNameTitle: 'Πώς σε λένε;',
+  startNameSubtitle: 'Έτσι θα σε βλέπουν οι άλλοι στα events.',
+  startAgeTitle: 'Πόσων χρονών είσαι; (προαιρετικό)',
+  startAgeSubtitle: 'Βοηθάει μόνο σε events με ηλικιακό όριο.',
+  startAccountTitle: 'Τελευταίο βήμα',
+  startAccountSubtitle: 'Το ακαδημαϊκό email επιβεβαιώνει ότι είσαι φοιτητής. Δεν το βλέπει κανείς άλλος.',
+  startContinueBtn: 'Συνέχεια',
+  startPersonalisePhotoBtn: 'Φωτογραφία',
+  startNoAcademicEmailLink: 'Δεν έχω ακαδημαϊκό email',
+  startUniMismatchError: (domain) => `Αυτό το email δεν φαίνεται να είναι από το ${domain}. Θες να αλλάξεις πανεπιστήμιο;`,
+  startUniMismatchChangeLink: 'Άλλαξε πανεπιστήμιο',
+  startDepartmentManualLink: 'Δεν βρίσκω το τμήμα μου',
+  startDepartmentPickLink: 'Επίλεξε από τη λίστα',
+  startUniversityOtherOption: 'Άλλο',
+  startUniversityOtherNote: 'Θα χρειαστεί να χρησιμοποιήσεις το δικό σου email (όχι ακαδημαϊκό) και να ανεβάσεις φωτογραφία φοιτητικής ταυτότητας ή βεβαίωσης φοίτησης, για να επιβεβαιώσουμε ότι είσαι φοιτητής.',
+  startUniversityFallbackNote: 'Δεν έχεις ακαδημαϊκό email (ή δεν δουλεύει); Μπορείς να χρησιμοποιήσεις το κανονικό σου email και μια φωτογραφία φοιτητικής ταυτότητας ή βεβαίωσης φοίτησης.',
+  startAccountIdPhotoNote: 'Ελέγχεται χειροκίνητα, συνήθως μέσα σε μία μέρα.',
+  startAccountEmailDeclinedNote: 'Αυτό δεν φαίνεται να είναι ακαδημαϊκό email.',
+  genericEmailLabel: 'Email',
 };
 
 const translations: Record<AppLanguage, Translations> = { en, el };

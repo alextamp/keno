@@ -25,6 +25,18 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowed);
     }
 
+    // The "keno" account (src/core/constants/eventsAccount.ts KENO_EVENTS_UID)
+    // reviews auto-imported events from its OWN Settings screen, deliberately
+    // separate from the general admin account/isAdmin() — it only ever needs
+    // eventsPending access, not reports/verifications too. Approving an
+    // event while signed in as this account already satisfies the plain
+    // creatorId == request.auth.uid self-create check on /events and its
+    // private/checkin doc (creatorId is set to this same uid), so this
+    // function is only needed for the eventsPending rule below.
+    function isEventsManager() {
+      return signedIn() && request.auth.uid == 'ObDcfgYrUJQVHYhLcyZ5WetCxSE3';
+    }
+
     // User profiles
     match /users/{userId} {
       allow read: if signedIn();
@@ -86,7 +98,12 @@ service cloud.firestore {
     // Events + subcollections
     match /events/{eventId} {
       allow read: if signedIn();
-      allow create: if signedIn() && request.resource.data.creatorId == request.auth.uid;
+      // isAdmin() OR here is for approving an auto-imported event out of
+      // eventsPending (admin-events.tsx): the signed-in admin is the one
+      // performing the write, but creatorId is set to the "keno" events
+      // account's uid, not the admin's own — the plain self-create check
+      // below would otherwise reject that write.
+      allow create: if signedIn() && (request.resource.data.creatorId == request.auth.uid || isAdmin());
       // Creator can edit everything; anyone else can only touch join/waitlist/reaction
       // state, XP stakes (for Anti-Flake system), or ask to join a private event via joinRequests.
       // referredBy is never client-writable — it's set by the claimReferral
@@ -162,7 +179,12 @@ service cloud.firestore {
           get(/databases/$(database)/documents/events/$(eventId)).data.creatorId == request.auth.uid ||
           get(/databases/$(database)/documents/events/$(eventId)).data.standInHostId == request.auth.uid
         );
-        allow create: if signedIn() && get(/databases/$(database)/documents/events/$(eventId)).data.creatorId == request.auth.uid;
+        // Same isAdmin() OR as the parent event's create rule — approving a
+        // pending event writes its check-in secret as the admin, not as the
+        // "keno" account that ends up as creatorId.
+        allow create: if signedIn() && (
+          get(/databases/$(database)/documents/events/$(eventId)).data.creatorId == request.auth.uid || isAdmin()
+        );
         allow update, delete: if false;
       }
 
@@ -216,6 +238,18 @@ service cloud.firestore {
         allow read: if signedIn();
         allow write: if isOwner(userId);
       }
+    }
+
+    // Candidate events found by the events-ingestion script (ΒΗΜΑ 3),
+    // awaiting a human decision in admin-events.tsx before they ever become
+    // a real, visible event. Only the Admin SDK (service account, bypasses
+    // these rules entirely) ever creates docs here — no client write path
+    // exists, intentionally. Admins can read to review and delete once
+    // they've approved (copied into /events) or rejected a candidate.
+    match /eventsPending/{id} {
+      allow read: if isAdmin() || isEventsManager();
+      allow create, update: if false;
+      allow delete: if isAdmin() || isEventsManager();
     }
 
     // Direct message conversations — gated to the two participants only.
@@ -318,7 +352,15 @@ service cloud.firestore {
     // app. Seed and manage it via the Firebase Console or the Admin SDK
     // directly (bypasses rules entirely), never from a client write.
     match /admins/{uid} {
-      allow read: if isAdmin();
+      // Anyone signed in may read their OWN doc (this is exactly what lets a
+      // client check "am I an admin?" — loadUserFromFirestore reads
+      // admins/{own uid} for every user on every sign-in). Without the
+      // uid==own-uid branch, isAdmin() is self-blocking: a non-admin's own
+      // check gets denied because they aren't already an admin, which
+      // breaks profile loading for every non-admin account. Reading
+      // someone else's doc (enumerating who's an admin) still requires
+      // isAdmin() and is not the client-side lookup used here.
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
       allow write: if false;
     }
 

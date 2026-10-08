@@ -9,7 +9,7 @@ export interface CreateGroupParams {
   coverColor: string;
   coverPhotoUri?: string;
   creatorId: string;
-  universityName?: string;
+  allowedUniversities?: string[];
   isPrivate: boolean;
 }
 
@@ -19,7 +19,7 @@ export interface UpdateGroupParams {
   emoji: string;
   coverColor: string;
   coverPhotoUri?: string;
-  universityName?: string;
+  allowedUniversities?: string[];
   isPrivate: boolean;
 }
 

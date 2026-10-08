@@ -92,7 +92,7 @@ export default function SignInScreen() {
           )}
 
           <Input
-            label={t.authEmailLabel}
+            label={t.genericEmailLabel}
             value={email}
             onChangeText={setEmail}
             placeholder="you@aueb.gr"
@@ -128,7 +128,7 @@ export default function SignInScreen() {
 
         <View style={styles.footer}>
           <Text style={[styles.footerText, { color: colors.textSecondary }]}>{t.authNoAccount}</Text>
-          <Link href="/(auth)/sign-up" asChild>
+          <Link href={'/(auth)/start/university' as any} asChild>
             <AnimatedPressable>
               <Text style={[styles.footerLink, { color: colors.primary }]}>{t.authSignUpLink}</Text>
             </AnimatedPressable>

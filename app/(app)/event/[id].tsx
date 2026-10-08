@@ -21,20 +21,6 @@ import {
   EventEntity, EventCategory, EVENT_CATEGORY_COLORS,
   GenderFilter, isAttending, isEventFull, isOnWaitlist, spotsLeft,
 } from '@/features/events/domain/entities/event.entity';
-
-const CATEGORY_KEYS: Record<EventCategory, string> = {
-  [EventCategory.Party]: 'catParty',
-  [EventCategory.Sports]: 'catSports',
-  [EventCategory.Study]: 'catStudy',
-  [EventCategory.Chill]: 'catChill',
-  [EventCategory.Coffee]: 'catCoffee',
-  [EventCategory.Other]: 'catOther',
-};
-// EventEntity has no stored duration/end time, so "has this event ended?"
-// (used to gate the post-event Connect/reconnect button) is a fixed-offset
-// guess from the start time, same style as the 30-min-before-start check-in
-// window elsewhere in this file.
-const ASSUMED_EVENT_DURATION_MS = 3 * 60 * 60 * 1000;
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { useEventsStore } from '@/features/events/presentation/store/events.store';
 import { eventsRepository } from '@/features/events/data/repositories/events.repository.impl';
@@ -64,6 +50,20 @@ import { useReviewsStore } from '@/features/reviews/presentation/store/reviews.s
 import { REVIEW_EMOJI, REVIEW_LABEL, ReviewType } from '@/features/reviews/domain/entities/review.entity';
 import { swipesRepository } from '@/features/swipes/data/repositories/swipes.repository.impl';
 import { queryUsersByNamePrefix } from '@/core/utils/userSearch';
+
+const CATEGORY_KEYS: Record<EventCategory, string> = {
+  [EventCategory.Party]: 'catParty',
+  [EventCategory.Sports]: 'catSports',
+  [EventCategory.Study]: 'catStudy',
+  [EventCategory.Chill]: 'catChill',
+  [EventCategory.Coffee]: 'catCoffee',
+  [EventCategory.Other]: 'catOther',
+};
+// EventEntity has no stored duration/end time, so "has this event ended?"
+// (used to gate the post-event Connect/reconnect button) is a fixed-offset
+// guess from the start time, same style as the 30-min-before-start check-in
+// window elsewhere in this file.
+const ASSUMED_EVENT_DURATION_MS = 3 * 60 * 60 * 1000;
 
 interface InviteUserResult { uid: string; name: string; universityName: string; avatarColor: string; }
 
@@ -2102,7 +2102,7 @@ const styles = StyleSheet.create({
   shareCardContainer: { position: 'absolute', top: -9999, left: 0, right: 0 },
   // 360x640 @3x device pixel ratio = 1080x1920, Instagram Story's exact recommended size
   shareCard: { width: 360, height: 640, borderRadius: 24, overflow: 'hidden' },
-  shareCardBgImage: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
+  shareCardBgImage: { ...StyleSheet.absoluteFill, width: '100%', height: '100%' },
   shareCardFloatWrap: { flex: 1, justifyContent: 'center', paddingHorizontal: 36 },
   shareCardFloat: {
     backgroundColor: '#FFFDF7',

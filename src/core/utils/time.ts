@@ -1,3 +1,5 @@
+import { format } from 'date-fns';
+import { el as dateFnsEl } from 'date-fns/locale';
 import type { AppLanguage } from '@/core/i18n';
 
 export function getCountdown(dateTime: Date, language: AppLanguage = 'en'): { label: string; urgent: boolean } {
@@ -28,5 +30,13 @@ export function formatMessageTime(timestamp: Date, language: AppLanguage = 'en')
   if (diffMins < 60) return el ? `${diffMins}λ πριν` : `${diffMins}m ago`;
   const diffHours = Math.floor(diffMins / 60);
   if (diffHours < 24) return el ? `${diffHours}ω πριν` : `${diffHours}h ago`;
-  return el ? 'χθες' : 'yesterday';
+  // Everything past 24h used to collapse into a single hardcoded "yesterday"
+  // no matter how old it actually was — a notification from last month
+  // read exactly the same as one from yesterday. Extend the same
+  // day-bucket pattern getCountdown already uses above, then fall back to
+  // an actual date once "N days ago" stops being a useful distinction.
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return el ? 'χθες' : 'yesterday';
+  if (diffDays < 7) return el ? `${diffDays}μ πριν` : `${diffDays}d ago`;
+  return format(timestamp, 'd MMM', { locale: el ? dateFnsEl : undefined });
 }

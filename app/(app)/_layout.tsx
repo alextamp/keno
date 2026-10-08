@@ -2,15 +2,24 @@ import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { useNotificationsStore } from '@/features/notifications/notifications.store';
+import { useDmUnreadStore } from '@/core/store/dmUnread.store';
 
 export default function AppLayout() {
   const user = useAuthStore((s) => s.user);
   const subscribe = useNotificationsStore((s) => s.subscribe);
   const clear = useNotificationsStore((s) => s.clear);
+  const subscribeDmUnread = useDmUnreadStore((s) => s.subscribe);
+  const clearDmUnread = useDmUnreadStore((s) => s.clear);
 
   useEffect(() => {
     if (!user) { clear(); return; }
     const unsub = subscribe(user.id);
+    return unsub;
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user) { clearDmUnread(); return; }
+    const unsub = subscribeDmUnread(user.id);
     return unsub;
   }, [user?.id]);
 
@@ -25,6 +34,7 @@ export default function AppLayout() {
       <Stack.Screen name="blocked-users" />
       <Stack.Screen name="admin-reports" />
       <Stack.Screen name="admin-verifications" />
+      <Stack.Screen name="admin-events" />
       <Stack.Screen name="event/[id]" />
       <Stack.Screen name="event/edit/[id]" />
       <Stack.Screen name="user/[uid]" />
@@ -34,6 +44,7 @@ export default function AppLayout() {
       <Stack.Screen name="group/create" />
       <Stack.Screen name="group/edit/[id]" />
       <Stack.Screen name="leaderboard" />
+      <Stack.Screen name="challenges" />
       <Stack.Screen name="dm/[uid]" />
       <Stack.Screen name="event-chat/[id]" />
       <Stack.Screen name="swipes/[eventId]" />

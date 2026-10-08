@@ -12,6 +12,7 @@ import { EventCategory, EventEntity, isAttending, isEventFull, isEventPast } fro
 import { useEventsStore } from '@/features/events/presentation/store/events.store';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { useNotificationsStore } from '@/features/notifications/notifications.store';
+import { useDmUnreadStore } from '@/core/store/dmUnread.store';
 import { eventsRepository } from '@/features/events/data/repositories/events.repository.impl';
 import { isLeft } from '@/core/utils/either';
 import { EventCard } from '@/components/ui/EventCard';
@@ -28,6 +29,7 @@ import { useLanguageStore, getDateLocale, useTranslation } from '@/core/i18n';
 import { fetchUserProfiles, UserProfile } from '@/core/utils/userProfiles';
 import { haversineKm, matchesWhenBucket } from '@/core/utils/geo';
 import { usePreferencesStore } from '@/core/store/preferences.store';
+import { INTEREST_MATCH_KEYWORDS } from '@/core/constants/interests';
 
 const FILTER_DEFS: { value: EventCategory | null; key: string }[] = [
   { key: 'catAll',    value: null },
@@ -39,10 +41,21 @@ const FILTER_DEFS: { value: EventCategory | null; key: string }[] = [
   { key: 'catOther',  value: EventCategory.Other },
 ];
 
+// Only a few picked interests (Sports/Study/Coffee) share a name with an
+// EventCategory — everything else (Gaming, Hiking, Chess, ...) has no
+// category counterpart at all, so relying on category alone left most of
+// the 16 signup interests never affecting sort order. Searching the event's
+// own title/description against each interest's keyword stems
+// (INTEREST_MATCH_KEYWORDS) gives every interest a real shot at matching.
 function interestScore(event: EventEntity, interests: string[]): number {
   if (!interests.length) return 0;
-  const tags = [event.category as string, ...(event.customCategory ? [event.customCategory.toLowerCase()] : [])];
-  return interests.filter((i) => tags.includes(i.toLowerCase())).length;
+  const haystack = [event.category as string, event.customCategory ?? '', event.title, event.description]
+    .join(' ')
+    .toLowerCase();
+  return interests.filter((i) => {
+    const keywords = INTEREST_MATCH_KEYWORDS[i] ?? [i.toLowerCase()];
+    return keywords.some((kw) => haystack.includes(kw));
+  }).length;
 }
 
 function FilterChip({ label, icon, active, onPress }: { label: string; icon?: IconName; active: boolean; onPress: () => void }) {
@@ -109,6 +122,7 @@ export default function FeedScreen() {
   const saveEvent = useAuthStore((s) => s.saveEvent);
   const unsaveEvent = useAuthStore((s) => s.unsaveEvent);
   const unreadCount = useNotificationsStore((s) => s.unreadCount);
+  const dmUnreadCount = useDmUnreadStore((s) => s.unreadCount);
   const { language } = useLanguageStore();
   const t = useTranslation();
   const FILTERS = FILTER_DEFS.map((f) => ({ ...f, label: t[f.key as keyof typeof t] as string }));
@@ -333,21 +347,19 @@ export default function FeedScreen() {
         style={styles.categoryTabs}
       />
 
-      {/* Secondary toggle chips (friends/for-you) + filter-sheet trigger */}
+      {/* Secondary toggle chips (for-you/friends/filters) — one uniform row */}
       <View style={styles.filterRowWrap}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-          <FilterChip label={t.feedForYou} active={forYouSort} onPress={() => { haptics.light(); setForYouSort((v) => !v); }} />
+          <FilterChip label={t.feedForYou} icon="star" active={forYouSort} onPress={() => { haptics.light(); setForYouSort((v) => !v); }} />
           <FilterChip
             label={t.feedFriends} icon="users" active={friendsOnly}
             onPress={() => { haptics.light(); setFriendsOnly((v) => !v); setSelected(null); setOtherSearch(''); }}
           />
+          <FilterChip
+            label={t.feedFilters} icon="filter" active={hasActiveFilters}
+            onPress={() => { haptics.light(); setFilterSheetVisible(true); }}
+          />
         </ScrollView>
-        <AnimatedPressable onPress={() => { haptics.light(); setFilterSheetVisible(true); }} style={styles.filterBtnWrap}>
-          <View style={[styles.filterBtn, { backgroundColor: hasActiveFilters ? colors.accentSoft : colors.surface, borderColor: hasActiveFilters ? colors.primary : colors.border }]}>
-            <Icon name="filter" size={15} color={hasActiveFilters ? colors.accentInk : colors.textSecondary} />
-          </View>
-          {hasActiveFilters && <View style={[styles.filterDot, { backgroundColor: colors.primary }]} />}
-        </AnimatedPressable>
       </View>
 
       {/* For You no-interests hint */}
@@ -434,6 +446,11 @@ export default function FeedScreen() {
               </AnimatedPressable>
               <AnimatedPressable onPress={() => router.push('/(app)/messages' as any)} style={styles.iconBtn}>
                 <Icon name="chat" size={19} color={colors.textPrimary} />
+                {dmUnreadCount > 0 && (
+                  <View style={[styles.topBadge, { backgroundColor: colors.error }]}>
+                    <Text style={styles.topBadgeText}>{dmUnreadCount > 9 ? '9+' : dmUnreadCount}</Text>
+                  </View>
+                )}
               </AnimatedPressable>
               <AnimatedPressable onPress={() => setSearchActive(true)} style={styles.iconBtn}>
                 <Icon name="search" size={19} color={colors.textPrimary} />
@@ -608,12 +625,6 @@ const styles = StyleSheet.create({
     paddingRight: Spacing.md,
     flexDirection: 'row', gap: 7, alignItems: 'center',
   },
-  filterBtnWrap: { marginRight: Spacing.gutter },
-  filterBtn: {
-    width: 34, height: 34, borderRadius: BorderRadius.full,
-    borderWidth: 1, alignItems: 'center', justifyContent: 'center',
-  },
-  filterDot: { position: 'absolute', top: -1, right: -1, width: 8, height: 8, borderRadius: 4 },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     borderRadius: BorderRadius.full, borderWidth: 1,

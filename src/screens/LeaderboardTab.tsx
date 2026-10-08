@@ -19,7 +19,6 @@ import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { ProgressTrack } from '@/components/ui/ProgressTrack';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Icon } from '@/components/ui/Icon';
-import QuestsView from './QuestsView';
 
 export default function LeaderboardScreen() {
   const router = useRouter();
@@ -130,9 +129,10 @@ export default function LeaderboardScreen() {
         </Text>
       </View>
       <SegmentedTabs
-        tabs={[t.leaderboardTopStudents, t.leaderboardUniversities, t.leaderboardQuests]}
+        tabs={[t.leaderboardTopStudents, t.leaderboardUniversities]}
         activeIndex={tab}
         onChange={(i) => { setTab(i); setScopeView(null); }}
+        centered
         style={styles.tabs}
       />
 
@@ -199,8 +199,6 @@ export default function LeaderboardScreen() {
               <Text style={[styles.explainer, { color: colors.textHint }]}>{t.leaderboardExplainerStudents}</Text>
             </>
           )
-        ) : tab === 2 ? (
-          <QuestsView />
         ) : uniLeaderboard.length === 0 ? (
           <Text style={[styles.empty, { color: colors.textHint }]}>{t.leaderboardEmpty}</Text>
         ) : (

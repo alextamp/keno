@@ -23,7 +23,7 @@ import { getLevel, calculateReliabilityScore } from '@/core/constants/gamificati
 import { MAX_STREAK_FREEZE_TOKENS, WEEKLY_QUESTS } from '@/core/constants/quests';
 import { getISOWeekId, getSemesterId, MAX_STREAK_PAUSES_PER_SEMESTER } from '@/core/utils/weekId';
 import { sounds } from '@/core/utils/sounds';
-import { uploadVerificationPhoto } from '@/core/utils/uploadImage';
+import { uploadVerificationPhoto, uploadProfilePhoto } from '@/core/utils/uploadImage';
 import { analytics } from '@/core/utils/analytics';
 
 // TEMPORARILY back on Firebase's own default verification email —
@@ -58,7 +58,14 @@ interface AuthState {
   error: string | null;
   initializeAuth: () => () => void;
   signIn: (params: { email: string; password: string }) => Promise<void>;
-  signUp: (params: { name: string; email: string; password: string; universityName?: string; department?: string; age?: number; idPhotoUri?: string }) => Promise<boolean>;
+  signUp: (params: {
+    name: string; email: string; password: string;
+    universityName?: string; department?: string; age?: number; idPhotoUri?: string;
+    /** Set only by the progressive signup flow (app/(auth)/start/*) — when
+     * present, the profile is created with onboarding already complete so
+     * the old (app)/onboarding screen is skipped entirely. */
+    interests?: string[]; bio?: string; avatarColor?: string; photoUri?: string;
+  }) => Promise<boolean>;
   sendEmailVerification: () => Promise<boolean>;
   sendPasswordReset: (email: string) => Promise<void>;
   reloadAndCheckVerification: () => Promise<void>;
@@ -150,6 +157,11 @@ interface PendingProfile {
   department?: string;
   age?: number;
   idPhotoUri?: string;
+  // Only set by the progressive signup flow — see signUp's doc comment.
+  interests?: string[];
+  bio?: string;
+  avatarColor?: string;
+  photoUri?: string;
 }
 
 // The Firestore user doc is only written once the email is confirmed, so an
@@ -177,6 +189,12 @@ async function ensureUserProfileExists(fbUser: { uid: string; displayName: strin
 
   try {
     const draft: PendingProfile = raw ? JSON.parse(raw) : fallbackDraft!;
+    // Draft.interests is only ever set by the progressive signup flow
+    // (app/(auth)/start/*), which already collected profile-building steps
+    // (interests/bio/colour/photo) before this account was even created —
+    // so completeOnboarding's job is already done here, and re-running the
+    // old (app)/onboarding screen afterward would just re-ask everything.
+    const fromProgressiveFlow = draft.interests !== undefined;
     const profileData: any = {
       name: draft.name,
       nameLower: draft.name.toLowerCase(),
@@ -185,16 +203,24 @@ async function ensureUserProfileExists(fbUser: { uid: string; displayName: strin
       createdEvents: [],
       following: [],
       followers: [],
-      bio: '',
-      avatarColor: '#B8482A',
-      interests: [],
-      onboardingDone: false,
+      bio: fromProgressiveFlow ? (draft.bio ?? '') : '',
+      avatarColor: fromProgressiveFlow ? (draft.avatarColor ?? '#B8482A') : '#B8482A',
+      interests: fromProgressiveFlow ? draft.interests : [],
+      onboardingDone: fromProgressiveFlow,
       createdAt: serverTimestamp(),
     };
     // Only include optional fields if they have values (Firestore rejects undefined)
     if (draft.universityName) profileData.universityName = draft.universityName;
     if (draft.department) profileData.department = draft.department;
     if (draft.age) profileData.age = draft.age;
+    if (draft.photoUri) {
+      try {
+        profileData.photoUri = await withTimeout(uploadProfilePhoto(uid, draft.photoUri), UPLOAD_TIMEOUT_MS, 'ensureUserProfileExists:uploadProfilePhoto');
+      } catch {
+        // Non-fatal — account creation must not hang on a flaky upload; the
+        // photo can always be added later from settings.
+      }
+    }
 
     await setDoc(ref, profileData);
     if (draft.idPhotoUri) {
@@ -335,7 +361,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  signUp: async ({ name, email, password, universityName, department, age, idPhotoUri }) => {
+  signUp: async ({ name, email, password, universityName, department, age, idPhotoUri, interests, bio, avatarColor, photoUri }) => {
     set({ isLoading: true, error: null });
     try {
       const { user: fbUser } = await withTimeout(createUserWithEmailAndPassword(auth, email, password), AUTH_NETWORK_TIMEOUT_MS, 'signUp:createUser');
@@ -344,7 +370,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // The Firestore profile doc isn't created yet — only once the email is
       // verified (see ensureUserProfileExists) — so a fake/typo'd address
       // that never gets confirmed doesn't leave a permanent row behind.
-      const draft: PendingProfile = { name, email, universityName, department, age, idPhotoUri };
+      const draft: PendingProfile = { name, email, universityName, department, age, idPhotoUri, interests, bio, avatarColor, photoUri };
       await AsyncStorage.setItem(`${PENDING_PROFILE_KEY}${fbUser.uid}`, JSON.stringify(draft));
       set({ isLoading: false, isEmailVerified: false });
       analytics.track('sign_up_completed', { universityName, hasIdPhoto: !!idPhotoUri });

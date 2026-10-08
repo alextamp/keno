@@ -10,7 +10,11 @@ export interface GroupEntity {
   creatorId: string;
   memberIds: string[];
   eventIds: string[];
-  universityName?: string;
+  /** Same shape/semantics as EventEntity.allowedUniversities — undefined or
+   *  empty means no restriction ("Any"), matching how event creation's
+   *  university picker omits the field entirely for "Any" rather than
+   *  storing it explicitly. */
+  allowedUniversities?: string[];
   isPrivate: boolean;
   invitedUserIds: string[];
   /** uid -> message the requester wrote explaining why they should be let in. */

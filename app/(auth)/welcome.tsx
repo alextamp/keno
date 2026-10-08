@@ -33,7 +33,7 @@ export default function WelcomeScreen() {
       </View>
 
       <View style={styles.footer}>
-        <Button label={t.welcomeGetStarted} onPress={() => router.push('/(auth)/sign-up')} fullWidth />
+        <Button label={t.welcomeGetStarted} onPress={() => router.push('/(auth)/start/university' as any)} fullWidth />
         <Button label={t.welcomeHaveAccount} variant="outline" onPress={() => router.push('/(auth)/sign-in')} fullWidth />
         <Text style={[styles.termsNotice, { color: colors.textHint }]}>{t.welcomeTermsNotice}</Text>
       </View>
