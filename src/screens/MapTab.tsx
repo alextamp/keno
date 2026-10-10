@@ -352,23 +352,6 @@ export default function MapScreen() {
         </View>
       )}
 
-      {/* Event count badge */}
-      <View style={[styles.countBadge, { backgroundColor: colors.surface, borderColor: colors.border, bottom: TAB_BAR_BASE_HEIGHT + insets.bottom + 16 }]}>
-        <Text style={[styles.countText, { color: colors.textPrimary }]}>
-          {t.mapEvents(eventsWithCoords.length)}
-        </Text>
-      </View>
-
-      {/* My location button */}
-      {userLocation && (
-        <AnimatedPressable
-          onPress={() => mapRef.current?.animateToRegion({ ...userLocation, latitudeDelta: 0.02, longitudeDelta: 0.02 }, 600)}
-          style={[styles.locBtn, { backgroundColor: colors.surface, borderColor: colors.border, bottom: TAB_BAR_BASE_HEIGHT + insets.bottom + 16 }]}
-        >
-          <Icon name="pin" size={19} color={colors.primary} />
-        </AnimatedPressable>
-      )}
-
       {/* Edge-swipe strips — restore swipe-to-change-tab without
           interfering with map panning or the filter/locate/count controls. */}
       <View
@@ -428,20 +411,7 @@ const styles = StyleSheet.create({
   mapFilterDot: { position: 'absolute', top: -1, right: -1, width: 8, height: 8, borderRadius: 4 },
   chip: { borderRadius: BorderRadius.full, borderWidth: 1, paddingHorizontal: Spacing.base, paddingVertical: 9, alignItems: 'center', justifyContent: 'center' },
   chipText: { fontSize: FontSize.base, fontFamily: UIFont },
-  // Count badge
-  countBadge: {
-    position: 'absolute', right: Spacing.gutter,
-    borderWidth: 1, borderRadius: BorderRadius.full,
-    paddingHorizontal: Spacing.base, paddingVertical: 7,
-  },
-  countText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
   swipeEdge: { position: 'absolute', width: 24 },
-  // Location button
-  locBtn: {
-    position: 'absolute', left: Spacing.gutter,
-    width: 42, height: 42, borderRadius: 21,
-    borderWidth: 1, alignItems: 'center', justifyContent: 'center',
-  },
   // Empty state
   emptyOverlay: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,

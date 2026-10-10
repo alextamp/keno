@@ -16,7 +16,7 @@ import { TAB_BAR_BASE_HEIGHT } from '@/core/constants/layout';
 import { EventEntity, isEventPast } from '@/features/events/domain/entities/event.entity';
 import { useTranslation, useLanguageStore } from '@/core/i18n';
 import { universityLabel } from '@/core/constants/universities';
-import { getLevel, isVerifiedUser, isRegularUser, isBetaTesterUser, LEVELS } from '@/core/constants/gamification';
+import { getLevel, isVerifiedUser, isRegularUser, isBetaTesterUser } from '@/core/constants/gamification';
 import { LevelsModal } from '@/components/ui/LevelsModal';
 import { Icon } from '@/components/ui/Icon';
 import { Card } from '@/components/ui/Card';
@@ -125,10 +125,6 @@ export default function ProfileScreen() {
   const now = new Date();
   const streak = user.currentStreak ?? 0;
   const levelInfo = getLevel(user.xp ?? 0, user.id);
-  // Overall journey progress (0 XP through the last level's threshold), not
-  // just the current level's own segment — matches the LevelsModal roadmap.
-  const maxLevelXP = LEVELS[LEVELS.length - 1].minXP;
-  const overallLevelProgress = Math.min(1, (user.xp ?? 0) / maxLevelXP);
 
   const upcomingEvents = myEvents.filter((e) => !isEventPast(e));
   const pastEvents = myEvents.filter((e) => isEventPast(e)).sort((a, b) => b.dateTime.getTime() - a.dateTime.getTime());
@@ -297,10 +293,10 @@ export default function ProfileScreen() {
             <View style={styles.levelCardHeader}>
               <SectionLabel label={t.profileLevelProgressLabel(levelInfo.name)} />
               <Text style={[styles.levelCardFraction, { color: colors.textHint }]}>
-                {user.xp ?? 0}/{maxLevelXP}
+                {levelInfo.next ? `${levelInfo.xpInLevel}/${levelInfo.xpNeeded}` : levelInfo.xpInLevel}
               </Text>
             </View>
-            <ProgressTrack progress={overallLevelProgress} style={styles.levelCardTrack} />
+            <ProgressTrack progress={levelInfo.progress} style={styles.levelCardTrack} />
             <Text style={[styles.levelCardCaption, { color: colors.textHint }]}>
               {levelInfo.next ? t.profileLevelXpToNext(levelInfo.xpNeeded - levelInfo.xpInLevel) : t.profileLevelMaxed}
             </Text>

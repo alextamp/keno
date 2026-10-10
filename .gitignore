@@ -28,8 +28,13 @@ functions/lib/
 
 # Service account keys for scripts/import-events.js — these must only ever
 # come from GOOGLE_APPLICATION_CREDENTIALS / FIREBASE_SERVICE_ACCOUNT_JSON
-# env vars, never a file checked into the repo.
+# env vars, never a file checked into the repo. Patterns cover every naming
+# variant actually seen in practice (Firebase Console's download, and a
+# manually-named copy), not just the "serviceAccount" camelCase spelling —
+# one of these (keno-service-account.json) once sat in the repo root
+# unignored for several days before this caught it.
 *serviceAccount*.json
+*service-account*.json
 *-firebase-adminsdk-*.json
 .env.scripts
 

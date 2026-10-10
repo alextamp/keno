@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { useCreateFlowStore } from '@/core/store/createFlow.store';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import {
   Alert, Image, KeyboardAvoidingView, Platform,
@@ -90,6 +91,8 @@ export default function CreateEventScreen() {
 
   const [step, setStep] = useState<1 | 2>(1);
   const scrollViewRef = useRef<ScrollView>(null);
+  const setCreateFlowStep = useCreateFlowStore((s) => s.setStep);
+  useEffect(() => { setCreateFlowStep(step); }, [step]);
 
   // Step 1 fields
   const [title, setTitle] = useState('');
@@ -327,8 +330,7 @@ export default function CreateEventScreen() {
         <View style={styles.header}>
           {step === 2 && (
             <AnimatedPressable onPress={() => { setStep(1); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }} style={[styles.backBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Icon name="back" size={14} color={colors.textSecondary} />
-              <Text style={[styles.backBtnText, { color: colors.textSecondary }]}>{t.createBack}</Text>
+              <Icon name="back" size={15} color={colors.textSecondary} />
             </AnimatedPressable>
           )}
           <Text style={[styles.title, { color: colors.textPrimary }]}>
@@ -652,8 +654,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flexGrow: 1, paddingHorizontal: Spacing.gutter, gap: Spacing.lg },
   header: { gap: Spacing.sm },
-  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: Spacing.md, paddingVertical: 7, borderRadius: BorderRadius.full, borderWidth: 1 },
-  backBtnText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
+  backBtn: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start', borderWidth: 1 },
   title: { fontSize: FontSize.display, fontWeight: FontWeight.bold, fontFamily: TitleFont, letterSpacing: -0.5 },
   subtitle: { fontSize: FontSize.base, fontFamily: UIFontLight },
   form: { gap: Spacing.md },

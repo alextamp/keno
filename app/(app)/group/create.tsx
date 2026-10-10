@@ -98,11 +98,11 @@ export default function CreateGroupScreen() {
     >
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12, borderBottomColor: colors.border }]}>
-        <AnimatedPressable onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={[styles.backText, { color: colors.textSecondary }]}>{t.editEventBack}</Text>
+        <AnimatedPressable onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Icon name="back" size={15} color={colors.textSecondary} />
         </AnimatedPressable>
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{t.groupNewTitle}</Text>
-        <View style={{ width: 60 }} />
+        <View style={{ width: 32 }} />
       </View>
 
       <ScrollView contentContainerStyle={[styles.form, { paddingBottom: insets.bottom + 24 }]} showsVerticalScrollIndicator={false}>
@@ -254,8 +254,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md,
     borderBottomWidth: 2,
   },
-  backBtn: { width: 60 },
-  backText: { fontSize: FontSize.sm, fontFamily: UIFont },
+  backBtn: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.extrabold, fontFamily: TitleFont },
   form: { padding: Spacing.lg, gap: Spacing.md },
   preview: {

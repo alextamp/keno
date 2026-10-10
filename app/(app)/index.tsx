@@ -9,6 +9,7 @@ import { useTheme } from '@/core/theme';
 import { UIFont, FontSize, FontWeight } from '@/core/constants/theme';
 import { useNotificationsStore } from '@/features/notifications/notifications.store';
 import { useTabNavigation } from '@/core/tabNavigation';
+import { useCreateFlowStore } from '@/core/store/createFlow.store';
 import { usePressAnimation } from '@/core/hooks/usePressAnimation';
 import { useTranslation } from '@/core/i18n';
 import { Icon, IconName } from '@/components/ui/Icon';
@@ -154,9 +155,11 @@ export default function AppHub() {
             return;
           }
           // Organic swipe. Only the swipe from Create toward Leaderboard
-          // bounces back — it read as a stray navigation bug mid-form.
-          // Swiping the other way (toward Map) still works normally.
-          if (activeIndexRef.current === FAB_INDEX && position === LEADERBOARD_INDEX) {
+          // bounces back, and only once there's actually a half-filled form
+          // to lose (createFlowStep 2) — it read as a stray navigation bug
+          // mid-form. Step 1 has nothing entered yet, so swiping away there
+          // is safe and left working normally, same as swiping toward Map.
+          if (activeIndexRef.current === FAB_INDEX && position === LEADERBOARD_INDEX && useCreateFlowStore.getState().step !== 1) {
             programmaticRef.current = true;
             pagerRef.current?.setPage(FAB_INDEX);
             return;

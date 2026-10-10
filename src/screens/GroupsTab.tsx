@@ -41,7 +41,7 @@ function GroupThumb({ group, size = 50 }: { group: GroupEntity; size?: number })
   );
 }
 
-function GroupHeroCard({ group, onPress }: { group: GroupEntity; onPress: () => void }) {
+function GroupHeroCard({ group, onPress, action }: { group: GroupEntity; onPress: () => void; action?: React.ReactNode }) {
   const { colors } = useTheme();
   const t = useTranslation();
   return (
@@ -63,6 +63,7 @@ function GroupHeroCard({ group, onPress }: { group: GroupEntity; onPress: () => 
             </View>
             <Tag label={t.groupsEvents(group.eventIds.length)} variant="neutral" />
           </View>
+          {action && <View style={styles.heroAction}>{action}</View>}
         </View>
       </Card>
     </AnimatedPressable>
@@ -126,6 +127,19 @@ export default function GroupsScreen() {
     });
   }, [dynamicHeroEnabled]);
 
+  // Same touch-driven hero promotion, for "ΠΡΟΤΕΙΝΟΜΕΝΕΣ" — this was never
+  // wired there at all (plain uniform rows only), so "dynamic card expand"
+  // never did anything for suggested groups even with the setting on.
+  const [suggestedHeroId, setSuggestedHeroId] = useState<string | null>(null);
+  const becomeSuggestedHero = useCallback((id: string) => {
+    if (!dynamicHeroEnabled) return;
+    setSuggestedHeroId((prev) => {
+      if (prev === id) return prev;
+      sounds.play('click').catch(() => {});
+      return id;
+    });
+  }, [dynamicHeroEnabled]);
+
   useEffect(() => {
     loadPublicGroups();
     if (user) loadMyGroups(user.id);
@@ -166,6 +180,13 @@ export default function GroupsScreen() {
       setHeroId(filteredMine[0].id);
     }
   }, [filteredMine, heroId]);
+
+  useEffect(() => {
+    if (!suggested.length) { setSuggestedHeroId(null); return; }
+    if (!suggestedHeroId || !suggested.some((g) => g.id === suggestedHeroId)) {
+      setSuggestedHeroId(suggested[0].id);
+    }
+  }, [suggested, suggestedHeroId]);
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -304,35 +325,97 @@ export default function GroupsScreen() {
             );
           })()}
 
-          {/* ── ΠΡΟΤΕΙΝΟΜΕΝΕΣ: compact rows with a small Join button ── */}
-          <View style={styles.section}>
-            <SectionLabel label={t.groupsSuggestedSection} style={styles.sectionLabel} />
-            {suggested.length === 0 ? (
-              <Text style={[styles.emptyInline, { color: colors.textHint }]}>
-                {search ? t.groupsEmptySearch : t.groupsEmptyMine}
-              </Text>
-            ) : (
-              <Card style={styles.rowsCard}>
-                {suggested.map((g, i) => (
-                  <GroupRow
-                    key={g.id}
-                    group={g}
-                    isFirst={i === 0}
-                    onPress={() => router.push(`/(app)/group/${g.id}` as any)}
-                    action={user ? (
-                      <Button
-                        label={t.groupsJoinBtn}
-                        variant="outline"
-                        size="sm"
-                        loading={joiningId === g.id}
-                        onPress={() => handleJoin(g.id)}
-                      />
-                    ) : undefined}
+          {/* ── ΠΡΟΤΕΙΝΟΜΕΝΕΣ: same touch-driven hero promotion as "ΟΙ ΟΜΑΔΕΣ
+              ΜΟΥ" above, each row/card keeping its own Join button. ── */}
+          {(() => {
+            if (suggested.length === 0) {
+              return (
+                <View style={styles.section}>
+                  <SectionLabel label={t.groupsSuggestedSection} style={styles.sectionLabel} />
+                  <Text style={[styles.emptyInline, { color: colors.textHint }]}>
+                    {search ? t.groupsEmptySearch : t.groupsEmptyMine}
+                  </Text>
+                </View>
+              );
+            }
+
+            const joinAction = (g: GroupEntity) => user ? (
+              <Button
+                label={t.groupsJoinBtn}
+                variant="outline"
+                size="sm"
+                loading={joiningId === g.id}
+                onPress={() => handleJoin(g.id)}
+              />
+            ) : undefined;
+
+            if (!dynamicHeroEnabled) {
+              return (
+                <View style={styles.section}>
+                  <SectionLabel label={t.groupsSuggestedSection} style={styles.sectionLabel} />
+                  <Card style={styles.rowsCard}>
+                    {suggested.map((g, i) => (
+                      <FadeInView key={g.id}>
+                        <GroupRow
+                          group={g}
+                          isFirst={i === 0}
+                          onPress={() => router.push(`/(app)/group/${g.id}` as any)}
+                          action={joinAction(g)}
+                        />
+                      </FadeInView>
+                    ))}
+                  </Card>
+                </View>
+              );
+            }
+
+            const heroIndex = suggested.findIndex((g) => g.id === suggestedHeroId);
+            const heroGroup = heroIndex === -1 ? suggested[0] : suggested[heroIndex];
+            const before = suggested.slice(0, heroIndex === -1 ? 0 : heroIndex);
+            const after = suggested.slice(heroIndex === -1 ? 1 : heroIndex + 1);
+            return (
+              <View style={styles.section}>
+                <SectionLabel label={t.groupsSuggestedSection} style={styles.sectionLabel} />
+                {before.length > 0 && (
+                  <Card style={styles.rowsCard}>
+                    {before.map((g, i) => (
+                      <FadeInView key={g.id}>
+                        <GroupRow
+                          group={g}
+                          isFirst={i === 0}
+                          onPress={() => router.push(`/(app)/group/${g.id}` as any)}
+                          onPressIn={() => becomeSuggestedHero(g.id)}
+                          action={joinAction(g)}
+                        />
+                      </FadeInView>
+                    ))}
+                  </Card>
+                )}
+                <FadeInView key={heroGroup.id}>
+                  <GroupHeroCard
+                    group={heroGroup}
+                    onPress={() => router.push(`/(app)/group/${heroGroup.id}` as any)}
+                    action={joinAction(heroGroup)}
                   />
-                ))}
-              </Card>
-            )}
-          </View>
+                </FadeInView>
+                {after.length > 0 && (
+                  <Card style={styles.rowsCard}>
+                    {after.map((g, i) => (
+                      <FadeInView key={g.id}>
+                        <GroupRow
+                          group={g}
+                          isFirst={i === 0}
+                          onPress={() => router.push(`/(app)/group/${g.id}` as any)}
+                          onPressIn={() => becomeSuggestedHero(g.id)}
+                          action={joinAction(g)}
+                        />
+                      </FadeInView>
+                    ))}
+                  </Card>
+                )}
+              </View>
+            );
+          })()}
         </ScrollView>
       )}
     </View>
@@ -365,6 +448,7 @@ const styles = StyleSheet.create({
   heroBody: { padding: Spacing.md, gap: 7 },
   heroName: { fontSize: FontSize.lg, fontWeight: FontWeight.semibold, fontFamily: TitleFont },
   heroFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  heroAction: { marginTop: 4 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaText: { fontSize: FontSize.sm, fontFamily: UIFontLight },
   // Compact rows

@@ -310,6 +310,20 @@ export default function FeedScreen() {
     }
   }, [zeroStateItems, heroId]);
 
+  // Same touch-driven hero promotion as the main list, but for the
+  // Opening Soon fallback rows — this was wired as a no-op there
+  // (onPressIn={() => {}}), so "dynamic card expand" never did anything
+  // for that section even though the setting/feature itself is identical.
+  const [openingSoonHeroId, setOpeningSoonHeroId] = useState<string | null>(null);
+  const becomeOpeningSoonHero = useCallback((id: string) => {
+    if (!dynamicHeroEnabled) return;
+    setOpeningSoonHeroId((prev) => {
+      if (prev === id) return prev;
+      sounds.play('click').catch(() => {});
+      return id;
+    });
+  }, [dynamicHeroEnabled]);
+
   // "Keno Wednesdays" flagship pin (research doc #28) — admin-curated (see
   // edit/[id].tsx), shown above every filter/search state so it never
   // requires browsing. Store already drops anything more than 6h past its
@@ -336,16 +350,32 @@ export default function FeedScreen() {
   const showOpeningSoonFallback =
     zeroStateItems.length === 0 && !friendsOnly && !(showOtherSearch && otherSearch) && openingSoonFallback.length > 0;
 
+  useEffect(() => {
+    if (!openingSoonFallback.length) return;
+    if (!openingSoonHeroId || !openingSoonFallback.some((e) => e.id === openingSoonHeroId)) {
+      setOpeningSoonHeroId(openingSoonFallback[0].id);
+    }
+  }, [openingSoonFallback, openingSoonHeroId]);
+
   const listHeader = (
     <>
-      {/* Category text-tabs (spec §6: "text tabs (Όλα / Κοντά μου / Φίλοι / Αύριο)") */}
-      <SegmentedTabs
-        tabs={FILTERS.map((f) => f.label)}
-        activeIndex={FILTERS.findIndex((f) => !friendsOnly && selected === f.value)}
-        onChange={(i) => handleSelectFilter(FILTERS[i].value)}
-        scrollable
-        style={styles.categoryTabs}
-      />
+      {/* Category text-tabs (spec §6: "text tabs (Όλα / Κοντά μου / Φίλοι / Αύριο)").
+          Pinned to its natural height: SegmentedTabs' scrollable mode puts
+          flexGrow:1 on its own contentContainerStyle (for centering short
+          rows), which used to be harmless nested inside the FlatList header's
+          plain content flow — now that this row is a flex sibling of the
+          list itself (fixed category tags), that flexGrow reads as "fill the
+          remaining column" instead, stretching the whole row into empty
+          space. flexGrow/flexShrink: 0 here keeps it pinned regardless. */}
+      <View style={{ flexGrow: 0, flexShrink: 0 }}>
+        <SegmentedTabs
+          tabs={FILTERS.map((f) => f.label)}
+          activeIndex={FILTERS.findIndex((f) => !friendsOnly && selected === f.value)}
+          onChange={(i) => handleSelectFilter(FILTERS[i].value)}
+          scrollable
+          style={styles.categoryTabs}
+        />
+      </View>
 
       {/* Secondary toggle chips (for-you/friends/filters) — one uniform row */}
       <View style={styles.filterRowWrap}>
@@ -474,61 +504,101 @@ export default function FeedScreen() {
         </AnimatedPressable>
       )}
 
+      {/* Category tags + For You/Friends/Filters row — fixed above the list,
+          not scrolled away with the events underneath it. */}
+      {!showZeroState && listHeader}
+
       {isLoading ? (
         <FlatList
           key="feed-skeleton"
+          style={{ flex: 1 }}
           data={[1, 2, 3]}
           keyExtractor={(item) => String(item)}
           contentContainerStyle={[styles.list, { paddingBottom: TAB_BAR_BASE_HEIGHT + insets.bottom + 20 }]}
           showsVerticalScrollIndicator={false}
-          ListHeaderComponent={listHeader}
           ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
           renderItem={() => <EventCardSkeleton />}
         />
+      ) : zeroStateItems.length === 0 ? (
+        // FlatList's own ListEmptyComponent path doesn't reliably scroll once
+        // its content (the opening-soon fallback cards) overflows the screen
+        // — a known RN quirk where an empty `data` array leaves the list's
+        // scroll metrics stuck near zero regardless of what actually renders.
+        // Tapping a category tag with zero matching events hit exactly this,
+        // so the empty state gets a plain ScrollView instead, which has no
+        // such issue.
+        <ScrollView
+          key="feed-empty"
+          style={{ flex: 1 }}
+          contentContainerStyle={[styles.list, { paddingBottom: TAB_BAR_BASE_HEIGHT + insets.bottom + 20 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
+        >
+          <View style={styles.empty}>
+            <Icon
+              name={friendsOnly ? 'users' : showOtherSearch && otherSearch ? 'search' : 'star'}
+              size={38}
+              color={colors.textDecor}
+            />
+            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
+              {friendsOnly ? t.feedEmptyFriendsTitle : showOtherSearch && otherSearch ? `"${otherSearch}"` : t.feedEmptyTitle}
+            </Text>
+            <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>
+              {friendsOnly ? t.feedEmptyFriendsBody : showOtherSearch && otherSearch ? t.feedEmptySearchBody : t.feedEmptyBody}
+            </Text>
+            {friendsOnly && (
+              <AnimatedPressable onPress={() => router.push('/(app)/search' as any)} style={[styles.emptyBtn, { backgroundColor: colors.primary }]}>
+                <Text style={styles.emptyBtnText}>{t.feedFindPeople}</Text>
+              </AnimatedPressable>
+            )}
+            {showOpeningSoonFallback && (
+              <View style={styles.openingSoonWrap}>
+                <Text style={[styles.openingSoonLabel, { color: colors.textHint }]}>{t.feedOpeningSoonLabel}</Text>
+                {openingSoonFallback.map((event, index) => {
+                  const joined = user ? isAttending(event, user.id) : false;
+                  const isHero = event.id === openingSoonHeroId;
+                  const prevEvent = index > 0 ? openingSoonFallback[index - 1] : null;
+                  const isFirstRow = !prevEvent || prevEvent.id === openingSoonHeroId;
+                  return (
+                    <FadeInView key={isHero ? `${event.id}-hero` : `${event.id}-row`}>
+                      {isHero ? (
+                        <EventCard
+                          event={event}
+                          isJoined={joined}
+                          isSaved={user?.savedEventIds?.includes(event.id) ?? false}
+                          onSave={user ? () => {
+                            haptics.light();
+                            const saved = user?.savedEventIds?.includes(event.id) ?? false;
+                            (saved ? unsaveEvent(event.id) : saveEvent(event.id)).catch(() => {});
+                          } : undefined}
+                          onPress={() => router.push(`/(app)/event/${event.id}`)}
+                          friendProfiles={friendProfiles}
+                        />
+                      ) : (
+                        <FeedRow
+                          event={event}
+                          isJoined={joined}
+                          isFirstRow={isFirstRow}
+                          onPress={() => router.push(`/(app)/event/${event.id}`)}
+                          onPressIn={() => becomeOpeningSoonHero(event.id)}
+                        />
+                      )}
+                    </FadeInView>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        </ScrollView>
       ) : (
         <FlatList
           key="feed-content"
+          style={{ flex: 1 }}
           data={zeroStateItems}
           keyExtractor={(item) => item.id}
           contentContainerStyle={[styles.list, { paddingBottom: TAB_BAR_BASE_HEIGHT + insets.bottom + 20 }]}
           showsVerticalScrollIndicator={false}
-          ListHeaderComponent={showZeroState ? null : listHeader}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Icon
-                name={friendsOnly ? 'users' : showOtherSearch && otherSearch ? 'search' : 'star'}
-                size={38}
-                color={colors.textDecor}
-              />
-              <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
-                {friendsOnly ? t.feedEmptyFriendsTitle : showOtherSearch && otherSearch ? `"${otherSearch}"` : t.feedEmptyTitle}
-              </Text>
-              <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>
-                {friendsOnly ? t.feedEmptyFriendsBody : showOtherSearch && otherSearch ? t.feedEmptySearchBody : t.feedEmptyBody}
-              </Text>
-              {friendsOnly && (
-                <AnimatedPressable onPress={() => router.push('/(app)/search' as any)} style={[styles.emptyBtn, { backgroundColor: colors.primary }]}>
-                  <Text style={styles.emptyBtnText}>{t.feedFindPeople}</Text>
-                </AnimatedPressable>
-              )}
-              {showOpeningSoonFallback && (
-                <View style={styles.openingSoonWrap}>
-                  <Text style={[styles.openingSoonLabel, { color: colors.textHint }]}>{t.feedOpeningSoonLabel}</Text>
-                  {openingSoonFallback.map((event, index) => (
-                    <FeedRow
-                      key={event.id}
-                      event={event}
-                      isJoined={user ? isAttending(event, user.id) : false}
-                      isFirstRow={index === 0}
-                      onPress={() => router.push(`/(app)/event/${event.id}`)}
-                      onPressIn={() => {}}
-                    />
-                  ))}
-                </View>
-              )}
-            </View>
-          }
           renderItem={({ item, index }) => {
             const joined = user ? isAttending(item, user.id) : false;
             // Spec §6: one photo hero card, then compact rows — but which

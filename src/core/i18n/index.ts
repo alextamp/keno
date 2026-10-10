@@ -165,7 +165,6 @@ export type Translations = {
   filterShowEvents: (n: number) => string;
 
   // Map
-  mapEvents: (n: number) => string;
   mapEmptyTitle: string;
   mapEmptyBody: string;
   mapAllCities: string;
@@ -194,7 +193,6 @@ export type Translations = {
   createWhoTitle: string;
   createStep1: string;
   createStep2: string;
-  createBack: string;
   createPhotoBtnLabel: string;
   createPhotoOptional: string;
   createLabelTitle: string;
@@ -1111,8 +1109,6 @@ const en: Translations = {
   filterWhoUni: 'From my university',
   filterWhoSolo: 'Solo-friendly',
   filterShowEvents: (n) => `Show ${n} event${n !== 1 ? 's' : ''}`,
-
-  mapEvents: (n) => `${n} event${n !== 1 ? 's' : ''}`,
   mapEmptyTitle: 'No pinned events nearby',
   mapEmptyBody: 'Events show up here once someone drops a pin for an exact spot. Try a different filter or check back later.',
   mapAllCities: 'All cities',
@@ -1121,7 +1117,6 @@ const en: Translations = {
   createWhoTitle: 'Who can join?',
   createStep1: 'Step 1 of 2 — The basics',
   createStep2: 'Step 2 of 2 — Set your filters',
-  createBack: '← Back',
   createPhotoBtnLabel: 'Add a cover photo',
   createPhotoOptional: 'optional',
   createLabelTitle: 'Title',
@@ -2031,7 +2026,6 @@ const el: Translations = {
   filterWhoSolo: 'Έρχονται μόνοι',
   filterShowEvents: (n) => n === 1 ? 'Δείξε 1 event' : `Δείξε ${n} events`,
 
-  mapEvents: (n) => n === 1 ? '1 εκδήλωση' : `${n} εκδηλώσεις`,
   mapEmptyTitle: 'Δεν υπάρχουν καρφιτσωμένες εκδηλώσεις κοντά',
   mapEmptyBody: 'Οι εκδηλώσεις εμφανίζονται εδώ όταν κάποιος καρφιτσώνει ακριβή τοποθεσία. Δοκίμασε άλλο φίλτρο ή ξανάρθε αργότερα.',
   mapAllCities: 'Όλες οι πόλεις',
@@ -2040,7 +2034,6 @@ const el: Translations = {
   createWhoTitle: 'Ποιος μπορεί να συμμετάσχει;',
   createStep1: 'Βήμα 1 από 2 — Τα βασικά',
   createStep2: 'Βήμα 2 από 2 — Ορισμός φίλτρων',
-  createBack: '← Πίσω',
   createPhotoBtnLabel: 'Προσθήκη εξώφυλλου',
   createPhotoOptional: 'προαιρετικό',
   createLabelTitle: 'Τίτλος',

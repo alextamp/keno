@@ -94,7 +94,7 @@ export function LevelsModal({ visible, xp, uid, onClose }: Props) {
           <View style={styles.header}>
             <View>
               <Text style={[styles.title, { color: colors.textPrimary }]}>{levelInfo.name}</Text>
-              <Text style={[styles.subtitle, { color: colors.textHint }]}>{xp} / {maxXP} XP</Text>
+              <Text style={[styles.subtitle, { color: colors.textHint }]}>{xp} / {levelInfo.next ? levelInfo.next.minXP : xp} XP</Text>
             </View>
             <Tag label={`${xp} XP`} />
           </View>
