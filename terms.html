@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="el" data-theme="day">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="author" content="Alex Tampidias">
+<meta name="description" content="Keno — Terms of Service">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23B8482A'/%3E%3Ctext x='32' y='46' font-family='Georgia,serif' font-size='42' font-weight='700' text-anchor='middle' fill='%23FAF7F2'%3Ek.%3C/text%3E%3C/svg%3E">
+<title>Terms of Service — Keno</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --paper:#FAF7F2; --paper2:#F2EBE0; --surface:#FFFFFF;
+  --ink:#241F19; --dim:#6E635A; --faint:#7A6E62; --decor:#A2968A;
+  --bord:#E8E0D5; --acc:#B8482A; --accSoft:#F7EBE5; --accInk:#A03F24; --deep:#5E2313;
+  --device:#1A1512;
+  --shadow:0 1px 2px rgba(36,31,25,.04), 0 10px 30px rgba(36,31,25,.07);
+  --shadowLg:0 2px 4px rgba(36,31,25,.05), 0 24px 60px rgba(36,31,25,.12);
+}
+
+[data-theme="night"]{
+  --paper:#17120E; --paper2:#1E1813; --surface:#221B15;
+  --ink:#F4EBE1; --dim:#B7A794; --faint:#9B8B79; --decor:#7B6C5D;
+  --bord:#332A20; --acc:#E0755A; --accSoft:#3B2219; --accInk:#EE8B71; --deep:#F0C3B2;
+  --device:#0B0806;
+  --shadow:0 1px 2px rgba(0,0,0,.35), 0 10px 30px rgba(0,0,0,.4);
+  --shadowLg:0 2px 4px rgba(0,0,0,.4), 0 24px 60px rgba(0,0,0,.5);
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.55; -webkit-font-smoothing:antialiased;
+  transition:background .34s ease, color .34s ease;
+}
+
+a{color:inherit;text-decoration:none}
+::selection{background:var(--accSoft);color:var(--accInk)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radius:6px}
+
+/* TYPE */
+.lora{font-family:Lora,Georgia,serif}
+h1,h2,h3{font-family:Lora,Georgia,serif;font-weight:700;letter-spacing:-.8px;line-height:1.1}
+h1{font-size:clamp(38px,6.4vw,66px);letter-spacing:-2px;line-height:1.03}
+h2{font-size:clamp(28px,3.8vw,44px);letter-spacing:-1.2px}
+h3{font-size:21px;font-weight:600;letter-spacing:-.5px;line-height:1.25}
+.label{font-size:10.5px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--decor)}
+.lede{font-size:clamp(16px,1.5vw,18.5px);color:var(--dim);line-height:1.65;max-width:56ch}
+.meta{font-size:13px;color:var(--faint)}
+
+/* LAYOUT */
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+section{padding:clamp(64px,9vw,112px) 0}
+.rule{border:none;border-top:1px solid var(--bord);margin:0}
+.head{max-width:640px;margin-bottom:clamp(36px,5vw,60px)}
+.head .label{display:block;margin-bottom:14px}
+.head h2{margin-bottom:16px}
+
+/* MOTION */
+.press{transition:transform .12s ease}
+.press:active{transform:scale(.97)}
+.rv{opacity:0;transform:translateY(10px);
+    transition:opacity .34s ease, transform .34s cubic-bezier(.2,.7,.3,1);
+    transition-delay:var(--d,0ms)}
+.rv.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .rv{opacity:1;transform:none;transition:none}
+  .press:active{transform:none}
+}
+
+/* NAV */
+.nav{position:sticky;top:0;z-index:60;background:var(--paper);
+     border-bottom:1px solid var(--bord);transition:background .34s ease}
+@supports (backdrop-filter:blur(12px)){
+  .nav{background:color-mix(in srgb, var(--paper) 86%, transparent);backdrop-filter:blur(14px) saturate(1.2)}
+}
+.nav-in{display:flex;align-items:center;gap:20px;height:64px}
+.wm{font-family:Lora,serif;font-weight:700;font-size:23px;letter-spacing:-1.3px}
+.wm .dot{color:var(--acc)}
+.nav-links{display:flex;gap:26px;margin-left:22px;font-size:14px;font-weight:500;color:var(--dim)}
+.nav-links a{transition:color .2s}
+.nav-links a:hover{color:var(--acc)}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.icon-btn{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;
+  border:1px solid var(--bord);background:var(--surface);color:var(--dim);cursor:pointer;
+  font-family:inherit;font-size:11.5px;font-weight:700;letter-spacing:.4px;transition:all .2s}
+.icon-btn:hover{color:var(--acc);border-color:var(--acc)}
+.icon-btn.lang{width:auto;padding:0 11px}
+.icon-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.6;
+  stroke-linecap:round;stroke-linejoin:round}
+[data-theme="day"] .ic-sun{display:none}
+[data-theme="night"] .ic-moon{display:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  background:var(--acc);color:#fff;border:none;border-radius:11px;
+  padding:10px 18px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;
+  transition:background .2s, transform .12s ease}
+.btn:hover{background:var(--accInk)}
+.btn:active{transform:scale(.97)}
+.nav .btn{padding:9px 16px;font-size:13.5px}
+
+/* FORM STYLES */
+.feedback-container{
+  max-width:720px;
+  margin:0 auto;
+  padding:0 24px;
+}
+
+.form-group{
+  margin-bottom:28px;
+}
+
+.form-group.cols-2{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:24px;
+}
+
+@media(max-width:640px){
+  .form-group.cols-2{
+    grid-template-columns:1fr;
+  }
+}
+
+label{
+  display:block;
+  font-size:14px;
+  font-weight:600;
+  margin-bottom:10px;
+  color:var(--ink);
+}
+
+input[type="text"],
+input[type="email"],
+textarea,
+select{
+  width:100%;
+  padding:12px 16px;
+  border:1px solid var(--bord);
+  border-radius:11px;
+  background:var(--surface);
+  color:var(--ink);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px;
+  line-height:1.5;
+  transition:border-color .2s, box-shadow .2s;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+textarea:focus,
+select:focus{
+  outline:none;
+  border-color:var(--acc);
+  box-shadow:0 0 0 3px var(--accSoft);
+}
+
+textarea{
+  resize:vertical;
+  min-height:140px;
+  font-family:inherit;
+}
+
+/* Radio/Checkbox Group */
+.radio-group,
+.checkbox-group{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.radio-item,
+.checkbox-item{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
+}
+
+input[type="radio"],
+input[type="checkbox"]{
+  width:18px;
+  height:18px;
+  cursor:pointer;
+  accent-color:var(--acc);
+}
+
+.radio-item label,
+.checkbox-item label{
+  margin:0;
+  font-weight:500;
+  cursor:pointer;
+  flex:1;
+}
+
+/* Rating */
+.rating-group{
+  display:flex;
+  gap:8px;
+}
+
+.rating-btn{
+  width:44px;
+  height:44px;
+  border:2px solid var(--bord);
+  border-radius:11px;
+  background:var(--surface);
+  color:var(--ink);
+  font-size:18px;
+  cursor:pointer;
+  transition:all .2s;
+}
+
+.rating-btn:hover{
+  border-color:var(--acc);
+  background:var(--accSoft);
+}
+
+.rating-btn.active{
+  background:var(--acc);
+  color:white;
+  border-color:var(--acc);
+}
+
+/* Submit Button */
+.form-actions{
+  display:flex;
+  gap:12px;
+  margin-top:32px;
+}
+
+.btn-submit{
+  flex:1;
+  padding:14px 24px;
+  background:var(--acc);
+  color:white;
+  border:none;
+  border-radius:11px;
+  font-size:15px;
+  font-weight:600;
+  cursor:pointer;
+  transition:background .2s, transform .12s ease;
+  font-family:inherit;
+}
+
+.btn-submit:hover{
+  background:var(--accInk);
+}
+
+.btn-submit:active{
+  transform:scale(.97);
+}
+
+.btn-submit:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
+
+/* Success Message */
+.success-message{
+  display:none;
+  background:var(--accSoft);
+  border:1px solid var(--acc);
+  border-radius:14px;
+  padding:20px 24px;
+  margin-bottom:28px;
+  color:var(--accInk);
+  text-align:center;
+}
+
+.success-message.show{
+  display:block;
+  animation:slideUp .34s cubic-bezier(.2,.7,.3,1);
+}
+
+@keyframes slideUp{
+  from{
+    opacity:0;
+    transform:translateY(10px);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0);
+  }
+}
+
+/* Footer */
+.footer{
+  border-top:1px solid var(--bord);
+  padding:48px 0 32px;
+  text-align:center;
+}
+
+.footer-text{
+  font-size:13px;
+  color:var(--dim);
+  margin-bottom:16px;
+}
+
+.footer-links{
+  display:flex;
+  justify-content:center;
+  gap:24px;
+  font-size:13px;
+  color:var(--dim);
+}
+
+.footer-links a{
+  transition:color .2s;
+}
+
+.footer-links a:hover{
+  color:var(--acc);
+}
+</style>
+<style>
+.legal{max-width:760px;margin:0 auto;padding:0 var(--gut,20px)}
+.legal h1{margin-bottom:12px}
+.legal h2{font-size:22px;margin:32px 0 10px}
+.legal p,.legal li{color:var(--dim);line-height:1.7;font-size:15.5px}
+.legal ul{padding-left:22px;margin:8px 0}
+.legal a{color:var(--acc);font-weight:600}
+.legal .note{font-size:13px;color:var(--faint);margin-bottom:24px}
+</style>
+</head>
+
+<body>
+<!-- NAV -->
+<nav class="nav">
+  <div class="wrap">
+    <div class="nav-in">
+      <a href="/keno/" class="wm">keno<span class="dot">.</span></a>
+      <div class="nav-links">
+        <a href="/keno/" >Home</a>
+        <a href="#feedback">Feedback</a>
+      </div>
+      <div class="nav-right">
+        <button class="icon-btn lang" id="langBtn" aria-label="Αλλαγή γλώσσας / Change language">EN</button>
+        <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">
+          <svg class="ic-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="ic-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<section style="padding-top:40px"><div class="legal">
+<h1>Terms of Service</h1>
+<p><strong>Last updated: July 3, 2026</strong></p>
+<p>Welcome to Keno. By creating an account or using the app, you agree to these terms. Please read them.</p>
+<h2>1. Eligibility</h2>
+<p>Keno is intended for current university students. You must register with a valid university email address and be at least 16 years old to use the app.</p>
+<h2>2. Your account</h2>
+<p>You're responsible for the activity that happens under your account and for keeping your password secure. Provide accurate information when you sign up — impersonating someone else or creating a fake identity isn't allowed.</p>
+<h2>3. Acceptable use</h2>
+<p>When using Keno, you agree not to:</p>
+<ul>
+<li>
+<p>Post content that is harassing, hateful, sexually explicit, threatening, or illegal</p>
+</li>
+<li>
+<p>Impersonate another person or organization</p>
+</li>
+<li>
+<p>Use the app to organize events that are illegal or that endanger others</p>
+</li>
+<li>
+<p>Spam, scrape, or attempt to disrupt the app's normal operation</p>
+</li>
+<li>
+<p>Attempt to access another user's account or private messages</p>
+</li>
+<li>
+<p>Upload photos or content you don't have the right to share</p>
+</li>
+</ul>
+<p>We use automated content filtering and user reports to help enforce these rules, and we may remove content or suspend accounts that violate them.</p>
+<h2>4. Content you post</h2>
+<p>You retain ownership of the content you create (event listings, photos, messages, comments). By posting it, you grant Keno a license to display and distribute that content within the app as intended by its features (e.g. showing your event to other users, delivering your messages to their recipients).</p>
+<p>You're solely responsible for the content you post. Keno does not pre-screen content and is not responsible for what users post, though we will act on reports and violations of these terms.</p>
+<h2>5. Events</h2>
+<p>Keno is a platform for discovering and organizing events — we are not a party to any event, and we don't guarantee the accuracy, safety, or legality of events created by users. Attend events at your own discretion and judgment. If an event seems unsafe, inappropriate, or fraudulent, report it in the app.</p>
+<h2>6. Reporting and moderation</h2>
+<p>If you encounter content or behavior that violates these terms, use the in-app report feature. We review reports and may remove content, warn users, or suspend/terminate accounts at our discretion.</p>
+<h2>7. Termination</h2>
+<p>You may delete your account at any time from Settings. We may suspend or terminate accounts that violate these terms, engage in abusive behavior, or pose a risk to other users, with or without notice depending on severity.</p>
+<h2>8. Disclaimers</h2>
+<p>Keno is provided "as is," without warranties of any kind. We do not guarantee the app will be uninterrupted, error-free, or available at all times.</p>
+<h2>9. Limitation of liability</h2>
+<p>To the extent permitted by law, Keno and its operator are not liable for any indirect, incidental, or consequential damages arising from your use of the app, including damages related to events you attend or interactions with other users.</p>
+<h2>10. Changes to these terms</h2>
+<p>We may update these terms from time to time. If we make material changes, we'll update the "Last updated" date and notify you in the app where appropriate. Continued use of the app after changes take effect means you accept the updated terms.</p>
+<h2>11. Contact</h2>
+<p>Questions about these terms: <a href="mailto:keno.app.official@gmail.com">keno.app.official@gmail.com</a></p>
+</div></section>
+
+<!-- FOOTER -->
+<section style="padding-top:32px;padding-bottom:48px">
+  <div class="wrap footer">
+    <p class="footer-text"><span data-el="Απορίες; Γράψε μας στο" data-en="Questions? Email us at">Απορίες; Γράψε μας στο</span> <a href="mailto:keno.app.official@gmail.com" style="color:var(--acc);font-weight:600">keno.app.official@gmail.com</a></p>
+    <div class="footer-links">
+      <a href="/keno/" >Home</a>
+      <a href="https://apps.apple.com/us/app/keno/id6789332791" target="_blank">App Store</a>
+      <a href="https://play.google.com/store/apps/details?id=com.KeNo.app" target="_blank">Google Play</a>
+      <a href="https://www.instagram.com/keno.app/" target="_blank" rel="noopener">Instagram</a>
+      <a href="https://www.tiktok.com/@keno.app" target="_blank" rel="noopener">TikTok</a>
+      <a href="/keno/terms.html" >Terms</a>
+      <a href="/keno/privacy.html" >Privacy</a>
+    </div>
+  </div>
+</section>
+
+<script>
+  function toggleTheme(){var h=document.documentElement;var n=h.getAttribute('data-theme')==='day'?'night':'day';h.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}}
+  try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}
+  document.getElementById('langBtn').style.display='none';
+</script>
+</body>
+</html>

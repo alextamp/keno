@@ -5,16 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="language" content="Greek">
 <meta name="author" content="Alex Tampidias">
-<meta name="keywords" content="keno, events, φοιτητές, Αθήνα, φοιτητικά events, social app, student app, meetup">
+<meta name="keywords" content="keno, events, φοιτητές, Ελλάδα, φοιτητικά events, social app, student app, meetup">
 
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23B8482A'/%3E%3Ctext x='32' y='46' font-family='Georgia,serif' font-size='42' font-weight='700' text-anchor='middle' fill='%23FAF7F2'%3Ek.%3C/text%3E%3C/svg%3E">
 <title>Keno — Λιγότερο scrolling, περισσότερη ζωή</title>
-<meta name="description" content="Βρες τι γίνεται σήμερα κοντά σου και πήγαινε. Events για φοιτητές στην Αθήνα — καφές, μπάλα, διάβασμα, πεζοπορία. Κατέβασε το app τώρα, δωρεάν.">
+<meta name="description" content="Βρες τι γίνεται σήμερα κοντά σου και πήγαινε. Events για φοιτητές σε όλη την Ελλάδα — καφές, μπάλα, διάβασμα, πεζοπορία. Κατέβασε το app τώρα, δωρεάν.">
 
 <!-- Open Graph / Facebook -->
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://alextamp.github.io/keno/">
 <meta property="og:title" content="Keno — Λιγότερο scrolling, περισσότερη ζωή">
-<meta property="og:description" content="Δες τι γίνεται σήμερα κοντά σου και πήγαινε με παρέα. Free student events app για Αθήνα.">
+<meta property="og:description" content="Δες τι γίνεται σήμερα κοντά σου και πήγαινε με παρέα. Free student events app για όλη την Ελλάδα.">
 <meta property="og:image" content="https://alextamp.github.io/keno/og-image.png">
 <meta property="og:site_name" content="Keno">
 <meta property="og:locale" content="el_GR">
@@ -23,7 +24,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:url" content="https://alextamp.github.io/keno/">
 <meta name="twitter:title" content="Keno — Λιγότερο scrolling, περισσότερη ζωή">
-<meta name="twitter:description" content="Free student events app. See what's happening today near you in Athens.">
+<meta name="twitter:description" content="Free student events app. See what's happening today near you in Greece.">
 <meta name="twitter:image" content="https://alextamp.github.io/keno/og-image.png">
 
 <!-- Structured Data (Schema.org) -->
@@ -32,7 +33,7 @@
   "@context": "https://schema.org/",
   "@type": "SoftwareApplication",
   "name": "Keno",
-  "description": "A free student event discovery and meetup app for Athens. Join events, collect tickets, and meet people from your university.",
+  "description": "A free student event discovery and meetup app for students across Greece. Join events, collect tickets, and meet people from your university.",
   "url": "https://alextamp.github.io/keno/",
   "applicationCategory": "SocialNetworkingApplication",
   "operatingSystem": "iOS, Android",
@@ -149,8 +150,8 @@ section{padding:clamp(64px,9vw,112px) 0}
 #mobileFeedback{display:none;padding:9px 14px;font-size:13px;background:transparent;
   color:var(--acc);border:1px solid var(--bord)}
 #mobileFeedback:hover{background:var(--accSoft);border-color:var(--acc)}
-/* θέμα + γλώσσα: μόνο σε κινητό */
-#langBtn,#themeBtn{display:none}
+/* θέμα + γλώσσα */
+#langBtn,#themeBtn{display:grid}
 
 /* ============ HERO ============ */
 .hero{padding-top:clamp(44px,6vw,84px);padding-bottom:clamp(56px,7vw,96px)}
@@ -325,6 +326,17 @@ section{padding:clamp(64px,9vw,112px) 0}
   .pile-t{display:none}
 }
 </style>
+<style>
+.faq{max-width:760px}
+.faq details{border-bottom:1px solid var(--bord);padding:18px 0}
+.faq summary{cursor:pointer;font-weight:600;font-size:17px;list-style:none;display:flex;justify-content:space-between;gap:16px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";color:var(--acc);font-size:22px;line-height:1}
+.faq details[open] summary::after{content:"–"}
+.faq p{color:var(--dim);font-size:15px;line-height:1.65;margin-top:10px}
+.org{background:var(--surface);border:1px solid var(--bord);border-radius:14px;padding:clamp(24px,4vw,40px);max-width:760px}
+.org p{color:var(--dim);line-height:1.65;margin:12px 0 20px}
+</style>
 </head>
 <body>
 
@@ -354,7 +366,7 @@ section{padding:clamp(64px,9vw,112px) 0}
 <section class="hero" id="top">
   <div class="wrap hero-grid">
     <div class="hero-copy">
-      <span class="label rv" data-el="ΓΙΑ ΦΟΙΤΗΤΕΣ ΣΤΗΝ ΑΘΗΝΑ" data-en="FOR STUDENTS IN ATHENS">ΓΙΑ ΦΟΙΤΗΤΕΣ ΣΤΗΝ ΑΘΗΝΑ</span>
+      <span class="label rv" data-el="ΓΙΑ ΦΟΙΤΗΤΕΣ ΣΕ ΟΛΗ ΤΗΝ ΕΛΛΑΔΑ" data-en="FOR STUDENTS ACROSS GREECE">ΓΙΑ ΦΟΙΤΗΤΕΣ ΣΕ ΟΛΗ ΤΗΝ ΕΛΛΑΔΑ</span>
       <h1 class="rv" style="--d:40ms" data-el="Λιγότερο scrolling, περισσότερη ζωή." data-en="Less scrolling. More living.">Λιγότερο scrolling, περισσότερη ζωή.</h1>
       <p class="lede rv" style="--d:80ms" data-el="Δες τι γίνεται σήμερα κοντά σου, δήλωσε συμμετοχή με ένα tap και εμφανίσου. Καφές, μπάλα, διάβασμα, πεζοπορία — με φοιτητές από τη σχολή σου." data-en="See what's happening near you today, join with one tap, and show up. Coffee, football, study sessions, hikes — with students from your own uni.">Δες τι γίνεται σήμερα κοντά σου, δήλωσε συμμετοχή με ένα tap και εμφανίσου. Καφές, μπάλα, διάβασμα, πεζοπορία — με φοιτητές από τη σχολή σου.</p>
 
@@ -381,6 +393,10 @@ section{padding:clamp(64px,9vw,112px) 0}
         <span>
           <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
           <b style="font-weight:500" data-el="Φτιαγμένο από φοιτητή του ΟΠΑ" data-en="Built by an AUEB student">Φτιαγμένο από φοιτητή του ΟΠΑ</b>
+        </span>
+        <span>
+          <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+          <b style="font-weight:500" data-el="500+ φοιτητές το χρησιμοποιούν" data-en="500+ students already use it">500+ φοιτητές το χρησιμοποιούν</b>
         </span>
       </div>
     </div>
@@ -619,10 +635,43 @@ section{padding:clamp(64px,9vw,112px) 0}
 
 <hr class="rule">
 
+<!-- ================= FAQ ================= -->
+<section id="faq">
+  <div class="wrap">
+    <div class="head">
+      <span class="label rv" data-el="ΣΥΧΝΕΣ ΕΡΩΤΗΣΕΙΣ" data-en="FAQ">ΣΥΧΝΕΣ ΕΡΩΤΗΣΕΙΣ</span>
+      <h2 class="rv" style="--d:40ms" data-el="Πριν το κατεβάσεις" data-en="Before you download">Πριν το κατεβάσεις</h2>
+    </div>
+    <div class="faq">
+<details class="rv"><summary><span data-el="Είναι δωρεάν;" data-en="Is it free?">Είναι δωρεάν;</span></summary><p data-el="Ναι. Δωρεάν και χωρίς διαφημίσεις." data-en="Yes. Free, with no ads.">Ναι. Δωρεάν και χωρίς διαφημίσεις.</p></details>
+<details class="rv"><summary><span data-el="Ποιος μπορεί να μπει;" data-en="Who can join?">Ποιος μπορεί να μπει;</span></summary><p data-el="Φοιτητές. Η επαλήθευση γίνεται με πανεπιστημιακό email .gr ή με φοιτητική ταυτότητα." data-en="Students. Verification is done with a .gr university email or a student ID.">Φοιτητές. Η επαλήθευση γίνεται με πανεπιστημιακό email .gr ή με φοιτητική ταυτότητα.</p></details>
+<details class="rv"><summary><span data-el="Είναι εφαρμογή γνωριμιών;" data-en="Is it a dating app?">Είναι εφαρμογή γνωριμιών;</span></summary><p data-el="Όχι. Δεν υπάρχει swipe ούτε «αντιστοίχιση». Βρίσκεσαι με κόσμο σε events: καφές, μπάλα, διάβασμα, πεζοπορία." data-en="No. There is no swiping and no matching. You meet people at events: coffee, football, study sessions, hikes.">Όχι. Δεν υπάρχει swipe ούτε «αντιστοίχιση». Βρίσκεσαι με κόσμο σε events: καφές, μπάλα, διάβασμα, πεζοπορία.</p></details>
+<details class="rv"><summary><span data-el="Σε ποιες πόλεις δουλεύει;" data-en="Which cities is it in?">Σε ποιες πόλεις δουλεύει;</span></summary><p data-el="Σε όλη την Ελλάδα, για φοιτητές ελληνικών πανεπιστημίων." data-en="All across Greece, for students of Greek universities.">Σε όλη την Ελλάδα, για φοιτητές ελληνικών πανεπιστημίων.</p></details>
+<details class="rv"><summary><span data-el="Τι κάνω αν δω κάτι που δεν πρέπει;" data-en="What if I see something wrong?">Τι κάνω αν δω κάτι που δεν πρέπει;</span></summary><p data-el="Κάνε αναφορά μέσα από την εφαρμογή. Κάθε αναφορά εξετάζεται σε 24 ώρες. Για προβλήματα ή ιδέες, γράψε μας στη σελίδα Feedback." data-en="Report it in the app. Every report is reviewed within 24 hours. For problems or ideas, use the Feedback page.">Κάνε αναφορά μέσα από την εφαρμογή. Κάθε αναφορά εξετάζεται σε 24 ώρες. Για προβλήματα ή ιδέες, γράψε μας στη σελίδα Feedback.</p></details>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ================= ORGANISERS ================= -->
+<section id="organisers">
+  <div class="wrap">
+    <div class="org rv">
+      <span class="label" data-el="ΓΙΑ ΣΥΛΛΟΓΟΥΣ ΚΑΙ ΟΡΓΑΝΩΤΕΣ" data-en="FOR CLUBS AND HOSTS">ΓΙΑ ΣΥΛΛΟΓΟΥΣ ΚΑΙ ΟΡΓΑΝΩΤΕΣ</span>
+      <h2 data-el="Οργανώνεις events; Φέρε τα στο Keno." data-en="Hosting events? Bring them to Keno.">Οργανώνεις events; Φέρε τα στο Keno.</h2>
+      <p data-el="Αν είσαι φοιτητικός σύλλογος ή απλώς οργανώνεις κάτι για φοιτητές, γράψε μας και θα το δούμε μαζί." data-en="If you run a student club or organise something for students, get in touch and we'll work it out together.">Αν είσαι φοιτητικός σύλλογος ή απλώς οργανώνεις κάτι για φοιτητές, γράψε μας και θα το δούμε μαζί.</p>
+      <a class="btn" href="mailto:keno.app.official@gmail.com?subject=Event%20%2F%20%CE%A3%CF%8D%CE%BB%CE%BB%CE%BF%CE%B3%CE%BF%CF%82"><span data-el="Στείλε μας email" data-en="Email us">Στείλε μας email</span></a>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
 <!-- ================= CTA ================= -->
 <section class="cta">
   <div class="wrap">
-    <h2 class="rv" data-el="Η Αθήνα είναι γεμάτη κόσμο. Βρες τους δικούς σου." data-en="Athens is full of people. Go find yours.">Η Αθήνα είναι γεμάτη κόσμο. Βρες τους δικούς σου.</h2>
+    <h2 class="rv" data-el="Η Ελλάδα είναι γεμάτη κόσμο. Βρες τους δικούς σου." data-en="Greece is full of people. Go find yours.">Η Ελλάδα είναι γεμάτη κόσμο. Βρες τους δικούς σου.</h2>
     <p class="lede rv" style="--d:40ms" data-el="Δωρεάν, στα ελληνικά, φτιαγμένο για ελληνικά πανεπιστήμια." data-en="Free, in Greek, built for Greek universities.">Δωρεάν, στα ελληνικά, φτιαγμένο για ελληνικά πανεπιστήμια.</p>
     <div class="stores rv" style="--d:80ms">
       <a class="store" href="https://apps.apple.com/us/app/keno/id6789332791" aria-label="App Store">
@@ -648,6 +697,8 @@ section{padding:clamp(64px,9vw,112px) 0}
       <div class="foot-l">
         <a href="mailto:keno.app.official@gmail.com" data-el="Επικοινωνία" data-en="Contact">Επικοινωνία</a>
         <a href="feedback.html" data-el="Αποστολή σχολίων" data-en="Send Feedback">Αποστολή σχολίων</a>
+        <a href="terms.html" data-el="Όροι χρήσης" data-en="Terms">Όροι χρήσης</a>
+        <a href="privacy.html" data-el="Απόρρητο" data-en="Privacy">Απόρρητο</a>
         <a href="https://www.instagram.com/keno.app/" target="_blank" rel="noopener">Instagram</a>
         <a href="https://www.tiktok.com/@keno.app" target="_blank" rel="noopener">TikTok</a>
       </div>
@@ -659,6 +710,7 @@ section{padding:clamp(64px,9vw,112px) 0}
 <script>
 /* ---------- language ---------- */
 var lang = 'el';
+try { var sl = localStorage.getItem('lang'); if (sl === 'en') lang = 'en'; } catch(e) {}
 var TITLES = {
   el: 'Keno — Λιγότερο scrolling, περισσότερη ζωή',
   en: 'Keno — Less scrolling. More living.'
@@ -671,16 +723,20 @@ function setLang(l){
     n.textContent = (l === 'el') ? n.dataset.el : n.dataset.en;
   });
   document.getElementById('langBtn').textContent = (l === 'el') ? 'EN' : 'ΕΛ';
+  try { localStorage.setItem('lang', l); } catch(e) {}
 }
+if (lang !== 'el') setLang(lang);
 document.getElementById('langBtn').addEventListener('click', function(){
   setLang(lang === 'el' ? 'en' : 'el');
   if (navigator.vibrate) navigator.vibrate(12);
 });
 
 /* ---------- theme ---------- */
+try { var st = localStorage.getItem('theme'); if (st === 'night' || st === 'day') document.documentElement.dataset.theme = st; } catch(e) {}
 document.getElementById('themeBtn').addEventListener('click', function(){
   var next = document.documentElement.dataset.theme === 'night' ? 'day' : 'night';
   document.documentElement.dataset.theme = next;
+  try { localStorage.setItem('theme', next); } catch(e) {}
   if (navigator.vibrate) navigator.vibrate(12);
 });
 
