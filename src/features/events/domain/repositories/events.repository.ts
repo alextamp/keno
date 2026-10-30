@@ -24,9 +24,17 @@ export interface CreateEventParams {
   soloFriendly?: boolean;
   checkInInfo?: { text?: string; photoUri?: string };
   isFlagship?: boolean;
+  /** Recurring events: which series this occurrence belongs to, and its position in it. */
+  seriesId?: string;
+  seriesIndex?: number;
+  /** Creator opted in to ride sharing for this event (event/rides/[id].tsx). */
+  ridesEnabled?: boolean;
+  /** Extra occurrences of a series created in one go don't each pay out the
+   *  create-event XP/quest progress — only the first does. */
+  skipRewards?: boolean;
 }
 
-export type UpdateEventParams = Partial<Omit<CreateEventParams, 'creatorId'>>;
+export type UpdateEventParams = Partial<Omit<CreateEventParams, 'creatorId' | 'seriesId' | 'seriesIndex' | 'skipRewards'>>;
 
 export interface EventsRepository {
   createEvent(params: CreateEventParams): Promise<Either<Failure, EventEntity>>;

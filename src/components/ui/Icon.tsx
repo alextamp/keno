@@ -11,7 +11,7 @@ export type IconName =
   | 'flame' | 'star' | 'gift' | 'filter' | 'qr' | 'settings' | 'share' | 'check'
   | 'x' | 'shield' | 'image' | 'lock' | 'more' | 'map' | 'heart' | 'ticket'
   | 'zap' | 'edit' | 'eye' | 'eye-off' | 'mail' | 'flag' | 'snow' | 'trash'
-  | 'logout' | 'globe' | 'moon' | 'sun' | 'alert' | 'doc' | 'crown';
+  | 'logout' | 'globe' | 'moon' | 'sun' | 'alert' | 'doc' | 'crown' | 'coffee';
 
 interface IconProps {
   name: IconName;
@@ -212,5 +212,11 @@ function renderPaths(name: IconName, s: S, color: string): React.ReactNode {
       </>);
     case 'crown':
       return <Path {...s} d="M4 18L5 10L8 13L12 7L16 13L19 10L20 18Z" />;
+    case 'coffee':
+      return (<>
+        <Path {...s} d="M18 8h1a4 4 0 0 1 0 8h-1" />
+        <Path {...s} d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4z" />
+        <Path {...s} d="M6 1v3M10 1v3M14 1v3" />
+      </>);
   }
 }

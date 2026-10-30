@@ -16,7 +16,7 @@ import { TAB_BAR_BASE_HEIGHT } from '@/core/constants/layout';
 import { EventEntity, isEventPast } from '@/features/events/domain/entities/event.entity';
 import { useTranslation, useLanguageStore } from '@/core/i18n';
 import { universityLabel } from '@/core/constants/universities';
-import { getLevel, isVerifiedUser, isRegularUser, isBetaTesterUser } from '@/core/constants/gamification';
+import { getLevel, isVerifiedUser, isRegularUser, isBetaTesterUser, isNewcomerUser } from '@/core/constants/gamification';
 import { LevelsModal } from '@/components/ui/LevelsModal';
 import { Icon } from '@/components/ui/Icon';
 import { Card } from '@/components/ui/Card';
@@ -27,6 +27,8 @@ import { ProgressTrack } from '@/components/ui/ProgressTrack';
 import { fetchUserProfiles, UserProfile } from '@/core/utils/userProfiles';
 import { getChallengeDefs } from '@/core/constants/challenges';
 import { ChallengeRow } from '@/components/ui/ChallengeRow';
+import { computeWrapped, WRAPPED_MIN_CHECKINS } from '@/features/wrapped/wrapped';
+import { semesterLabel } from '@/components/wrapped/WrappedSlides';
 
 const AVATAR_COLORS = ['#B8482A','#7C3AED','#059669','#2563EB','#DB2777','#D97706','#DC2626','#0891B2'];
 
@@ -125,6 +127,7 @@ export default function ProfileScreen() {
   const now = new Date();
   const streak = user.currentStreak ?? 0;
   const levelInfo = getLevel(user.xp ?? 0, user.id);
+  const wrapped = computeWrapped(user, myEvents);
 
   const upcomingEvents = myEvents.filter((e) => !isEventPast(e));
   const pastEvents = myEvents.filter((e) => isEventPast(e)).sort((a, b) => b.dateTime.getTime() - a.dateTime.getTime());
@@ -258,6 +261,7 @@ export default function ProfileScreen() {
               <AnimatedPressable onPress={() => setShowLevelModal(true)}>
                 <Tag label={levelInfo.name} />
               </AnimatedPressable>
+              {isNewcomerUser(user.checkInCount) && <VerifiedBadge label={t.newcomerBadgeLabel} icon="star" />}
               {isVerifiedUser(user.checkInCount) && <VerifiedBadge />}
               {isRegularUser(user.currentStreak) && <VerifiedBadge label={t.regularBadgeLabel} icon="flame" />}
             </View>
@@ -300,6 +304,37 @@ export default function ProfileScreen() {
             <Text style={[styles.levelCardCaption, { color: colors.textHint }]}>
               {levelInfo.next ? t.profileLevelXpToNext(levelInfo.xpNeeded - levelInfo.xpInLevel) : t.profileLevelMaxed}
             </Text>
+          </Card>
+        </AnimatedPressable>
+      )}
+
+      {/* ── Keno Wrapped — computed from the same attended-events list this
+          screen already loads (myEvents), so the card costs no extra read. ── */}
+      {!editing && (
+        <AnimatedPressable onPress={() => router.push('/(app)/wrapped' as any)}>
+          <View style={[styles.wrappedCard, { backgroundColor: colors.primary }]}>
+            <View style={styles.wrappedCardText}>
+              <Text style={styles.wrappedCardKicker}>{t.wrappedCardLabel}</Text>
+              <Text style={styles.wrappedCardTitle}>{semesterLabel(wrapped.semesterId, t)}</Text>
+              <Text style={styles.wrappedCardCaption}>
+                {wrapped.eventsAttended >= WRAPPED_MIN_CHECKINS
+                  ? t.wrappedCardOpen
+                  : t.wrappedCardLocked(WRAPPED_MIN_CHECKINS - wrapped.eventsAttended)}
+              </Text>
+            </View>
+            <View style={styles.wrappedCardIcon}>
+              <Icon name={wrapped.eventsAttended >= WRAPPED_MIN_CHECKINS ? 'fwd' : 'lock'} size={18} color="#FAF7F2" />
+            </View>
+          </View>
+        </AnimatedPressable>
+      )}
+
+      {!editing && user.createdEvents.length > 0 && (
+        <AnimatedPressable onPress={() => router.push('/(app)/organiser-stats' as any)}>
+          <Card padded style={styles.orgStatsRow}>
+            <Icon name="trophy" size={18} color={colors.primary} />
+            <Text style={[styles.orgStatsText, { color: colors.textPrimary }]}>{t.orgStatsTitle}</Text>
+            <Icon name="fwd" size={15} color={colors.textDecor} />
           </Card>
         </AnimatedPressable>
       )}
@@ -511,6 +546,14 @@ const styles = StyleSheet.create({
   levelCardFraction: { fontSize: 11.5 },
   levelCardTrack: { marginBottom: 7 },
   levelCardCaption: { fontSize: 11.5 },
+  wrappedCard: { flexDirection: 'row', alignItems: 'center', borderRadius: BorderRadius.lg, padding: Spacing.base, marginBottom: Spacing.md, gap: Spacing.md },
+  wrappedCardText: { flex: 1, gap: 2 },
+  wrappedCardKicker: { fontSize: 10.5, letterSpacing: 2, fontFamily: UIFont, fontWeight: FontWeight.bold, color: 'rgba(250,247,242,0.75)' },
+  wrappedCardTitle: { fontSize: FontSize.xl, fontFamily: TitleFont, fontWeight: FontWeight.bold, color: '#FAF7F2' },
+  wrappedCardCaption: { fontSize: FontSize.sm, color: 'rgba(250,247,242,0.85)' },
+  orgStatsRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.md },
+  orgStatsText: { flex: 1, fontSize: FontSize.base, fontFamily: UIFont, fontWeight: FontWeight.bold },
+  wrappedCardIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(250,247,242,0.18)' },
   // Edit block
   editBlock: { borderWidth: 1, borderRadius: BorderRadius.lg, padding: Spacing.md, gap: 6},
   editLabel: { fontSize: FontSize.xs, fontWeight: FontWeight.bold, fontFamily: UIFont },

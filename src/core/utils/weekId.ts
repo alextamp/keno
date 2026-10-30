@@ -32,3 +32,14 @@ export function getSemesterId(date: Date): string {
   }
   return `${date.getFullYear()}-spring`;
 }
+
+// Same month cutoffs as getSemesterId, as an inclusive [start, end] range.
+export function getSemesterBounds(date: Date): { start: Date; end: Date } {
+  const month = date.getMonth();
+  if (month === 0 || month >= 7) {
+    const startYear = month === 0 ? date.getFullYear() - 1 : date.getFullYear();
+    return { start: new Date(startYear, 7, 1), end: new Date(startYear + 1, 1, 0, 23, 59, 59, 999) };
+  }
+  const y = date.getFullYear();
+  return { start: new Date(y, 1, 1), end: new Date(y, 7, 0, 23, 59, 59, 999) };
+}

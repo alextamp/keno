@@ -21,6 +21,9 @@ import { containsBlockedContent } from '@/core/utils/contentModeration';
 import { notificationsRepository } from '@/features/notifications/notifications.repository';
 import { uploadDmImage } from '@/core/utils/uploadImage';
 import { useKeyboardOffset } from '@/core/hooks/useKeyboardOffset';
+import { beaconsRepository } from '@/features/beacons/beacons.repository';
+import { BeaconEntity } from '@/features/beacons/beacon.entity';
+import { remainingLabel } from '@/components/ui/BeaconCard';
 
 interface DmMessage {
   id: string;
@@ -61,6 +64,23 @@ export default function DmScreen() {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [msgReactionPicker, setMsgReactionPicker] = useState<string | null>(null);
   const listRef = useRef<FlatList>(null);
+
+  // "Έχω κενό" context banner — rendered above the thread, not stored as an
+  // actual message, so it never pollutes real chat history and just stops
+  // showing once the beacon expires.
+  const [otherBeacon, setOtherBeacon] = useState<BeaconEntity | null>(null);
+  const [beaconNow, setBeaconNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!otherUid) return;
+    return beaconsRepository.subscribeForUser(otherUid, setOtherBeacon);
+  }, [otherUid]);
+
+  useEffect(() => {
+    if (!otherBeacon) return;
+    const id = setInterval(() => setBeaconNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [otherBeacon?.id]);
 
   const convoId = user ? conversationId(user.id, otherUid) : '';
   const [otherLastReadAt, setOtherLastReadAt] = useState<Date | null>(null);
@@ -286,6 +306,20 @@ export default function DmScreen() {
           <Text style={[styles.headerName, { color: colors.textPrimary }]} numberOfLines={1}>{otherName}</Text>
         </AnimatedPressable>
       </View>
+
+      {otherBeacon && (
+        <View style={[styles.beaconBanner, { backgroundColor: colors.accentSoft }]}>
+          <View style={styles.beaconBannerRow}>
+            <Icon name="coffee" size={14} color={colors.primary} />
+            <Text style={[styles.beaconBannerText, { color: colors.accentInk }]} numberOfLines={2}>
+              {t.beaconContextBubble(otherName)} · {remainingLabel(otherBeacon.expiresAt, beaconNow)}
+            </Text>
+          </View>
+          <AnimatedPressable onPress={() => setDraft(t.beaconQuickReply)} style={[styles.beaconQuickReplyChip, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
+            <Text style={[styles.beaconQuickReplyText, { color: colors.primary }]}>{t.beaconQuickReply}</Text>
+          </AnimatedPressable>
+        </View>
+      )}
 
       {/* Messages */}
       <FlatList
@@ -589,6 +623,11 @@ const styles = StyleSheet.create({
   headerAvatarImg: { width: 36, height: 36, borderRadius: 18 },
   headerAvatarInitial: { color: '#fff', fontSize: 15, fontWeight: FontWeight.bold, fontFamily: UIFont },
   headerName: { flex: 1, fontSize: FontSize.lg, fontWeight: FontWeight.bold, fontFamily: UIFont },
+  beaconBanner: { marginHorizontal: Spacing.lg, marginTop: Spacing.sm, borderRadius: BorderRadius.md, padding: Spacing.sm, gap: 8 },
+  beaconBannerRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  beaconBannerText: { flex: 1, fontSize: FontSize.sm, fontFamily: UIFontLight, lineHeight: 17 },
+  beaconQuickReplyChip: { alignSelf: 'flex-start', borderWidth: 1.5, borderRadius: BorderRadius.full, paddingHorizontal: 12, paddingVertical: 6 },
+  beaconQuickReplyText: { fontSize: FontSize.xs, fontWeight: FontWeight.bold, fontFamily: UIFont },
   msgList: { paddingHorizontal: Spacing.lg, paddingTop: 12, gap: 8 },
   msgRow: { flexDirection: 'row', justifyContent: 'flex-start' },
   msgRowMe: { justifyContent: 'flex-end' },

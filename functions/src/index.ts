@@ -1,10 +1,11 @@
 import * as admin from 'firebase-admin';
-import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
+import { onDocumentCreated, onDocumentDeleted, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onCall, onRequest, HttpsError } from 'firebase-functions/v2/https';
 import { onObjectFinalized } from 'firebase-functions/v2/storage';
 import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
+import { randomBytes } from 'crypto';
 import { Expo, ExpoPushMessage } from 'expo-server-sdk';
 import { ImageAnnotatorClient } from '@google-cloud/vision';
 
@@ -134,7 +135,26 @@ type NotifType =
   | 'mutual_match'
   | 'level_up'
   | 'friend_going'
-  | 'referral_reward';
+  | 'referral_reward'
+  | 'series_next'
+  | 'ride_request'
+  | 'ride_confirmed'
+  | 'ride_declined'
+  | 'ride_cancelled';
+
+// Which Settings toggle (users.notificationPrefs.<key>) silences the push for
+// a given type. Types not listed here always push. The in-app list entry is
+// still written either way — the toggle only controls the push.
+const PREF_FOR_TYPE: Partial<Record<NotifType, 'groupMessages' | 'suggestions' | 'rides'>> = {
+  group_message: 'groupMessages',
+  friend_going: 'suggestions',
+  buddy_match: 'suggestions',
+  series_next: 'suggestions',
+  ride_request: 'rides',
+  ride_confirmed: 'rides',
+  ride_declined: 'rides',
+  ride_cancelled: 'rides',
+};
 
 function buildPushMessage(type: NotifType, fromName: string, eventTitle?: string, messagePreview?: string): { title: string; body: string } {
   switch (type) {
@@ -236,6 +256,31 @@ function buildPushMessage(type: NotifType, fromName: string, eventTitle?: string
         title: '🎟️ Plus One!',
         body: eventTitle ? `${fromName} checked in to "${eventTitle}" — you both earned a Plus One ticket` : `${fromName} checked in — you earned a Plus One ticket`,
       };
+    case 'series_next':
+      return {
+        title: '🔁 Again this week',
+        body: eventTitle ? `The next "${eventTitle}" is up — want to come again?` : 'The next date of an event you went to is up',
+      };
+    case 'ride_request':
+      return {
+        title: '🚗 Seat request',
+        body: eventTitle ? `${fromName} asked for a seat in your ride to "${eventTitle}"` : `${fromName} asked for a seat in your ride`,
+      };
+    case 'ride_confirmed':
+      return {
+        title: '🚗 Seat confirmed',
+        body: eventTitle ? `${fromName} confirmed your seat to "${eventTitle}"` : `${fromName} confirmed your seat`,
+      };
+    case 'ride_declined':
+      return {
+        title: '🚗 Ride request',
+        body: eventTitle ? `Your ride request for "${eventTitle}" wasn't accepted` : "Your ride request wasn't accepted",
+      };
+    case 'ride_cancelled':
+      return {
+        title: '🚗 Ride update',
+        body: eventTitle ? `${fromName} cancelled a seat in the ride to "${eventTitle}"` : `${fromName} cancelled a ride seat`,
+      };
     default:
       return { title: 'Keno', body: 'You have a new notification' };
   }
@@ -257,6 +302,9 @@ export const onNotificationCreated = onDocumentCreated(
 
       const pushToken: string | undefined = userSnap.data()?.pushToken;
       if (!pushToken || !Expo.isExpoPushToken(pushToken)) return;
+
+      const prefKey = PREF_FOR_TYPE[notif.type as NotifType];
+      if (prefKey && userSnap.data()?.notificationPrefs?.[prefKey] === false) return;
 
       const { title, body } = buildPushMessage(
         notif.type as NotifType,
@@ -290,6 +338,23 @@ export const onNotificationCreated = onDocumentCreated(
                 await db.doc(`users/${userId}`).update({ pushToken: admin.firestore.FieldValue.delete() });
               } else {
                 logger.error('Push send failed', { userId, error: receipt.message, details: receipt.details });
+              }
+            }
+          }
+          // The tickets above only mean Expo accepted the message. Whether
+          // Apple/Google actually delivered it (e.g. a missing APNs key or
+          // FCM credential) only shows up in the delivery receipt, a few
+          // seconds later.
+          const ticketIds = receipts.flatMap((r) => (r.status === 'ok' ? [r.id] : []));
+          if (ticketIds.length) {
+            await new Promise((resolve) => setTimeout(resolve, 5000));
+            const delivery = await expo.getPushNotificationReceiptsAsync(ticketIds);
+            for (const r of Object.values(delivery)) {
+              if (r.status !== 'error') continue;
+              if (r.details?.error === 'DeviceNotRegistered') {
+                await db.doc(`users/${userId}`).update({ pushToken: admin.firestore.FieldValue.delete() });
+              } else {
+                logger.error('Push delivery failed', { userId, error: r.message, details: r.details });
               }
             }
           }
@@ -1016,6 +1081,123 @@ export const sweepOrphanedGroupNotifications = onSchedule('every 1 hours', async
   logger.log(`sweepOrphanedGroupNotifications: deleted ${toDelete.length} notification(s) pointing at a deleted group`);
 });
 
+// "Έχω κενό" beacons self-expire client-side (the `expiresAt` where-clause
+// in beacons.repository.ts's subscribeNearby/subscribeForUser already keeps
+// them out of every live query) — this just keeps the collection itself
+// from growing forever with stale docs nobody's querying anymore.
+export const sweepExpiredBeacons = onSchedule('every 30 minutes', async () => {
+  const expiredSnap = await db.collection('beacons')
+    .where('expiresAt', '<=', admin.firestore.Timestamp.fromMillis(Date.now()))
+    .get();
+  if (expiredSnap.empty) return;
+
+  for (let i = 0; i < expiredSnap.docs.length; i += 450) {
+    const batch = db.batch();
+    expiredSnap.docs.slice(i, i + 450).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+  logger.log(`sweepExpiredBeacons: deleted ${expiredSnap.docs.length} expired beacon(s)`);
+});
+
+// Mirrors SERIES_HORIZON_DAYS in src/features/series/series.ts — occurrences
+// are only created once they fall inside this window so the feed isn't
+// flooded with 26 copies of the same weekly event.
+const SERIES_HORIZON_MS = 28 * 24 * 3600_000;
+
+function checkInSecret(): string {
+  const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  return Array.from(randomBytes(20), (b) => alphabet[b % alphabet.length]).join('');
+}
+
+/**
+ * Recurring events: creates each series' next occurrences as they come
+ * inside the horizon (from the template the client saved when the series
+ * was created), and once an occurrence is over, nudges the people who had
+ * joined it about the next one.
+ */
+export const generateSeriesOccurrences = onSchedule('every 6 hours', async () => {
+  const now = Date.now();
+  const seriesSnap = await db.collection('eventSeries').where('active', '==', true).get();
+
+  for (const seriesDoc of seriesSnap.docs) {
+    const series = seriesDoc.data();
+    const creatorId: string = series.creatorId;
+    const dates: admin.firestore.Timestamp[] = series.dates ?? [];
+    let generated: number = series.generatedCount ?? 0;
+
+    try {
+      if (series.template) {
+        while (generated < dates.length && dates[generated].toMillis() <= now + SERIES_HORIZON_MS) {
+          const ref = db.collection('events').doc();
+          const batch = db.batch();
+          batch.set(ref, {
+            ...series.template,
+            creatorId,
+            dateTime: dates[generated],
+            attendeeIds: [creatorId],
+            waitlistIds: [],
+            messages: [],
+            reactions: { hype: [], funny: [], interested: [] },
+            seriesId: seriesDoc.id,
+            seriesIndex: generated,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          batch.set(ref.collection('private').doc('checkin'), {
+            secret: checkInSecret(),
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          batch.update(db.doc(`users/${creatorId}`), {
+            createdEvents: admin.firestore.FieldValue.arrayUnion(ref.id),
+            joinedEvents: admin.firestore.FieldValue.arrayUnion(ref.id),
+          });
+          batch.update(seriesDoc.ref, { generatedCount: generated + 1 });
+          await batch.commit();
+          generated += 1;
+        }
+        if (generated >= dates.length) await seriesDoc.ref.update({ active: false });
+      }
+
+      // "Θα έρθεις ξανά;" — for each finished occurrence not yet followed up,
+      // tell its attendees (not the host) that the next date exists.
+      const occSnap = await db.collection('events').where('seriesId', '==', seriesDoc.id).get();
+      const occurrences = occSnap.docs
+        .filter((d) => d.data().creatorId === creatorId)
+        .sort((a, b) => (a.data().seriesIndex ?? 0) - (b.data().seriesIndex ?? 0));
+      for (let i = 0; i < occurrences.length - 1; i++) {
+        const past = occurrences[i].data();
+        const startMs = (past.dateTime as admin.firestore.Timestamp).toMillis();
+        if (past.seriesNextNotified || startMs > now - ASSUMED_EVENT_DURATION_MS) continue;
+        // Only follow up recently finished ones — an old occurrence the job
+        // missed shouldn't wake people up about it days later.
+        if (startMs < now - ASSUMED_EVENT_DURATION_MS - 2 * 24 * 3600_000) {
+          await occurrences[i].ref.update({ seriesNextNotified: true });
+          continue;
+        }
+        const next = occurrences[i + 1];
+        const nextAttendees: string[] = next.data().attendeeIds ?? [];
+        const recipients = ((past.attendeeIds ?? []) as string[])
+          .filter((uid) => uid !== creatorId && !nextAttendees.includes(uid));
+        const hostSnap = await db.doc(`users/${creatorId}`).get();
+        const host = hostSnap.data();
+        await Promise.all(recipients.map((uid) => db.collection(`users/${uid}/notifications`).add({
+          type: 'series_next',
+          fromUid: creatorId,
+          fromName: host?.name ?? 'Keno',
+          fromAvatarColor: host?.avatarColor ?? '#C94D0A',
+          fromPhotoUri: host?.photoUri ?? null,
+          eventId: next.id,
+          eventTitle: next.data().title ?? '',
+          read: false,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        })));
+        await occurrences[i].ref.update({ seriesNextNotified: true });
+      }
+    } catch (err) {
+      logger.error('generateSeriesOccurrences failed for series', { seriesId: seriesDoc.id, err: String(err) });
+    }
+  }
+});
+
 export const markNoShows = onSchedule('every 30 minutes', async () => {
   const now = Date.now();
   const windowStart = admin.firestore.Timestamp.fromMillis(now - NO_SHOW_SCAN_WINDOW_MS - ASSUMED_EVENT_DURATION_MS);
@@ -1104,4 +1286,316 @@ export const markNoShows = onSchedule('every 30 minutes', async () => {
       logger.error('markNoShows failed for event', { eventId: eventDoc.id, err: String(err) });
     }
   }
+});
+
+// ── Public event page (spec #1) ─────────────────────────────────────────────
+// A logged-out web view of a public event, shared as a normal https link so it
+// previews in WhatsApp/Instagram/Messenger. Reads with the admin SDK, so it
+// must only ever render the allow-listed fields below: never the exact
+// address, user ids, emails, or the attendee list. Private events 404.
+
+const STORE_IOS = 'https://apps.apple.com/us/app/keno/id6789332791';
+const STORE_ANDROID = 'https://play.google.com/store/apps/details?id=com.KeNo.app';
+const FALLBACK_OG_IMAGE = 'https://alextamp.github.io/keno/og-image.png';
+
+const CATEGORY_EL: Record<string, string> = {
+  party: 'Πάρτι', sports: 'Αθλητικά', study: 'Διάβασμα', chill: 'Χαλαρά', coffee: 'Καφές', other: 'Άλλο',
+};
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+}
+
+// Only a coarse area: the last comma-separated part with no digits in it
+// (street numbers/postcodes), e.g. "Ζωγράφου 15, Ζωγράφου, Αθήνα" -> "Αθήνα",
+// "Καφέ Χ, Κουκάκι" -> "Κουκάκι". A single-part location shows nothing,
+// since it can't be told apart from an exact spot.
+function approximateArea(location: string): string | null {
+  const parts = location.split(',').map((p) => p.trim()).filter(Boolean);
+  if (parts.length < 2) return null;
+  const coarse = parts.slice(1).filter((p) => !/\d/.test(p) && !/^(ελλάδα|greece)$/i.test(p));
+  return coarse.length ? coarse[coarse.length - 1] : null;
+}
+
+function eventRestriction(e: admin.firestore.DocumentData): string | null {
+  const unis: string[] = e.allowedUniversities ?? [];
+  if (unis.length) return `Μόνο για φοιτητές ${unis.join(', ')}`;
+  if (e.genderFilter === 'female') return 'Μόνο για γυναίκες';
+  if (e.genderFilter === 'male') return 'Μόνο για άντρες';
+  if (e.minAge || e.maxAge) return `Μόνο για ηλικίες ${e.minAge ?? 17}–${e.maxAge ?? 99}`;
+  if (e.category === 'party') return 'Μόνο για επαληθευμένους φοιτητές';
+  return null;
+}
+
+function pageShell(title: string, description: string, image: string, body: string): string {
+  return `<!doctype html><html lang="el"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escapeHtml(title)} · Keno</title>
+<meta name="description" content="${escapeHtml(description)}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Keno">
+<meta property="og:locale" content="el_GR">
+<meta property="og:title" content="${escapeHtml(title)}">
+<meta property="og:description" content="${escapeHtml(description)}">
+<meta property="og:image" content="${escapeHtml(image)}">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{--bg:#F6F1E7;--card:#FFFDF8;--ink:#2B2520;--muted:#7A6E62;--accent:#C94D0A;--soft:#F7E2D3;--line:#E6DCCB}
+@media (prefers-color-scheme:dark){:root{--bg:#1B1714;--card:#25201C;--ink:#F3ECE2;--muted:#A89C8E;--accent:#F08A4B;--soft:#3A2A20;--line:#3A332D}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+main{max-width:480px;margin:0 auto;padding:24px 16px 40px}
+.brand{font-weight:800;letter-spacing:-.02em;color:var(--accent);font-size:20px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.cover{width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
+.inner{padding:18px}
+.chip{display:inline-block;background:var(--soft);color:var(--accent);border-radius:999px;padding:3px 10px;font-size:13px;font-weight:600}
+h1{font-size:24px;line-height:1.2;margin:10px 0 12px}
+.row{color:var(--muted);margin:4px 0}
+.desc{margin:14px 0 0;white-space:pre-wrap}
+.lock{margin-top:14px;padding:12px;border-radius:12px;background:var(--soft);color:var(--ink);font-weight:600}
+.cta{display:block;text-align:center;background:var(--accent);color:#fff;text-decoration:none;font-weight:700;border-radius:14px;padding:15px;margin-top:18px}
+.stores{display:flex;gap:10px;margin-top:10px}.stores a{flex:1;text-align:center;border:1px solid var(--line);border-radius:12px;padding:10px;color:var(--ink);text-decoration:none;font-size:14px}
+.foot{color:var(--muted);font-size:13px;text-align:center;margin-top:18px}
+</style></head><body><main><div class="brand">keno.</div>${body}
+<div class="foot">λιγότερο scrolling, περισσότερη ζωή</div></main></body></html>`;
+}
+
+function notFoundPage(): string {
+  return pageShell('Keno', 'Βρες τι γίνεται κοντά σου και πήγαινε με παρέα.', FALLBACK_OG_IMAGE,
+    `<div class="card"><div class="inner"><h1>Αυτό το event δεν είναι διαθέσιμο</h1>
+<p class="row">Μπορεί να είναι ιδιωτικό ή να έχει διαγραφεί.</p>
+<div class="stores"><a href="${STORE_IOS}">App Store</a><a href="${STORE_ANDROID}">Google Play</a></div></div></div>`);
+}
+
+export const eventPage = onRequest({ cors: false }, async (req, res) => {
+  const id = String(req.query.id ?? req.path.split('/').filter(Boolean).pop() ?? '');
+  res.set('Cache-Control', 'public, max-age=300');
+  if (!/^[A-Za-z0-9]{10,40}$/.test(id)) {
+    res.status(404).send(notFoundPage());
+    return;
+  }
+
+  const snap = await db.doc(`events/${id}`).get();
+  const e = snap.data();
+  if (!snap.exists || !e || e.isPrivate) {
+    res.status(404).send(notFoundPage());
+    return;
+  }
+
+  const host = e.creatorId ? (await db.doc(`users/${e.creatorId}`).get()).data() : undefined;
+  const hostFirstName = String(host?.name ?? '').trim().split(/\s+/)[0] || 'Keno';
+  const hostUni = host?.university ? ` · ${host.university}` : '';
+
+  const when = (e.dateTime as admin.firestore.Timestamp).toDate();
+  const dateStr = new Intl.DateTimeFormat('el-GR', {
+    weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Athens',
+  }).format(when);
+  const isOver = when.getTime() + ASSUMED_EVENT_DURATION_MS < Date.now() || !!e.endedAt;
+
+  const title = String(e.title ?? 'Event');
+  const restriction = eventRestriction(e);
+  const area = approximateArea(String(e.location ?? ''));
+  const category = CATEGORY_EL[e.category] ?? (e.customCategory || 'Event');
+  const image = typeof e.imageUri === 'string' && e.imageUri.startsWith('https://') ? e.imageUri : FALLBACK_OG_IMAGE;
+  const count: number = (e.attendeeIds ?? []).length;
+  const description = String(e.description ?? '').slice(0, 600);
+  const ogDescription = restriction
+    ? `${dateStr} · ${restriction}`
+    : `${dateStr}${area ? ` · ${area}` : ''} · ${count} ${count === 1 ? 'πάει' : 'πάνε'}`;
+
+  const details = restriction
+    ? `<div class="lock">🔒 ${escapeHtml(restriction)}</div>`
+    : `${area ? `<p class="row">📍 ${escapeHtml(area)}</p>` : ''}
+<p class="row">👥 ${count} ${count === 1 ? 'άτομο πάει' : 'άτομα πάνε'}</p>
+<p class="row">Διοργανωτής: ${escapeHtml(hostFirstName)}${escapeHtml(hostUni)}</p>
+${description ? `<p class="desc">${escapeHtml(description)}</p>` : ''}`;
+
+  const deepLink = `keno://event/${id}`;
+  const body = `<div class="card">${image !== FALLBACK_OG_IMAGE ? `<img class="cover" src="${escapeHtml(image)}" alt="">` : ''}
+<div class="inner"><span class="chip">${escapeHtml(category)}</span>
+<h1>${escapeHtml(title)}</h1>
+<p class="row">🕒 ${escapeHtml(dateStr)}${isOver ? ' · έχει τελειώσει' : ''}</p>
+${details}
+<a class="cta" id="open" href="${deepLink}">Άνοιξέ το στο Keno</a>
+<div class="stores"><a href="${STORE_IOS}">App Store</a><a href="${STORE_ANDROID}">Google Play</a></div>
+</div></div>
+<script>
+document.getElementById('open').addEventListener('click',function(){
+  var ua=navigator.userAgent||'';var store=/android/i.test(ua)?'${STORE_ANDROID}':/iphone|ipad|ipod/i.test(ua)?'${STORE_IOS}':null;
+  if(!store)return;var t=setTimeout(function(){if(!document.hidden)location.href=store;},1600);
+  document.addEventListener('visibilitychange',function(){if(document.hidden)clearTimeout(t);});
+});
+</script>`;
+
+  res.status(200).send(pageShell(`${title} · ${dateStr}`, ogDescription, image, body));
+});
+
+// ── Account deletion cleanup ────────────────────────────────────────────────
+// Settings' "delete account" removes users/{uid} and the Auth account; this
+// erases everything else tied to that person. Purely personal data is
+// deleted outright. Content that's part of someone else's conversation
+// (chat/DM messages) is blanked the same way an in-app "delete message"
+// does, so threads don't break. Upcoming events they host are cancelled
+// (attendees notified); past ones stay so other people's tickets/history
+// survive, pointing at a uid that no longer resolves to anyone. Reports
+// filed by or about them are kept for moderation.
+
+const DELETED_NAME = 'Διαγραμμένος χρήστης';
+
+async function deleteDocs(docs: admin.firestore.QueryDocumentSnapshot[]): Promise<void> {
+  for (let i = 0; i < docs.length; i += 400) {
+    const batch = db.batch();
+    docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+}
+
+async function updateDocs(docs: admin.firestore.QueryDocumentSnapshot[], data: Record<string, unknown>): Promise<void> {
+  for (let i = 0; i < docs.length; i += 400) {
+    const batch = db.batch();
+    docs.slice(i, i + 400).forEach((d) => batch.update(d.ref, data));
+    await batch.commit();
+  }
+}
+
+function storagePathFromUrl(uri: unknown): string | null {
+  if (typeof uri !== 'string') return null;
+  const match = uri.match(/\/o\/([^?]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+export const onUserDeleted = onDocumentDeleted({ document: 'users/{userId}', timeoutSeconds: 540 }, async (event) => {
+  const { userId: uid } = event.params;
+  const FieldValue = admin.firestore.FieldValue;
+  const bucket = admin.storage().bucket();
+  const now = Date.now();
+
+  // Each step is independent: one failing (e.g. an index still building)
+  // must not stop the rest, and gets logged so it can be re-run by hand.
+  const step = async (name: string, fn: () => Promise<unknown>) => {
+    try {
+      await fn();
+    } catch (err) {
+      logger.error(`onUserDeleted: ${name} failed`, { uid, err: String(err) });
+    }
+  };
+
+  // Subcollections (notifications, reviews received, private — incl. the ID
+  // verification record) don't go away with their parent doc.
+  await step('profile subcollections', () => db.recursiveDelete(db.doc(`users/${uid}`)));
+
+  await step('storage files', async () => {
+    for (const prefix of [`avatars/${uid}.`, `verification-photos/${uid}.`, `issue-reports/${uid}_`]) {
+      const [files] = await bucket.getFiles({ prefix });
+      await Promise.all(files.map((f) => f.delete({ ignoreNotFound: true })));
+    }
+  });
+
+  await step('beacons', async () => {
+    await deleteDocs((await db.collection('beacons').where('userId', '==', uid).get()).docs);
+  });
+
+  await step('rides offered', async () => {
+    const rides = await db.collectionGroup('rides').where('driverId', '==', uid).get();
+    for (const ride of rides.docs) {
+      const eventRef = ride.ref.parent.parent!;
+      const eventTitle = (await eventRef.get()).data()?.title ?? '';
+      await Promise.all(((ride.data().confirmedIds ?? []) as string[]).map((riderId) =>
+        db.collection(`users/${riderId}/notifications`).add({
+          type: 'ride_cancelled', fromUid: uid, fromName: DELETED_NAME, fromAvatarColor: '#7A6E62', fromPhotoUri: null,
+          eventId: eventRef.id, eventTitle, read: false, createdAt: FieldValue.serverTimestamp(),
+        })));
+      await db.recursiveDelete(ride.ref);
+    }
+  });
+
+  await step('ride bookings', async () => {
+    const bookings = await db.collectionGroup('bookings').where('uid', '==', uid).get();
+    for (const b of bookings.docs) {
+      const rideRef = b.ref.parent.parent!;
+      await rideRef.update({ confirmedIds: FieldValue.arrayRemove(uid) }).catch(() => {});
+      await b.ref.delete();
+    }
+  });
+
+  await step('check-ins', async () => {
+    await deleteDocs((await db.collectionGroup('checkIns').where('userId', '==', uid).get()).docs);
+  });
+
+  await step('swipes and matches', async () => {
+    await deleteDocs((await db.collectionGroup('swipes').where('fromUid', '==', uid).get()).docs);
+    await deleteDocs((await db.collectionGroup('swipes').where('toUid', '==', uid).get()).docs);
+    await deleteDocs((await db.collection('mutualMatches').where('user1Id', '==', uid).get()).docs);
+    await deleteDocs((await db.collection('mutualMatches').where('user2Id', '==', uid).get()).docs);
+  });
+
+  await step('photo wall', async () => {
+    const photos = await db.collectionGroup('photos').where('uploaderUid', '==', uid).get();
+    await Promise.all(photos.docs.map(async (p) => {
+      const path = storagePathFromUrl(p.data().uri);
+      if (path) await bucket.file(path).delete({ ignoreNotFound: true }).catch(() => {});
+    }));
+    await deleteDocs(photos.docs);
+  });
+
+  // events/*/messages and groups/*/messages both key the author as userId.
+  await step('event and group chat messages', async () => {
+    const msgs = await db.collectionGroup('messages').where('userId', '==', uid).get();
+    const groupMsgs = msgs.docs.filter((d) => d.ref.parent.parent?.parent.id === 'groups');
+    const eventMsgs = msgs.docs.filter((d) => d.ref.parent.parent?.parent.id === 'events');
+    await updateDocs(eventMsgs, { text: '', imageUri: null, isDeleted: true });
+    await updateDocs(groupMsgs, { text: '', imageUri: null, isDeleted: true, userName: DELETED_NAME });
+  });
+
+  await step('direct messages', async () => {
+    const convos = await db.collection('conversations').where('participantIds', 'array-contains', uid).get();
+    for (const convo of convos.docs) {
+      const mine = await convo.ref.collection('messages').where('senderId', '==', uid).get();
+      await updateDocs(mine.docs, { text: '', imageUri: null, isDeleted: true });
+      if (convo.data().lastSenderId === uid) await convo.ref.update({ lastMessage: '' });
+    }
+  });
+
+  await step('hosted events', async () => {
+    const hosted = await db.collection('events').where('creatorId', '==', uid).get();
+    for (const ev of hosted.docs) {
+      const e = ev.data();
+      const startMs = (e.dateTime as admin.firestore.Timestamp).toMillis();
+      if (e.endedAt || startMs + ASSUMED_EVENT_DURATION_MS < now) continue;
+      const attendees = ((e.attendeeIds ?? []) as string[]).filter((a) => a !== uid);
+      await Promise.all(attendees.map((a) => Promise.all([
+        db.collection(`users/${a}/notifications`).add({
+          type: 'event_cancelled', fromUid: uid, fromName: DELETED_NAME, fromAvatarColor: '#7A6E62', fromPhotoUri: null,
+          eventId: ev.id, eventTitle: e.title ?? '', read: false, createdAt: FieldValue.serverTimestamp(),
+        }),
+        db.doc(`users/${a}`).update({ joinedEvents: FieldValue.arrayRemove(ev.id) }).catch(() => {}),
+      ])));
+      await db.recursiveDelete(ev.ref);
+    }
+    await deleteDocs((await db.collection('eventSeries').where('creatorId', '==', uid).get()).docs);
+  });
+
+  // Frees their spot in events they'd joined but that haven't happened yet.
+  await step('upcoming joined events', async () => {
+    const joined = await db.collection('events').where('attendeeIds', 'array-contains', uid).get();
+    await Promise.all(joined.docs
+      .filter((d) => (d.data().dateTime as admin.firestore.Timestamp).toMillis() > now)
+      .map((d) => d.ref.update({
+        attendeeIds: FieldValue.arrayRemove(uid),
+        waitlistIds: FieldValue.arrayRemove(uid),
+        [`rsvpStakes.${uid}`]: FieldValue.delete(),
+        [`joinRequests.${uid}`]: FieldValue.delete(),
+      })));
+  });
+
+  await step('follows and groups', async () => {
+    await updateDocs((await db.collection('users').where('followers', 'array-contains', uid).get()).docs,
+      { followers: FieldValue.arrayRemove(uid) });
+    await updateDocs((await db.collection('users').where('following', 'array-contains', uid).get()).docs,
+      { following: FieldValue.arrayRemove(uid) });
+    await updateDocs((await db.collection('groups').where('memberIds', 'array-contains', uid).get()).docs,
+      { memberIds: FieldValue.arrayRemove(uid) });
+  });
+
+  logger.log('onUserDeleted: cleanup finished', { uid });
 });

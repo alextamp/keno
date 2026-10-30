@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import {
-  ActivityIndicator, Alert, Image, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet,
+  ActivityIndicator, Alert, AppState, Image, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet,
   Switch, Text, TextInput, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +20,11 @@ import { INTERESTS } from '@/core/constants/interests';
 import { useIsAdmin } from '@/core/utils/adminRole';
 import { KENO_EVENTS_UID } from '@/core/constants/eventsAccount';
 import { Icon, IconName } from '@/components/ui/Icon';
+import * as Notifications from 'expo-notifications';
+import {
+  REMINDER_LEAD_OPTIONS, getExpoPushToken, isNotificationPermissionGranted, requestNotificationPermissions,
+} from '@/core/utils/eventReminders';
+import { FEATURES } from '@/core/constants/features';
 import { universityLabel } from '@/core/constants/universities';
 import { uploadIssueScreenshot } from '@/core/utils/uploadImage';
 import { pickImage } from '@/core/utils/imagePicker';
@@ -146,7 +151,38 @@ export default function SettingsScreen() {
 
   // Per-category notification toggles (opt-out model — a missing key means "on").
   const [editingNotifs, setEditingNotifs] = useState(false);
-  const setNotifPref = (key: 'eventReminders' | 'groupMessages' | 'suggestions', value: boolean) => {
+  // OS-level permission. The only in-app ask is the one-time screen after the
+  // first join, so anyone who skipped it (or installed a new build since)
+  // had no way back in — and without permission no push token is saved, so
+  // pushes kept going to whatever device/app last registered one.
+  const [osNotifsOn, setOsNotifsOn] = useState<boolean | null>(null);
+  const savePushToken = () => {
+    if (!user) return;
+    getExpoPushToken().then((token) => {
+      if (token) updateDoc(doc(db, 'users', user.id), { pushToken: token }).catch(() => {});
+    }).catch(() => {});
+  };
+  useEffect(() => {
+    const check = () => isNotificationPermissionGranted().then((granted) => {
+      setOsNotifsOn(granted);
+      if (granted) savePushToken();
+    });
+    check();
+    const sub = AppState.addEventListener('change', (s) => { if (s === 'active') check(); });
+    return () => sub.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+  const handleEnableOsNotifs = async () => {
+    const { status, canAskAgain } = await Notifications.getPermissionsAsync();
+    if (status === 'undetermined' || canAskAgain) {
+      const granted = await requestNotificationPermissions();
+      setOsNotifsOn(granted);
+      if (granted) { savePushToken(); return; }
+    }
+    Linking.openSettings().catch(() => {});
+  };
+
+  const setNotifPref = (key: 'eventReminders' | 'groupMessages' | 'suggestions' | 'rides', value: boolean) => {
     if (!user) return;
     updateProfile({ notificationPrefs: { ...(user.notificationPrefs ?? {}), [key]: value } });
   };
@@ -390,6 +426,15 @@ export default function SettingsScreen() {
         <SettingRow icon="bell" label={t.settingsSectionNotifications} onPress={() => setEditingNotifs((v) => !v)}>
           <Icon name={editingNotifs ? 'x' : 'fwd'} size={15} color={colors.textHint} />
         </SettingRow>
+        {osNotifsOn === false && (
+          <AnimatedPressable
+            onPress={handleEnableOsNotifs}
+            style={[styles.osNotifBanner, { backgroundColor: colors.accentSoft, borderColor: colors.primary }]}
+          >
+            <Text style={[styles.osNotifText, { color: colors.textPrimary }]}>{t.settingsOsNotifsOff}</Text>
+            <Text style={[styles.osNotifCta, { color: colors.primary }]}>{t.settingsOsNotifsEnable}</Text>
+          </AnimatedPressable>
+        )}
         {editingNotifs && (
           <View style={styles.notifBlock}>
             <View style={styles.notifRow}>
@@ -401,6 +446,28 @@ export default function SettingsScreen() {
                 thumbColor="#FFFFFF"
               />
             </View>
+            {user?.notificationPrefs?.eventReminders !== false && (
+              <View style={styles.leadRow}>
+                <Text style={[styles.leadLabel, { color: colors.textHint }]}>{t.settingsReminderLead}</Text>
+                <View style={styles.leadChips}>
+                  {REMINDER_LEAD_OPTIONS.map((m) => {
+                    const active = (user?.notificationPrefs?.reminderLeadMinutes ?? 60) === m;
+                    return (
+                      <AnimatedPressable
+                        key={m}
+                        onPress={() => user && updateProfile({ notificationPrefs: { ...(user.notificationPrefs ?? {}), reminderLeadMinutes: m } })}
+                        style={[styles.leadChip, {
+                          backgroundColor: active ? colors.primary : colors.surface,
+                          borderColor: active ? colors.primary : colors.border,
+                        }]}
+                      >
+                        <Text style={[styles.leadChipText, { color: active ? '#FFFFFF' : colors.textPrimary }]}>{t.reminderLeadLabel(m)}</Text>
+                      </AnimatedPressable>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
             <Divider />
             <View style={styles.notifRow}>
               <Text style={[styles.notifLabel, { color: colors.textPrimary }]}>{t.settingsNotifGroupMessages}</Text>
@@ -421,6 +488,20 @@ export default function SettingsScreen() {
                 thumbColor="#FFFFFF"
               />
             </View>
+            {FEATURES.rides && (
+              <>
+                <Divider />
+                <View style={styles.notifRow}>
+                  <Text style={[styles.notifLabel, { color: colors.textPrimary }]}>{t.settingsNotifRides}</Text>
+                  <Switch
+                    value={user?.notificationPrefs?.rides !== false}
+                    onValueChange={(v) => setNotifPref('rides', v)}
+                    trackColor={{ false: colors.surfaceVariant, true: colors.primary }}
+                    thumbColor="#FFFFFF"
+                  />
+                </View>
+              </>
+            )}
           </View>
         )}
       </Section>
@@ -700,7 +781,18 @@ const styles = StyleSheet.create({
   // Inline notification-preferences toggle list
   notifBlock: { paddingHorizontal: Spacing.md },
   notifRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
+  osNotifBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, borderWidth: 1,
+    borderRadius: BorderRadius.md, padding: Spacing.md, marginVertical: Spacing.sm,
+  },
+  osNotifText: { flex: 1, fontSize: FontSize.sm, fontFamily: UIFont },
+  osNotifCta: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, fontFamily: UIFont },
   notifLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.medium, fontFamily: UIFont },
+  leadRow: { paddingBottom: Spacing.sm, gap: 8 },
+  leadLabel: { fontSize: FontSize.xs, fontFamily: UIFont },
+  leadChips: { flexDirection: 'row', gap: 8 },
+  leadChip: { flex: 1, paddingVertical: 8, borderRadius: 999, borderWidth: 1.5, alignItems: 'center' },
+  leadChipText: { fontSize: FontSize.sm, fontFamily: UIFont },
   prefHint: { fontSize: FontSize.xs, fontFamily: UIFontLight, lineHeight: 16, paddingBottom: 12 },
 
   // Safety note box (24h SLA / second-strike copy)

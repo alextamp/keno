@@ -22,8 +22,8 @@ describe('getChallengeDefs', () => {
     expect(getChallengeDefs(undefined, t)).toEqual([]);
   });
 
-  it('returns all 10 challenge definitions for a user', () => {
-    expect(getChallengeDefs(makeUser(), t)).toHaveLength(10);
+  it('returns all 11 challenge definitions for a user', () => {
+    expect(getChallengeDefs(makeUser(), t)).toHaveLength(11);
   });
 
   it('clamps current progress at each challenge\'s own target, never above it', () => {
@@ -47,6 +47,15 @@ describe('getChallengeDefs', () => {
     expect(defs.find((d) => d.id === 'create_1')!.current).toBe(1);
     expect(defs.find((d) => d.id === 'streak_3')!.current).toBe(3);
     expect(defs.find((d) => d.id === 'follow_5')!.current).toBe(4);
+  });
+
+  // checkin_1 deliberately tracks checkInCount (real attendance), never
+  // joinedEvents (an RSVP) — see the "Νέος στην πόλη" newcomer-mode spec.
+  it('tracks checkin_1 off checkInCount, independent of joinedEvents', () => {
+    const rsvpOnly = getChallengeDefs(makeUser({ joinedEvents: ['a'], checkInCount: 0 }), t);
+    expect(rsvpOnly.find((d) => d.id === 'checkin_1')!.current).toBe(0);
+    const checkedIn = getChallengeDefs(makeUser({ joinedEvents: [], checkInCount: 1 }), t);
+    expect(checkedIn.find((d) => d.id === 'checkin_1')!.current).toBe(1);
   });
 
   it('treats a missing currentStreak/following as zero, not a crash', () => {

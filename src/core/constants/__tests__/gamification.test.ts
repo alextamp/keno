@@ -1,6 +1,6 @@
 import {
-  calculateReliabilityScore, getLevel, getReliabilityBadge, isBetaTesterUser, isRegularUser, isVerifiedUser,
-  LEVELS, VERIFIED_CHECKIN_THRESHOLD,
+  calculateReliabilityScore, getLevel, getReliabilityBadge, isBetaTesterUser, isNewcomerUser, isRegularUser, isVerifiedUser,
+  LEVELS, VERIFIED_CHECKIN_THRESHOLD, XP_VALUES,
 } from '../gamification';
 
 describe('getLevel', () => {
@@ -47,6 +47,21 @@ describe('isVerifiedUser', () => {
     expect(isVerifiedUser(VERIFIED_CHECKIN_THRESHOLD - 1)).toBe(false);
     expect(isVerifiedUser(VERIFIED_CHECKIN_THRESHOLD)).toBe(true);
     expect(isVerifiedUser(undefined)).toBe(false);
+  });
+});
+
+describe('isNewcomerUser', () => {
+  it('is true only before the first real check-in ever', () => {
+    expect(isNewcomerUser(undefined)).toBe(true);
+    expect(isNewcomerUser(0)).toBe(true);
+    expect(isNewcomerUser(1)).toBe(false);
+  });
+
+  it('newcomer create-event + checkin bonuses land exactly on the Sophomore threshold', () => {
+    const total = XP_VALUES.createEvent + XP_VALUES.newcomerFirstEventBonus;
+    expect(getLevel(0).name).toBe('Freshman');
+    expect(getLevel(total).name).toBe('Sophomore');
+    expect(total).toBe(LEVELS.find((l) => l.name === 'Sophomore')!.minXP);
   });
 });
 

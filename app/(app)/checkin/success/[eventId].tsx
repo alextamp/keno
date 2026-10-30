@@ -22,7 +22,9 @@ import { isLeft } from '@/core/utils/either';
 import { haptics } from '@/core/utils/haptics';
 import { fetchUserProfiles, UserProfile } from '@/core/utils/userProfiles';
 import { universityLabel } from '@/core/constants/universities';
-import { XP_VALUES } from '@/core/constants/gamification';
+import { XP_VALUES, isNewcomerUser } from '@/core/constants/gamification';
+import { NewcomerMilestoneModal } from '@/components/ui/NewcomerMilestoneModal';
+import { cancelEventReminder } from '@/core/utils/eventReminders';
 
 interface CheckedInRow {
   uid: string;
@@ -49,6 +51,7 @@ export default function CheckInSuccessScreen() {
   const [ownIsGroupBonus, setOwnIsGroupBonus] = useState(false);
   const [profiles, setProfiles] = useState<Record<string, UserProfile>>({});
   const [loading, setLoading] = useState(true);
+  const [showNewcomerExit, setShowNewcomerExit] = useState(false);
 
   // Check-in already gets a sound + haptic buzz the instant the QR scan
   // resolves (checkin/[eventId].tsx, right before it routes here) — this
@@ -73,6 +76,11 @@ export default function CheckInSuccessScreen() {
     opacity: contentOpacity.value,
     transform: [{ translateY: contentTranslateY.value }],
   }));
+
+  // Already here — a "starting soon" reminder for this event would be noise.
+  useEffect(() => {
+    if (eventId) cancelEventReminder(eventId).catch(() => {});
+  }, [eventId]);
 
   useEffect(() => {
     if (!eventId) return;
@@ -144,6 +152,29 @@ export default function CheckInSuccessScreen() {
     if (missing.length === 0) return;
     fetchUserProfiles(missing).then((fetched) => setProfiles((prev) => ({ ...prev, ...fetched })));
   }, [checkedInUids]);
+
+  // "Νέος στην πόλη" (newcomer mode) ends on the very first real check-in.
+  // On the self check-in path `user.checkInCount` is never optimistically
+  // bumped (see checkInWithToken), so it still reads the PRE-increment value
+  // here — `=== 0` reliably means "this is that first check-in," and
+  // firstCheckInEventId guards against paying the bonus twice if this effect
+  // somehow re-fires before a reload picks up the real incremented count.
+  useEffect(() => {
+    if (loading || !user || !eventId) return;
+    if (user.firstCheckInEventId || !isNewcomerUser(user.checkInCount)) return;
+    (async () => {
+      try {
+        await updateDoc(doc(db, 'users', user.id), {
+          firstCheckInEventId: eventId,
+          xp: increment(XP_VALUES.newcomerFirstCheckinBonus),
+        });
+        useAuthStore.setState((s) => (s.user ? {
+          user: { ...s.user, firstCheckInEventId: eventId, xp: (s.user.xp ?? 0) + XP_VALUES.newcomerFirstCheckinBonus },
+        } : {}));
+        setShowNewcomerExit(true);
+      } catch {}
+    })();
+  }, [loading, user?.id, eventId]);
 
   if (loading || !event) return <LoadingScreen />;
 
@@ -278,6 +309,13 @@ export default function CheckInSuccessScreen() {
       <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: insets.bottom + 16 }]}>
         <Button label={t.checkinSeeWhoBtn} onPress={() => router.replace(`/(app)/event/${eventId}`)} variant="primary" fullWidth />
       </View>
+
+      <NewcomerMilestoneModal
+        visible={showNewcomerExit}
+        variant="exitMode"
+        xpAmount={XP_VALUES.checkinBonus + XP_VALUES.newcomerFirstCheckinBonus}
+        onContinue={() => setShowNewcomerExit(false)}
+      />
     </View>
   );
 }

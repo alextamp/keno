@@ -36,6 +36,11 @@ const NOTIF_ICONS: Record<NotifType, IconName> = {
   level_up: 'trophy',
   friend_going: 'users',
   referral_reward: 'gift',
+  series_next: 'cal',
+  ride_request: 'users',
+  ride_confirmed: 'check',
+  ride_declined: 'x',
+  ride_cancelled: 'x',
 };
 
 // Screen 26: notifications grouped into ΣΗΜΕΡΑ / ΧΘΕΣ / ΠΑΛΙΟΤΕΡΑ sections.
@@ -115,6 +120,8 @@ export default function NotificationsScreen() {
       router.push(`/(app)/group/${notif.eventId}`);
     } else if (notif.type === 'event_message' && notif.eventId) {
       router.push(`/(app)/event-chat/${notif.eventId}` as any);
+    } else if (notif.type.startsWith('ride_') && notif.eventId) {
+      router.push(`/(app)/event/rides/${notif.eventId}` as any);
     } else if (notif.eventId) {
       router.push(`/(app)/event/${notif.eventId}`);
     } else if (notif.type === 'follow') {
@@ -178,6 +185,11 @@ export default function NotificationsScreen() {
       case 'level_up': return t.notifLevelUp(notif.eventTitle ?? '');
       case 'friend_going': return t.notifFriendGoing(notif.fromName, notif.eventTitle ?? '');
       case 'referral_reward': return t.notifReferralReward(notif.fromName, notif.eventTitle ?? '');
+      case 'series_next': return t.notifSeriesNext(notif.eventTitle ?? '');
+      case 'ride_request': return t.notifRideRequest(notif.fromName, notif.eventTitle ?? '');
+      case 'ride_confirmed': return t.notifRideConfirmed(notif.fromName, notif.eventTitle ?? '');
+      case 'ride_declined': return t.notifRideDeclined(notif.eventTitle ?? '');
+      case 'ride_cancelled': return t.notifRideCancelled(notif.fromName, notif.eventTitle ?? '');
       default: return t.notifGroupInvite(notif.fromName, notif.eventTitle ?? '');
     }
   };

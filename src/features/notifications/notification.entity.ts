@@ -1,4 +1,4 @@
-export type NotifType = 'follow' | 'event_join' | 'event_message' | 'event_invite' | 'waitlist_promoted' | 'event_cancelled' | 'event_reminder' | 'group_invite' | 'event_join_request' | 'event_join_accepted' | 'group_join_request' | 'group_join_accepted' | 'group_message' | 'dm_message' | 'buddy_match' | 'mutual_match' | 'level_up' | 'friend_going' | 'referral_reward';
+export type NotifType = 'follow' | 'event_join' | 'event_message' | 'event_invite' | 'waitlist_promoted' | 'event_cancelled' | 'event_reminder' | 'group_invite' | 'event_join_request' | 'event_join_accepted' | 'group_join_request' | 'group_join_accepted' | 'group_message' | 'dm_message' | 'buddy_match' | 'mutual_match' | 'level_up' | 'friend_going' | 'referral_reward' | 'series_next' | 'ride_request' | 'ride_confirmed' | 'ride_declined' | 'ride_cancelled';
 
 export interface NotificationEntity {
   id: string;

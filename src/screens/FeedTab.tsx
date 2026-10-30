@@ -30,6 +30,10 @@ import { fetchUserProfiles, UserProfile } from '@/core/utils/userProfiles';
 import { haversineKm, matchesWhenBucket } from '@/core/utils/geo';
 import { usePreferencesStore } from '@/core/store/preferences.store';
 import { INTEREST_MATCH_KEYWORDS } from '@/core/constants/interests';
+import { beaconsRepository } from '@/features/beacons/beacons.repository';
+import { BeaconEntity } from '@/features/beacons/beacon.entity';
+import { BeaconCard } from '@/components/ui/BeaconCard';
+import { CreateBeaconSheet } from '@/components/ui/CreateBeaconSheet';
 
 const FILTER_DEFS: { value: EventCategory | null; key: string }[] = [
   { key: 'catAll',    value: null },
@@ -136,6 +140,71 @@ export default function FeedScreen() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null);
   const [friendProfiles, setFriendProfiles] = useState<Record<string, UserProfile>>({});
   const [refreshing, setRefreshing] = useState(false);
+
+  // "Έχω κενό" beacons — a silent, best-effort location request (no Alert on
+  // denial, unlike the explicit radius-filter flow below) since this is a
+  // nice-to-have surface, not something that should interrupt first load.
+  const [beaconLocation, setBeaconLocation] = useState<{ lat: number; lon: number } | null>(null);
+  const [nearbyBeacons, setNearbyBeacons] = useState<BeaconEntity[]>([]);
+  const [beaconProfiles, setBeaconProfiles] = useState<Record<string, UserProfile>>({});
+  const [createBeaconVisible, setCreateBeaconVisible] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await Location.getForegroundPermissionsAsync();
+        if (status !== 'granted') return;
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        setBeaconLocation({ lat: loc.coords.latitude, lon: loc.coords.longitude });
+      } catch {}
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!beaconLocation) return;
+    return beaconsRepository.subscribeNearby(beaconLocation.lat, beaconLocation.lon, setNearbyBeacons);
+  }, [beaconLocation?.lat, beaconLocation?.lon]);
+
+  useEffect(() => {
+    const missing = Array.from(new Set(nearbyBeacons.map((b) => b.userId))).filter((id) => !beaconProfiles[id]);
+    if (missing.length === 0) return;
+    fetchUserProfiles(missing).then((fetched) => setBeaconProfiles((prev) => ({ ...prev, ...fetched })));
+  }, [nearbyBeacons]);
+
+  const handleBeaconPress = useCallback((beacon: BeaconEntity) => {
+    if (beacon.userId === user?.id) {
+      Alert.alert(
+        t.beaconActiveTitle,
+        t.beaconSeenCount(beacon.seenByUids?.length ?? 0),
+        [
+          { text: t.cancel, style: 'cancel' },
+          { text: t.beaconEndEarlyBtn, style: 'destructive', onPress: () => beaconsRepository.cancel(beacon.id).catch(() => {}) },
+        ],
+      );
+      return;
+    }
+    beaconsRepository.markSeen(beacon.id, user!.id).catch(() => {});
+    router.push(`/(app)/dm/${beacon.userId}` as any);
+  }, [user?.id]);
+
+  const handleCreateBeacon = useCallback(async (durationMinutes: BeaconEntity['durationMinutes'], note: string) => {
+    setCreateBeaconVisible(false);
+    if (!user) return;
+    let loc = beaconLocation;
+    if (!loc) {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(t.createAlertSaveError, t.authErrGeneric);
+        return;
+      }
+      const fresh = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      loc = { lat: fresh.coords.latitude, lon: fresh.coords.longitude };
+      setBeaconLocation(loc);
+    }
+    await beaconsRepository.create({
+      userId: user.id, latitude: loc.lat, longitude: loc.lon, durationMinutes, note: note || undefined,
+    }).catch(() => {});
+  }, [user, beaconLocation]);
 
   // Touch-driven hero card (replaces the old "index === 0 is always the
   // hero" rule): landing a finger on a compact row instantly promotes that
@@ -482,6 +551,9 @@ export default function FeedScreen() {
                   </View>
                 )}
               </AnimatedPressable>
+              <AnimatedPressable onPress={() => setCreateBeaconVisible(true)} style={styles.iconBtn}>
+                <Icon name="coffee" size={19} color={colors.textPrimary} />
+              </AnimatedPressable>
               <AnimatedPressable onPress={() => setSearchActive(true)} style={styles.iconBtn}>
                 <Icon name="search" size={19} color={colors.textPrimary} />
               </AnimatedPressable>
@@ -504,9 +576,36 @@ export default function FeedScreen() {
         </AnimatedPressable>
       )}
 
+      {!searchActive && nearbyBeacons.length > 0 && beaconLocation && (
+        <View style={styles.beaconList}>
+          {nearbyBeacons.map((b) => {
+            const profile = beaconProfiles[b.userId];
+            const distanceM = haversineKm(beaconLocation.lat, beaconLocation.lon, b.latitude, b.longitude) * 1000;
+            return (
+              <BeaconCard
+                key={b.id}
+                beacon={b}
+                isOwn={b.userId === user?.id}
+                distanceM={distanceM}
+                creatorName={profile?.name ?? '…'}
+                creatorAvatarColor={profile?.avatarColor}
+                creatorPhotoUri={profile?.photoUri}
+                onPress={() => handleBeaconPress(b)}
+              />
+            );
+          })}
+        </View>
+      )}
+
       {/* Category tags + For You/Friends/Filters row — fixed above the list,
           not scrolled away with the events underneath it. */}
       {!showZeroState && listHeader}
+
+      <CreateBeaconSheet
+        visible={createBeaconVisible}
+        onClose={() => setCreateBeaconVisible(false)}
+        onSubmit={handleCreateBeacon}
+      />
 
       {isLoading ? (
         <FlatList
@@ -664,6 +763,7 @@ export default function FeedScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  beaconList: { paddingHorizontal: Spacing.gutter, gap: Spacing.sm, marginBottom: Spacing.sm },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',

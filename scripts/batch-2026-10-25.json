@@ -1,0 +1,38 @@
+[
+  {
+    "title": "Δωρεάν μουσεία για την 28η Οκτωβρίου",
+    "description": "Την Τετάρτη της εθνικής επετείου η είσοδος στα κρατικά μουσεία και τους αρχαιολογικούς χώρους είναι δωρεάν, και το Μουσείο Ακρόπολης συμμετέχει με ελεύθερη είσοδο σε όλο το ωράριο. Ιδανική μέρα για βόλτα με παρέα. Δωρεάν είσοδος. Ώρα: προς επιβεβαίωση.",
+    "category": "Πολιτισμός",
+    "dateTime": "2026-10-28T12:00:00+02:00",
+    "location": "Μουσείο Ακρόπολης, Αθήνα",
+    "source": "https://www.odigostoupoliti.eu/eleftheri-eisodos-se-mouseia-archaiologikous-chorous-tin-tetarti-28-oktovriou-2026/",
+    "needsReview": ["time", "location", "source"]
+  },
+  {
+    "title": "Thess Youth Festival στο άγαλμα του Μεγάλου Αλεξάνδρου",
+    "description": "Διήμερο φεστιβάλ για τη νέα γενιά στη Νέα Παραλία της Θεσσαλονίκης, με μουσική και τεχνολογία, από τον Δήμο Θεσσαλονίκης. Έλα με παρέα ή γνώρισε κόσμο εκεί. Ώρα και κόστος: προς επιβεβαίωση.",
+    "category": "Πολιτισμός",
+    "dateTime": "2026-10-30T12:00:00+02:00",
+    "location": "Άγαλμα Μεγάλου Αλεξάνδρου, Νέα Παραλία, Θεσσαλονίκη",
+    "source": "https://thessaloniki.gr/1st-thess-youth-festival-2026-%CE%B7-%CE%B8%CE%B5%CF%83%CF%83%CE%B1%CE%BB%CE%BF%CE%BD%CE%AF%CE%BA%CE%B7-%CE%B4%CE%AF%CE%BD%CE%B5%CE%B9-%CF%87%CF%8E%CF%81%CE%BF-%CF%86%CF%89%CE%BD%CE%AE-%CE%BA%CE%B1/",
+    "needsReview": ["time", "cost"]
+  },
+  {
+    "title": "Athens Halloween Festival στο Γκάζι",
+    "description": "Τριήμερο Halloween στο παλιό αμαξοστάσιο ΟΣΥ στο Γκάζι (έως 1/11), με workshops, stand-up, κινηματογραφικές βραδιές και σκαλίσματα κολοκύθας. Γενική είσοδος από 5€ (early bird), μερικές δραστηριότητες έχουν ξεχωριστό εισιτήριο. Ώρα: προς επιβεβαίωση.",
+    "category": "Πάρτι",
+    "dateTime": "2026-10-30T12:00:00+02:00",
+    "location": "Παλιό αμαξοστάσιο ΟΣΥ, Ερμού & Πειραιώς 1, Γκάζι, Αθήνα",
+    "source": "https://www.tovima.com/culture/athens-halloween-festival-returns-for-three-nights-in-gazi/",
+    "needsReview": ["time", "cost", "source"]
+  },
+  {
+    "title": "Γιορτή του Σινεμά: εισιτήριο 3€",
+    "description": "Την Πέμπτη 29/10 όλες οι ταινίες και όλες οι προβολές στους κινηματογράφους σε όλη την Ελλάδα με ενιαίο εισιτήριο 3€. Διάλεξε ταινία, πάρε παρέα και πήγαινε στη σινεμά της γειτονιάς σου. Κόστος: 3€. Ώρα: ανάλογα με την προβολή.",
+    "category": "Πολιτισμός",
+    "dateTime": "2026-10-29T12:00:00+02:00",
+    "location": "Κινηματογράφοι σε όλη την Ελλάδα (επίλεξε σινεμά κοντά σου)",
+    "source": "https://www.odigostoupoliti.eu/giorti-tou-sinema-2026-me-eniaio-eisitirio-3-evro-gia-oles-tis-tainies-kai-oles-tis-provoles/",
+    "needsReview": ["time", "location", "source"]
+  }
+]

@@ -47,6 +47,9 @@ export function eventFromFirestore(doc: DocumentSnapshot<DocumentData>): EventMo
     referredBy: (data.referredBy as Record<string, string>) ?? undefined,
     endedAt: data.endedAt ? (data.endedAt as Timestamp).toDate() : undefined,
     isFlagship: (data.isFlagship as boolean) ?? false,
+    seriesId: data.seriesId as string | undefined,
+    seriesIndex: data.seriesIndex as number | undefined,
+    ridesEnabled: (data.ridesEnabled as boolean) ?? false,
     rsvpStakes: data.rsvpStakes
       ? Object.fromEntries(
           Object.entries(data.rsvpStakes as Record<string, { xp: number; timestamp: Timestamp; didCheckIn: boolean }>)
@@ -91,6 +94,8 @@ export function eventToFirestore(
     ...(event.soloFriendly ? { soloFriendly: true } : {}),
     ...(event.checkInInfo && (event.checkInInfo.text || event.checkInInfo.photoUri) ? { checkInInfo: event.checkInInfo } : {}),
     ...(event.isFlagship ? { isFlagship: true } : {}),
+    ...(event.seriesId ? { seriesId: event.seriesId, seriesIndex: event.seriesIndex ?? 0 } : {}),
+    ...(event.ridesEnabled ? { ridesEnabled: true } : {}),
     messages: event.messages.map((m) => ({
       ...m,
       timestamp: Timestamp.fromDate(m.timestamp),

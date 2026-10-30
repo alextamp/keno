@@ -69,6 +69,9 @@ export const eventsRepository: EventsRepository = {
         soloFriendly: params.soloFriendly ?? false,
         checkInInfo: params.checkInInfo,
         isFlagship: params.isFlagship ?? false,
+        seriesId: params.seriesId,
+        seriesIndex: params.seriesIndex,
+        ridesEnabled: params.ridesEnabled ?? false,
         reactions: { hype: [], funny: [], interested: [] },
         waitlistIds: [],
         messages: [],
@@ -88,9 +91,11 @@ export const eventsRepository: EventsRepository = {
         createdAt: serverTimestamp(),
       });
       const snap = await getDoc(ref);
-      const { awardXP, incrementQuestProgress } = useAuthStore.getState();
-      awardXP(XP_VALUES.createEvent).catch(() => {});
-      incrementQuestProgress('host_event').catch(() => {});
+      if (!params.skipRewards) {
+        const { awardXP, incrementQuestProgress } = useAuthStore.getState();
+        awardXP(XP_VALUES.createEvent).catch(() => {});
+        incrementQuestProgress('host_event').catch(() => {});
+      }
       return right(eventFromFirestore(snap));
     } catch (e: any) {
       return left(new ServerFailure(e.message ?? 'Failed to create event.'));
@@ -116,6 +121,7 @@ export const eventsRepository: EventsRepository = {
       if (params.soloFriendly !== undefined) patch.soloFriendly = params.soloFriendly;
       if (params.checkInInfo !== undefined) patch.checkInInfo = params.checkInInfo;
       if (params.isFlagship !== undefined) patch.isFlagship = params.isFlagship;
+      if (params.ridesEnabled !== undefined) patch.ridesEnabled = params.ridesEnabled;
       await updateDoc(ref, patch);
       const updated = await getDoc(ref);
       return right(eventFromFirestore(updated));

@@ -74,22 +74,47 @@ export async function markNotificationPermissionPromptShown(userId: string): Pro
   } catch {}
 }
 
-export async function scheduleEventReminder(event: EventEntity): Promise<void> {
+export type ReminderLeadMinutes = 30 | 60 | 120;
+export const REMINDER_LEAD_OPTIONS: ReminderLeadMinutes[] = [30, 60, 120];
+
+/** The user-dependent inputs a reminder needs. Passed in rather than read
+ *  from the auth store here, since auth.store already imports this module. */
+export interface ReminderContext {
+  enabled: boolean;
+  leadMinutes: ReminderLeadMinutes;
+  following: string[];
+}
+
+export function reminderContextFor(user: {
+  notificationPrefs?: { eventReminders?: boolean; reminderLeadMinutes?: ReminderLeadMinutes };
+  following?: string[];
+}): ReminderContext {
+  return {
+    enabled: user.notificationPrefs?.eventReminders !== false,
+    leadMinutes: user.notificationPrefs?.reminderLeadMinutes ?? 60,
+    following: user.following ?? [],
+  };
+}
+
+export async function scheduleEventReminder(event: EventEntity, ctx: ReminderContext): Promise<void> {
   try {
+    // Cancel any existing reminder for this event first — also covers a
+    // changed start time and the user having just switched reminders off.
+    await cancelEventReminder(event.id);
+    if (!ctx.enabled) return;
+
     const granted = await isNotificationPermissionGranted();
     if (!granted) return;
 
-    const reminderTime = new Date(event.dateTime.getTime() - 60 * 60 * 1000);
+    const reminderTime = new Date(event.dateTime.getTime() - ctx.leadMinutes * 60 * 1000);
     if (reminderTime <= new Date()) return;
 
-    // Cancel any existing reminder for this event first
-    await cancelEventReminder(event.id);
-
+    const friendsGoing = event.attendeeIds.filter((uid) => ctx.following.includes(uid)).length;
     const t = getTranslations();
     const identifier = await Notifications.scheduleNotificationAsync({
       content: {
-        title: t.reminderTitle(event.title),
-        body: t.reminderBody(event.location),
+        title: t.reminderTitleLead(ctx.leadMinutes, event.title),
+        body: friendsGoing > 0 ? t.reminderBodyFriends(friendsGoing) : t.reminderBody(event.location),
         data: { eventId: event.id },
       },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: reminderTime },
@@ -128,10 +153,24 @@ export async function getExpoPushToken(): Promise<string | null> {
   }
 }
 
-export async function syncEventReminders(joinedEventIds: string[], allEvents: EventEntity[]): Promise<void> {
+export async function syncEventReminders(
+  joinedEventIds: string[],
+  allEvents: EventEntity[],
+  ctx: ReminderContext,
+  checkedInEventIds: string[] = [],
+): Promise<void> {
   const now = new Date();
   const joinedUpcoming = allEvents.filter(
-    (e) => joinedEventIds.includes(e.id) && e.dateTime > now,
+    (e) => joinedEventIds.includes(e.id) && e.dateTime > now && !checkedInEventIds.includes(e.id),
   );
-  await Promise.all(joinedUpcoming.map((e) => scheduleEventReminder(e)));
+  // A reminder whose event was deleted, left, or already checked into would
+  // otherwise still fire — cancel anything scheduled that isn't still due.
+  try {
+    const keep = new Set(joinedUpcoming.map((e) => e.id));
+    const keys = await AsyncStorage.getAllKeys();
+    await Promise.all(keys
+      .filter((k) => k.startsWith(STORAGE_KEY_PREFIX) && !keep.has(k.slice(STORAGE_KEY_PREFIX.length)))
+      .map((k) => cancelEventReminder(k.slice(STORAGE_KEY_PREFIX.length))));
+  } catch {}
+  await Promise.all(joinedUpcoming.map((e) => scheduleEventReminder(e, ctx)));
 }

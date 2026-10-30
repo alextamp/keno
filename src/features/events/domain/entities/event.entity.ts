@@ -122,6 +122,11 @@ export interface EventEntity {
    *  core/utils/adminRole.ts and edit/[id].tsx), not a general creator
    *  feature. */
   isFlagship?: boolean;
+  /** Set on every occurrence of a recurring event (see features/series). */
+  seriesId?: string;
+  seriesIndex?: number;
+  /** Creator turned on ride sharing for this event. */
+  ridesEnabled?: boolean;
 }
 
 export function isEventFull(event: EventEntity): boolean {
@@ -146,8 +151,8 @@ export function isOnWaitlist(event: EventEntity, userId: string): boolean {
 // of "happening now" and into event history.
 const PAST_EVENT_GRACE_MS = 24 * 60 * 60 * 1000;
 
-export function isEventPast(event: EventEntity): boolean {
-  return !!event.endedAt || Date.now() >= event.dateTime.getTime() + PAST_EVENT_GRACE_MS;
+export function isEventPast(event: EventEntity, now: number = Date.now()): boolean {
+  return !!event.endedAt || now >= event.dateTime.getTime() + PAST_EVENT_GRACE_MS;
 }
 
 export function getCategoryLabel(category: EventCategory, customCategory?: string): string {

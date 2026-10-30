@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "776108780336",
+    "project_id": "keno-212fa",
+    "storage_bucket": "keno-212fa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:776108780336:android:5eb614098a3ff76c2436f5",
+        "android_client_info": {
+          "package_name": "com.KeNo.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB_R2ivEv_4VvK-9g9tNqbzQKoy4-ZdeR8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

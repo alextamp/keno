@@ -2,7 +2,7 @@
   "expo": {
     "name": "keno",
     "slug": "keno",
-    "version": "1.2",
+    "version": "1.4",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "keno",
@@ -20,6 +20,7 @@
         "backgroundColor": "#FAF7F2"
       },
       "package": "com.KeNo.app",
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
@@ -31,8 +32,7 @@
         "googleMaps": {
           "apiKey": "AIzaSyBivBgxEI5WZweR4Lv9ERELbRRL6b1IYlg"
         }
-      },
-      "versionCode": 31
+      }
     },
     "plugins": [
       "expo-router",

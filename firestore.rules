@@ -238,6 +238,62 @@ service cloud.firestore {
         allow read: if signedIn();
         allow write: if isOwner(userId);
       }
+
+      // Ride sharing (spec #6). The ride doc only carries an approximate
+      // departure area; the exact meeting point lives in private/meeting,
+      // readable by the driver and confirmed riders only. Offering and
+      // booking both require actually being on the event's attendee list.
+      // confirmedIds is the seat ledger: only the driver grows it (when
+      // confirming a booking), never past `seats`; a confirmed rider may
+      // only remove themselves.
+      match /rides/{rideId} {
+        function event() {
+          return get(/databases/$(database)/documents/events/$(eventId)).data;
+        }
+        function ride() {
+          return get(/databases/$(database)/documents/events/$(eventId)/rides/$(rideId)).data;
+        }
+
+        allow read: if signedIn();
+        allow create: if signedIn() &&
+          event().get('ridesEnabled', false) == true &&
+          request.auth.uid in event().attendeeIds &&
+          request.resource.data.driverId == request.auth.uid &&
+          request.resource.data.seats is int &&
+          request.resource.data.seats >= 1 && request.resource.data.seats <= 6 &&
+          request.resource.data.confirmedIds.size() == 0;
+        allow update: if signedIn() && (
+          (resource.data.driverId == request.auth.uid &&
+            onlyChangedFields(['departureArea', 'departureTime', 'seats', 'costPerPerson', 'confirmedIds']) &&
+            request.resource.data.seats is int &&
+            request.resource.data.seats >= 1 && request.resource.data.seats <= 6 &&
+            request.resource.data.confirmedIds.size() <= request.resource.data.seats) ||
+          (onlyChangedFields(['confirmedIds']) &&
+            request.auth.uid in resource.data.confirmedIds &&
+            request.resource.data.confirmedIds.toSet() ==
+              resource.data.confirmedIds.toSet().difference([request.auth.uid].toSet()))
+        );
+        allow delete: if signedIn() && resource.data.driverId == request.auth.uid;
+
+        match /bookings/{uid} {
+          allow read: if signedIn() && (request.auth.uid == uid || ride().driverId == request.auth.uid);
+          allow create: if signedIn() && request.auth.uid == uid &&
+            ride().driverId != uid &&
+            request.auth.uid in event().attendeeIds &&
+            request.resource.data.status == 'pending';
+          allow update: if signedIn() && ride().driverId == request.auth.uid &&
+            onlyChangedFields(['status']) &&
+            request.resource.data.status in ['confirmed', 'declined'];
+          allow delete: if signedIn() && (request.auth.uid == uid || ride().driverId == request.auth.uid);
+        }
+
+        match /private/{docId} {
+          allow read: if signedIn() && (
+            ride().driverId == request.auth.uid || request.auth.uid in ride().confirmedIds
+          );
+          allow write: if signedIn() && ride().driverId == request.auth.uid;
+        }
+      }
     }
 
     // Candidate events found by the events-ingestion script (ΒΗΜΑ 3),
@@ -371,6 +427,36 @@ service cloud.firestore {
     match /moderationLog/{logId} {
       allow read: if isAdmin();
       allow create, update, delete: if false;
+    }
+
+    // "Έχω κενό" — ephemeral location beacons (src/features/beacons). World
+    // readable like events (the client does the actual 1km filtering,
+    // Firestore has no native geo-radius query); only the creator can write
+    // their own, and the only field anyone else may ever touch is
+    // seenByUids (a viewer marking "I opened this"). Expired docs are swept
+    // by functions/src/index.ts's sweepExpiredBeacons — this collection
+    // intentionally has no TTL/read-time filter of its own.
+    match /beacons/{beaconId} {
+      allow read: if signedIn();
+      allow create: if signedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.durationMinutes in [30, 60, 120] &&
+        request.resource.data.expiresAt > request.time &&
+        request.resource.data.expiresAt <= request.time + duration.value(125, 'm');
+      allow update: if signedIn() && onlyChangedFields(['seenByUids']);
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    // Recurring events (spec #4): the repeat rule + a template of the first
+    // occurrence. Only its creator touches it from the client; the
+    // generateSeriesOccurrences Cloud Function (admin SDK) creates the later
+    // occurrences and advances generatedCount.
+    match /eventSeries/{seriesId} {
+      allow read: if signedIn() && resource.data.creatorId == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.creatorId == request.auth.uid;
+      allow update: if signedIn() && resource.data.creatorId == request.auth.uid &&
+        request.resource.data.creatorId == resource.data.creatorId;
+      allow delete: if signedIn() && resource.data.creatorId == request.auth.uid;
     }
   }
 }

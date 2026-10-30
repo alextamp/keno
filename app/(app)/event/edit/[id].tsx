@@ -11,7 +11,10 @@ import { pickImage as pickPhoto } from '@/core/utils/imagePicker';
 import { format } from 'date-fns';
 import { useTheme } from '@/core/theme';
 import { BorderRadius, UIFont, TitleFont, FontSize, FontWeight, Shadow, Spacing } from '@/core/constants/theme';
-import { EventCategory, GenderFilter } from '@/features/events/domain/entities/event.entity';
+import { EventCategory, EventEntity, GenderFilter } from '@/features/events/domain/entities/event.entity';
+import { UpdateEventParams } from '@/features/events/domain/repositories/events.repository';
+import { seriesRepository } from '@/features/series/series.repository';
+import { FEATURES } from '@/core/constants/features';
 import { useEventsStore } from '@/features/events/presentation/store/events.store';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { useIsAdmin } from '@/core/utils/adminRole';
@@ -66,6 +69,8 @@ export default function EditEventScreen() {
   const [checkInInfoText, setCheckInInfoText] = useState('');
   const [checkInInfoPhotoUri, setCheckInInfoPhotoUri] = useState<string | null>(null);
   const [isFlagship, setIsFlagship] = useState(false);
+  const [ridesEnabled, setRidesEnabled] = useState(false);
+  const [original, setOriginal] = useState<EventEntity | null>(null);
 
   useEffect(() => {
     eventsRepository.getEvent(id).then((result) => {
@@ -89,6 +94,8 @@ export default function EditEventScreen() {
       setCheckInInfoText(e.checkInInfo?.text ?? '');
       setCheckInInfoPhotoUri(e.checkInInfo?.photoUri ?? null);
       setIsFlagship(e.isFlagship ?? false);
+      setRidesEnabled(e.ridesEnabled ?? false);
+      setOriginal(e);
       setLoading(false);
     });
   }, [id]);
@@ -154,7 +161,7 @@ export default function EditEventScreen() {
       }
     }
 
-    const result = await eventsRepository.updateEvent(id, {
+    const patch: UpdateEventParams = {
       title: title.trim(),
       description: description.trim(),
       category,
@@ -170,12 +177,49 @@ export default function EditEventScreen() {
       checkInInfo: (checkInInfoText.trim() || finalCheckInPhoto)
         ? { text: checkInInfoText.trim() || undefined, photoUri: finalCheckInPhoto }
         : undefined,
+      ridesEnabled,
       ...(isAdmin ? { isFlagship } : {}),
-    });
+    };
+
+    // Part of a series → ask whether the edit is for this occurrence only.
+    const scope: 'this' | 'following' | null = original?.seriesId
+      ? await new Promise((resolve) => Alert.alert(t.seriesEditScopeTitle, undefined, [
+          { text: t.seriesEditThisOnly, onPress: () => resolve('this') },
+          { text: t.seriesEditFollowing, onPress: () => resolve('following') },
+          { text: t.cancel, style: 'cancel', onPress: () => resolve(null) },
+        ], { cancelable: true, onDismiss: () => resolve(null) }))
+      : 'this';
+    if (!scope) { setSaving(false); setUploadProgress(0); return; }
+
+    const result = await eventsRepository.updateEvent(id, patch);
     if (isLeft(result)) Alert.alert(t.userInviteErrorTitle, result.left.message);
-    else { upsertEvent(result.right); router.back(); }
+    else {
+      if (scope === 'following' && original) {
+        await seriesRepository.applyToFollowing(result.right, original, patch).catch(() => {
+          Alert.alert(t.userInviteErrorTitle, t.seriesEditFollowingFailed);
+        });
+      }
+      upsertEvent(result.right);
+      router.back();
+    }
     setSaving(false);
     setUploadProgress(0);
+  };
+
+  const handleStopSeries = () => {
+    if (!original?.seriesId) return;
+    Alert.alert(t.seriesStopTitle, t.seriesStopBody, [
+      { text: t.cancel, style: 'cancel' },
+      {
+        text: t.seriesStopConfirm,
+        style: 'destructive',
+        onPress: () => {
+          seriesRepository.stopSeries(original.seriesId!)
+            .then(() => Alert.alert(t.seriesStoppedToast))
+            .catch(() => Alert.alert(t.userInviteErrorTitle, t.authErrGeneric));
+        },
+      },
+    ]);
   };
 
   if (loading) return <LoadingScreen />;
@@ -351,6 +395,22 @@ export default function EditEventScreen() {
             </AnimatedPressable>
           )}
 
+          {FEATURES.rides && (
+            <AnimatedPressable
+              onPress={() => setRidesEnabled((v) => !v)}
+              style={[
+                styles.flagshipRow,
+                { borderColor: ridesEnabled ? colors.primary : colors.border, backgroundColor: ridesEnabled ? colors.accentSoft : colors.surface },
+              ]}
+            >
+              <Icon name="users" size={16} color={ridesEnabled ? colors.primary : colors.textSecondary} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.flagshipLabel, { color: ridesEnabled ? colors.accentInk : colors.textPrimary }]}>{t.ridesToggleLabel}</Text>
+                <Text style={[styles.flagshipHint, { color: ridesEnabled ? colors.accentInk : colors.textHint }]}>{t.ridesToggleHint}</Text>
+              </View>
+            </AnimatedPressable>
+          )}
+
           <Button
             label={saving && uploadProgress > 0 && uploadProgress < 1
               ? t.editEventSaving(Math.round(uploadProgress * 100))
@@ -359,6 +419,10 @@ export default function EditEventScreen() {
             loading={saving}
             fullWidth
           />
+
+          {!!original?.seriesId && (
+            <Button label={t.seriesStopConfirm} onPress={handleStopSeries} variant="ghost" fullWidth />
+          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

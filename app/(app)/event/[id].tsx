@@ -29,10 +29,12 @@ import { isLeft, isRight } from '@/core/utils/either';
 import { getCountdown } from '@/core/utils/time';
 import { fetchUserProfiles, UserProfile } from '@/core/utils/userProfiles';
 import { notificationsRepository } from '@/features/notifications/notifications.repository';
-import { scheduleEventReminder, cancelEventReminder, hasShownNotificationPermissionPrompt, markNotificationPermissionPromptShown } from '@/core/utils/eventReminders';
+import { scheduleEventReminder, cancelEventReminder, hasShownNotificationPermissionPrompt, markNotificationPermissionPromptShown, reminderContextFor } from '@/core/utils/eventReminders';
 import { haptics } from '@/core/utils/haptics';
 import { sounds } from '@/core/utils/sounds';
 import { analytics } from '@/core/utils/analytics';
+import { FEATURES } from '@/core/constants/features';
+import { publicEventUrl } from '@/core/constants/publicLinks';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { DuotoneScene } from '@/components/ui/DuotoneScene';
@@ -388,7 +390,7 @@ export default function EventDetailScreen() {
       } else {
         const isFirstJoinEver = user.joinedEvents.length === 0;
         addJoinedEvent(event.id);
-        scheduleEventReminder(updated).catch(() => {});
+        scheduleEventReminder(updated, reminderContextFor(user)).catch(() => {});
         haptics.success();
         sounds.play('success');
         analytics.track('event_joined', { eventId: event.id, category: event.category, isFirstJoinEver });
@@ -772,11 +774,17 @@ export default function EventDetailScreen() {
     if (!event) return;
     haptics.light();
     const dateStr = format(event.dateTime, 'EEE d MMM, HH:mm', { locale: dateLocale });
+    // Public events get the web page link (opens and previews without the
+    // app); private ones never get a public page, so they keep the deep link.
+    const isPublicLink = FEATURES.publicEventLinks && !event.isPrivate;
+    const link = isPublicLink ? publicEventUrl(event.id) : `keno://event/${event.id}`;
     const result = await Share.share({
       title: event.title,
-      message: `🎉 ${event.title}\n📌 ${event.location}\n⏰ ${dateStr}\n\n${t.eventShareCta}\nkeno://event/${event.id}`,
+      message: `🎉 ${event.title}\n📌 ${event.location}\n⏰ ${dateStr}\n\n${t.eventShareCta}\n${link}`,
     });
-    if (result.action !== 'dismissedAction') analytics.track('event_shared', { eventId: event.id, method: 'text' });
+    if (result.action !== 'dismissedAction') {
+      analytics.track('event_shared', { eventId: event.id, method: isPublicLink ? 'public_link' : 'text' });
+    }
   };
 
   // Live Mode's "tell a friend where I'm at" (research doc #10) — unlike
@@ -1161,6 +1169,20 @@ export default function EventDetailScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[styles.privateBannerTitle, { color: colors.accentInk }]}>{t.eventPrivateTitle}</Text>
               <Text style={[styles.privateBannerSub, { color: colors.textSecondary }]}>{t.eventPrivateBannerSub}</Text>
+            </View>
+            <Icon name="fwd" size={16} color={colors.primary} />
+          </AnimatedPressable>
+        )}
+
+        {FEATURES.rides && event.ridesEnabled && (
+          <AnimatedPressable
+            onPress={() => router.push(`/(app)/event/rides/${event.id}` as any)}
+            style={[styles.privateBanner, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          >
+            <Icon name="users" size={18} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.privateBannerTitle, { color: colors.textPrimary }]}>{t.ridesTitle}</Text>
+              <Text style={[styles.privateBannerSub, { color: colors.textSecondary }]}>{t.ridesLinkLabel}</Text>
             </View>
             <Icon name="fwd" size={16} color={colors.primary} />
           </AnimatedPressable>

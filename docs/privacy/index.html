@@ -1,111 +1,272 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="el" data-theme="day">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Keno — Privacy Policy</title>
+<meta name="author" content="Alex Tampakis">
+<meta name="description" content="Keno — Privacy Policy">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23B8482A'/%3E%3Ctext x='32' y='46' font-family='Georgia,serif' font-size='42' font-weight='700' text-anchor='middle' fill='%23FAF7F2'%3Ek.%3C/text%3E%3C/svg%3E">
+<title>Privacy Policy — Keno</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 40px 20px 80px; line-height: 1.6; color: #1a1208; background: #faf9f6; }
-  h1 { font-size: 28px; margin-bottom: 4px; }
-  h2 { font-size: 19px; margin-top: 36px; }
-  .updated { color: #6b5d4f; font-size: 14px; margin-bottom: 32px; }
-  a { color: #c94d0a; }
-  ul { padding-left: 22px; }
+:root{
+  --paper:#FAF7F2; --paper2:#F2EBE0; --surface:#FFFFFF;
+  --ink:#241F19; --dim:#6E635A; --faint:#7A6E62; --decor:#A2968A;
+  --bord:#E8E0D5; --acc:#B8482A; --accSoft:#F7EBE5; --accInk:#A03F24; --deep:#5E2313;
+}
+[data-theme="night"]{
+  --paper:#17120E; --paper2:#1E1813; --surface:#221B15;
+  --ink:#F4EBE1; --dim:#B7A794; --faint:#9B8B79; --decor:#7B6C5D;
+  --bord:#332A20; --acc:#E0755A; --accSoft:#3B2219; --accInk:#EE8B71; --deep:#F0C3B2;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+body{background:var(--paper);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;transition:background .34s ease,color .34s ease}
+a{color:inherit;text-decoration:none}
+::selection{background:var(--accSoft);color:var(--accInk)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radius:6px}
+h1,h2,h3{font-family:Lora,Georgia,serif;font-weight:700;letter-spacing:-.8px;line-height:1.1}
+h1{font-size:clamp(38px,6.4vw,66px);letter-spacing:-2px;line-height:1.03}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+section{padding:clamp(64px,9vw,112px) 0}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+.nav{position:sticky;top:0;z-index:60;background:var(--paper);border-bottom:1px solid var(--bord);transition:background .34s ease}
+@supports (backdrop-filter:blur(12px)){.nav{background:color-mix(in srgb, var(--paper) 86%, transparent);backdrop-filter:blur(14px) saturate(1.2)}}
+.nav-in{display:flex;align-items:center;gap:20px;height:64px}
+.wm{font-family:Lora,serif;font-weight:700;font-size:23px;letter-spacing:-1.3px}
+.wm .dot{color:var(--acc)}
+.nav-links{display:flex;gap:26px;margin-left:22px;font-size:14px;font-weight:500;color:var(--dim)}
+.nav-links a{transition:color .2s}
+.nav-links a:hover{color:var(--acc)}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.icon-btn{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;border:1px solid var(--bord);background:var(--surface);
+  color:var(--dim);cursor:pointer;font-family:inherit;font-size:11.5px;font-weight:700;letter-spacing:.4px;transition:all .2s}
+.icon-btn:hover{color:var(--acc);border-color:var(--acc)}
+.icon-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+[data-theme="day"] .ic-sun{display:none}
+[data-theme="night"] .ic-moon{display:none}
+.footer{border-top:1px solid var(--bord);padding:48px 0 32px;text-align:center}
+.footer-text{font-size:13px;color:var(--dim);margin-bottom:16px}
+.footer-links{display:flex;flex-wrap:wrap;justify-content:center;gap:16px 24px;font-size:13px;color:var(--dim)}
+.footer-links a{transition:color .2s}
+.footer-links a:hover{color:var(--acc)}
+.legal{max-width:760px;margin:0 auto;padding:0 20px}
+.legal h1{margin-bottom:12px}
+.legal h2{font-size:22px;margin:32px 0 10px}
+.legal p,.legal li{color:var(--dim);line-height:1.7;font-size:15.5px}
+.legal ul{padding-left:22px;margin:8px 0}
+.legal a{color:var(--acc);font-weight:600}
 </style>
 </head>
 <body>
+<nav class="nav">
+  <div class="wrap">
+    <div class="nav-in">
+      <a href="/keno/" class="wm">keno<span class="dot">.</span></a>
+      <div class="nav-links">
+        <a href="/keno/">Home</a>
+        <a href="/keno/feedback.html">Feedback</a>
+      </div>
+      <div class="nav-right">
+        <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle theme">
+          <svg class="ic-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="ic-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+<section style="padding-top:40px"><div class="legal">
 <h1>Privacy Policy</h1>
-<p class="updated">Last updated: August 4, 2026</p>
-
+<p><strong>Last updated: October 30, 2026</strong></p>
 <p>Keno ("we," "us," "the App") is a hyper-local event-sharing app for university students. This policy explains what information we collect, why, and what control you have over it.</p>
-
 <h2>Who we are</h2>
 <p>Keno is operated by Alex Tamp (<a href="mailto:keno.app.official@gmail.com">keno.app.official@gmail.com</a>). For any privacy question or request, contact us at that address.</p>
-
 <h2>Information we collect</h2>
 <p><strong>Account information</strong>, provided when you sign up:</p>
 <ul>
-  <li>Name</li>
-  <li>University email address</li>
-  <li>University name and department</li>
-  <li>Password (stored securely by our authentication provider — we never see it in plain text)</li>
+<li><p>Name</p></li>
+<li><p>University email address</p></li>
+<li><p>University name and department</p></li>
+<li><p>Password (stored securely by our authentication provider — we never see it in plain text)</p></li>
 </ul>
-
 <p><strong>Profile information</strong>, which you may optionally add:</p>
 <ul>
-  <li>Bio</li>
-  <li>Profile photo</li>
-  <li>Interests (used to personalize your event feed)</li>
-  <li>An emergency contact name and phone number, used only by the in-app safety button during a live event you've checked into, which lets you send that contact a pre-filled text message or call 112 — we don't contact them ourselves or use this information for anything else</li>
+<li><p>Bio</p></li>
+<li><p>Profile photo</p></li>
+<li><p>Interests (used to personalize your event feed)</p></li>
+<li><p>An emergency contact name and phone number, used only by the in-app safety button during a live event you've checked into, which lets you send that contact a pre-filled text message or call 112 — we don't contact them ourselves or use this information for anything else</p></li>
 </ul>
-
 <p><strong>Identity verification.</strong> University email verification is the default way to confirm you're a student. If that isn't available to you, you can instead upload a photo of a student or government ID as a fallback — this photo is stored securely, visible only to you and to app administrators reviewing the verification request, and is never shown to other users.</p>
-
 <p><strong>Content you create</strong>, including:</p>
 <ul>
-  <li>Events you create (title, description, category, location, date/time, cover photo)</li>
-  <li>Messages you send in event chats, group chats, and direct messages</li>
-  <li>Comments and reactions on events</li>
-  <li>Photos you upload to an event's photo wall</li>
-  <li>Reports you submit about other users or events</li>
+<li><p>Events you create (title, description, category, location, date/time, cover photo)</p></li>
+<li><p>Messages you send in event chats, group chats, and direct messages</p></li>
+<li><p>Comments and reactions on events</p></li>
+<li><p>Photos you upload to an event's photo wall</p></li>
+<li><p>Reports you submit about other users or events</p></li>
 </ul>
-
 <p><strong>Location data.</strong> If you grant permission, we use your device's location to show you nearby events on the map and to filter your feed by distance. We do not track or store your location history — only your position at the moment you use these features.</p>
-
+<p>If you post an "Έχω κενό" (free time) card, your position at that moment is stored with it so that users within about 1 km can see the card, together with your name and photo. The app shows them how far away you are, not your exact position. The card and its location are deleted automatically shortly after it expires (after at most 2 hours), or earlier if you cancel it.</p>
 <p><strong>Usage and social data</strong>, generated as you use the app:</p>
 <ul>
-  <li>Events you've joined, saved, or created</li>
-  <li>People you follow and who follows you</li>
-  <li>Group memberships</li>
-  <li>XP, level, and attendance streaks (used for the app's gamification features)</li>
-  <li>A push notification token, if you allow notifications, used to deliver alerts (e.g. new followers, event updates)</li>
+<li><p>Events you've joined, saved, or created</p></li>
+<li><p>People you follow and who follows you</p></li>
+<li><p>Group memberships</p></li>
+<li><p>XP, level, and attendance streaks (used for the app's gamification features)</p></li>
+<li><p>A push notification token, if you allow notifications, used to deliver alerts (e.g. new followers, event updates)</p></li>
 </ul>
-
 <p><strong>Calendar access.</strong> If you choose to add an event to your device calendar, we write that single event to your calendar via your device's OS. We do not read or store the rest of your calendar.</p>
-
+<p><strong>Ride sharing data</strong>, if an event organizer turns on ride sharing and you use it (see "Ride sharing for events" below for details).</p>
 <h2>How we use your information</h2>
 <p>We use your information to:</p>
 <ul>
-  <li>Operate the core features of the app (creating and joining events, messaging, following)</li>
-  <li>Personalize your feed based on your interests and location</li>
-  <li>Send you notifications you've opted into</li>
-  <li>Enforce our community guidelines (via user reports and content filtering)</li>
-  <li>Maintain the security and integrity of the service</li>
+<li><p>Operate the core features of the app (creating and joining events, messaging, following)</p></li>
+<li><p>Personalize your feed based on your interests and location</p></li>
+<li><p>Send you notifications you've opted into</p></li>
+<li><p>Enforce our community guidelines (via user reports and content filtering)</p></li>
+<li><p>Maintain the security and integrity of the service</p></li>
+<li><p>Show public event pages to people who have the link to a public event</p></li>
+<li><p>Connect drivers and passengers who use ride sharing for an event</p></li>
 </ul>
 <p>We do not sell your personal information, and we do not use it for third-party advertising.</p>
-
 <h2>Who we share it with</h2>
 <ul>
-  <li><strong>Other users.</strong> Your name, university, profile photo, bio, and any content you post (events, messages, comments) are visible to other users of the app as intended by the app's social features. Direct messages are only visible to the two participants in that conversation.</li>
-  <li><strong>Service providers.</strong> We use Google Firebase (authentication, database, file storage, and push notification delivery) and Expo (push notification routing) to run the app. These providers process data on our behalf under their own security and privacy commitments, and do not use your data for their own purposes.</li>
-  <li><strong>Legal requirements.</strong> We may disclose information if required by law or to protect the safety of our users.</li>
+<li><p><strong>Other users.</strong> Your name, university, profile photo, bio, and any content you post (events, messages, comments) are visible to other users of the app as intended by the app's social features. Direct messages are only visible to the two participants in that conversation. Ride sharing details are visible only as described in "Ride sharing for events" below.</p></li>
+<li><p><strong>Service providers.</strong> We use Google Firebase (authentication, database, file storage, and push notification delivery) and Expo (push notification routing) to run the app. These providers process data on our behalf under their own security and privacy commitments, and do not use your data for their own purposes.</p></li>
+<li><p><strong>Anyone with a link, for public events.</strong> For a public event, the limited information described in "Public event pages" below is visible to anyone who has the event's link, without an account.</p></li>
+<li><p><strong>Legal requirements.</strong> We may disclose information if required by law or to protect the safety of our users.</p></li>
 </ul>
 <p>We do not share your data with advertisers or data brokers.</p>
-
+<h2>Public event pages</h2>
+<p>Events are public unless the organizer marks them as private when creating them. Anyone who has the link to a public event can open a page for it in a browser, without a Keno account.</p>
+<p><strong>What is shown:</strong> the event's title, date and time, category, description, a general area (not an exact address), the organizer's short name and university, and the number of participants.</p>
+<p><strong>What is not shown:</strong> the exact address, participants' names or photos, email addresses, or user IDs.</p>
+<p>Private events have no public page. For restricted events (for example by university, gender, age or party), the page shows only the title, the time and the restriction.</p>
+<p><strong>How the page is served.</strong> The page is served by Google Firebase Cloud Functions in the us-central1 region (United States). It may be cached for up to 5 minutes, so a change to or deletion of an event can take up to 5 minutes to show on the page.</p>
+<p><strong>Previews by other apps.</strong> When someone shares the link, apps such as WhatsApp, Instagram and Messenger create their own preview. Those companies handle the preview and its data under their own privacy policies and are independent from Keno. We do not control them and cannot delete data from their systems.</p>
+<p><strong>Notice to organizers.</strong> When creating an event, organizers are told in the app that, unless they mark it private, it gets a page that anyone with the link can see.</p>
+<p><strong>Legal basis (GDPR).</strong></p>
+<ul>
+<li><p>Showing the organizer's short name and university on the page of a public event the organizer published: performance of our contract with you (Art. 6(1)(b)).</p></li>
+<li><p>Technical and security logs created when the page is requested (such as IP address and request data) and preventing abuse: our legitimate interest in keeping the service secure and working (Art. 6(1)(f)).</p></li>
+<li><p>The number of participants is shown as a total, not as a list of people.</p></li>
+</ul>
+<p><strong>Transfers outside the EU/EEA.</strong> Because the page is served from the United States, data is processed there by Google. Google relies on safeguards such as standard contractual clauses or the EU–US Data Privacy Framework for these transfers.</p>
+<h2>Ride sharing for events</h2>
+<p>When an event organizer turns on ride sharing for an event, participants of that event can offer seats in their car, and other participants can request a seat. Keno only connects users. We do not process payments, and we do not provide insurance or any guarantee about a journey.</p>
+<p><strong>Data we store</strong> (in Google Firebase Firestore):</p>
+<ul>
+<li><p>About the driver: name, avatar color or photo, number of check-ins, departure area, departure time, number of seats, an optional indicative cost per person, and the exact meeting point.</p></li>
+<li><p>About a passenger who requests a seat: name, photo, and the status of the request (pending, confirmed or declined).</p></li>
+</ul>
+<p><strong>Who can see it:</strong></p>
+<ul>
+<li><p>Departure area, time, seats and cost: all signed-in users.</p></li>
+<li><p>Seat requests: only the driver and the passenger who made the request.</p></li>
+<li><p>The exact meeting point: only the driver and confirmed passengers.</p></li>
+</ul>
+<p><strong>Retention.</strong> Ride data is deleted when the driver cancels the ride, when the event is deleted, or when the driver or passenger deletes their account. Backup copies kept by Google may remain for a short period after deletion. Reports about users related to ride sharing may be kept for as long as needed to keep the community safe and to defend legal claims.</p>
+<p><strong>Legal basis (GDPR).</strong></p>
+<ul>
+<li><p>Creating an offer, requesting a seat, confirming a request, showing name, photo and check-ins to the users described above, and sharing the exact meeting point with confirmed passengers: performance of our contract with you (Art. 6(1)(b)), because the feature cannot work without it.</p></li>
+<li><p>Reporting and blocking users, preventing abuse, and looking into incidents: our legitimate interest in the safety of our community (Art. 6(1)(f)).</p></li>
+<li><p>Keeping reports to establish, exercise or defend legal claims: our legitimate interest (Art. 6(1)(f)).</p></li>
+</ul>
+<p>We do not make automated decisions about you or profile you in this feature. You can delete your own offer or request at any time, and all your rights described in "Your rights" apply.</p>
+<h2 lang="el">Δημόσιες σελίδες event (ελληνική απόδοση)</h2>
+<p lang="el">Τα events είναι δημόσια, εκτός αν ο διοργανωτής τα ορίσει ως ιδιωτικά κατά τη δημιουργία τους. Όποιος έχει το link ενός δημόσιου event μπορεί να ανοίξει μια σελίδα του σε browser, χωρίς λογαριασμό στο Keno.</p>
+<p lang="el"><strong>Τι εμφανίζεται:</strong> ο τίτλος, η ημερομηνία και ώρα, η κατηγορία, η περιγραφή, μια γενική περιοχή (όχι ακριβής διεύθυνση), το μικρό όνομα και το πανεπιστήμιο του διοργανωτή και ο αριθμός των συμμετεχόντων.</p>
+<p lang="el"><strong>Τι δεν εμφανίζεται:</strong> η ακριβής διεύθυνση, ονόματα ή φωτογραφίες συμμετεχόντων, email ή user IDs.</p>
+<p lang="el">Τα ιδιωτικά events δεν έχουν δημόσια σελίδα. Στα events με περιορισμό (π.χ. πανεπιστήμιο, φύλο, ηλικία ή πάρτι) η σελίδα δείχνει μόνο τον τίτλο, την ώρα και τον περιορισμό.</p>
+<p lang="el"><strong>Πώς εξυπηρετείται η σελίδα.</strong> Η σελίδα εξυπηρετείται από Firebase Cloud Functions της Google, στην περιοχή us-central1 (ΗΠΑ). Μπορεί να κρατιέται σε cache έως 5 λεπτά, οπότε μια αλλαγή ή διαγραφή event μπορεί να χρειαστεί έως 5 λεπτά για να φανεί στη σελίδα.</p>
+<p lang="el"><strong>Προεπισκοπήσεις από άλλες εφαρμογές.</strong> Όταν κάποιος μοιράζεται το link, εφαρμογές όπως WhatsApp, Instagram και Messenger δημιουργούν δική τους προεπισκόπηση. Οι εταιρείες αυτές διαχειρίζονται την προεπισκόπηση και τα δεδομένα της με βάση τις δικές τους πολιτικές και είναι ανεξάρτητες από το Keno. Δεν τις ελέγχουμε και δεν μπορούμε να διαγράψουμε δεδομένα από τα συστήματά τους.</p>
+<p lang="el"><strong>Ενημέρωση διοργανωτών.</strong> Κατά τη δημιουργία ενός event, η εφαρμογή ενημερώνει τον διοργανωτή ότι, αν δεν το ορίσει ιδιωτικό, θα έχει σελίδα που μπορεί να δει όποιος έχει το link.</p>
+<p lang="el"><strong>Νομική βάση (GDPR).</strong></p>
+<ul lang="el">
+<li><p>Εμφάνιση του μικρού ονόματος και του πανεπιστημίου του διοργανωτή στη σελίδα ενός δημόσιου event που ο ίδιος δημοσίευσε: εκτέλεση της σύμβασής μας μαζί σου (άρθρο 6 παρ. 1 β΄).</p></li>
+<li><p>Τεχνικά αρχεία καταγραφής και ασφάλειας που δημιουργούνται όταν ζητείται η σελίδα (όπως διεύθυνση IP και δεδομένα αιτήματος) και αποτροπή κατάχρησης: έννομο συμφέρον μας για την ασφάλεια και τη σωστή λειτουργία της υπηρεσίας (άρθρο 6 παρ. 1 στ΄).</p></li>
+<li><p>Ο αριθμός των συμμετεχόντων εμφανίζεται ως σύνολο και όχι ως λίστα προσώπων.</p></li>
+</ul>
+<p lang="el"><strong>Διαβιβάσεις εκτός ΕΕ/ΕΟΧ.</strong> Επειδή η σελίδα εξυπηρετείται από τις ΗΠΑ, τα δεδομένα επεξεργάζονται εκεί από την Google. Η Google στηρίζει τις διαβιβάσεις αυτές σε εγγυήσεις όπως οι τυποποιημένες συμβατικές ρήτρες ή το πλαίσιο προστασίας δεδομένων ΕΕ–ΗΠΑ (Data Privacy Framework).</p>
+<h2 lang="el">Μεταφορά (ride sharing) για events (ελληνική απόδοση)</h2>
+<p lang="el">Όταν ο διοργανωτής ενός event ενεργοποιήσει τη μεταφορά, όσοι συμμετέχουν σε αυτό μπορούν να προσφέρουν θέσεις στο αυτοκίνητό τους και άλλοι συμμετέχοντες μπορούν να ζητήσουν θέση. Το Keno απλώς φέρνει τους χρήστες σε επαφή. Δεν επεξεργαζόμαστε πληρωμές και δεν παρέχουμε ασφάλιση ή εγγύηση για καμία μετακίνηση.</p>
+<p lang="el"><strong>Δεδομένα που αποθηκεύουμε</strong> (στο Google Firebase Firestore):</p>
+<ul lang="el">
+<li><p>Για τον οδηγό: όνομα, χρώμα avatar ή φωτογραφία, αριθμός check-ins, περιοχή αναχώρησης, ώρα αναχώρησης, αριθμός θέσεων, προαιρετικό ενδεικτικό κόστος ανά άτομο και το ακριβές σημείο συνάντησης.</p></li>
+<li><p>Για επιβάτη που ζητά θέση: όνομα, φωτογραφία και η κατάσταση του αιτήματος (σε αναμονή, επιβεβαιωμένο ή απορριφθέν).</p></li>
+</ul>
+<p lang="el"><strong>Ποιος τα βλέπει:</strong></p>
+<ul lang="el">
+<li><p>Περιοχή αναχώρησης, ώρα, θέσεις και κόστος: όλοι οι συνδεδεμένοι χρήστες.</p></li>
+<li><p>Αιτήματα θέσης: μόνο ο οδηγός και ο επιβάτης που έκανε το αίτημα.</p></li>
+<li><p>Το ακριβές σημείο συνάντησης: μόνο ο οδηγός και οι επιβεβαιωμένοι επιβάτες.</p></li>
+</ul>
+<p lang="el"><strong>Διατήρηση.</strong> Τα δεδομένα μεταφοράς διαγράφονται όταν ο οδηγός ακυρώσει τη διαδρομή, όταν διαγραφεί το event ή όταν ο οδηγός ή ο επιβάτης διαγράψει τον λογαριασμό του. Αντίγραφα ασφαλείας της Google μπορεί να διατηρηθούν για σύντομο διάστημα μετά τη διαγραφή. Αναφορές για χρήστες που σχετίζονται με τη μεταφορά μπορεί να διατηρούνται για όσο χρειάζεται για την ασφάλεια της κοινότητας και την υπεράσπιση νομικών αξιώσεων.</p>
+<p lang="el"><strong>Νομική βάση (GDPR).</strong></p>
+<ul lang="el">
+<li><p>Δημιουργία προσφοράς, αίτημα θέσης, επιβεβαίωση αιτήματος, εμφάνιση ονόματος, φωτογραφίας και check-ins στους χρήστες που περιγράφονται παραπάνω και κοινοποίηση του ακριβούς σημείου συνάντησης στους επιβεβαιωμένους επιβάτες: εκτέλεση της σύμβασής μας μαζί σου (άρθρο 6 παρ. 1 β΄), επειδή η λειτουργία δεν μπορεί να δουλέψει χωρίς αυτά.</p></li>
+<li><p>Αναφορά και μπλοκάρισμα χρηστών, αποτροπή κατάχρησης και διερεύνηση περιστατικών: έννομο συμφέρον μας για την ασφάλεια της κοινότητάς μας (άρθρο 6 παρ. 1 στ΄).</p></li>
+<li><p>Διατήρηση αναφορών για τη θεμελίωση, άσκηση ή υπεράσπιση νομικών αξιώσεων: έννομο συμφέρον μας (άρθρο 6 παρ. 1 στ΄).</p></li>
+</ul>
+<p lang="el">Δεν λαμβάνουμε αυτοματοποιημένες αποφάσεις και δεν κάνουμε profiling σε αυτή τη λειτουργία. Μπορείς να διαγράψεις τη δική σου προσφορά ή το αίτημά σου οποιαδήποτε στιγμή και ισχύουν όλα τα δικαιώματά σου που περιγράφονται στην ενότητα «Your rights».</p>
 <h2>Data retention</h2>
-<p>We keep your account and content for as long as your account is active. If you delete your account (Settings → Delete Account), your profile and personal data are permanently removed. Content you've posted that is inherently shared with others (e.g. messages already sent, comments on events) may not be fully removable from other users' views, consistent with how messaging and social features generally work.</p>
-
+<p>We keep your account and content for as long as your account is active. You can delete your account at any time (Settings → Delete Account). When you do:</p>
+<ul>
+<li><p><strong>Deleted:</strong> your profile, profile photo, ID verification photo, notifications, check-ins, post-event swipes and matches, photo wall uploads, ride offers and seat requests, and "Έχω κενό" cards. You are also removed from upcoming events you joined, from other users' followers/following lists and from groups.</p></li>
+<li><p><strong>Blanked:</strong> messages you sent in event chats, group chats and direct messages are emptied and shown as deleted, so other people's conversations stay readable.</p></li>
+<li><p><strong>Upcoming events you organize</strong> are cancelled and their participants are notified. <strong>Past events</strong> you organized stay, without any link to your profile, so other participants keep their history and tickets.</p></li>
+<li><p><strong>Kept:</strong> reports about abusive behavior, for as long as needed to keep the community safe and to establish, exercise or defend legal claims.</p></li>
+</ul>
+<p>Backup copies kept by our service providers may remain for a short period after deletion.</p>
+<h2 lang="el">Διατήρηση δεδομένων (ελληνική απόδοση)</h2>
+<p lang="el">Κρατάμε τον λογαριασμό και το περιεχόμενό σου για όσο ο λογαριασμός είναι ενεργός. Μπορείς να διαγράψεις τον λογαριασμό σου οποιαδήποτε στιγμή (Ρυθμίσεις → Διαγραφή λογαριασμού). Τότε:</p>
+<ul lang="el">
+<li><p><strong>Διαγράφονται:</strong> το προφίλ, η φωτογραφία προφίλ, η φωτογραφία ταυτότητας, οι ειδοποιήσεις, τα check-ins, τα swipes και τα matches μετά τα events, οι φωτογραφίες στο photo wall, οι προσφορές και τα αιτήματα μεταφοράς, και οι κάρτες «Έχω κενό». Αφαιρείσαι επίσης από τα επερχόμενα events στα οποία συμμετέχεις, από τις λίστες followers/following άλλων χρηστών και από τις ομάδες.</p></li>
+<li><p><strong>Αδειάζουν:</strong> τα μηνύματα που έστειλες σε chats events, ομάδων και σε DM εμφανίζονται ως διαγραμμένα, ώστε οι συζητήσεις των άλλων να παραμένουν κατανοητές.</p></li>
+<li><p><strong>Τα επερχόμενα events που διοργανώνεις</strong> ακυρώνονται και οι συμμετέχοντες ειδοποιούνται. <strong>Τα παλιά events</strong> που διοργάνωσες παραμένουν, χωρίς σύνδεση με το προφίλ σου, ώστε οι υπόλοιποι συμμετέχοντες να κρατούν το ιστορικό και τα tickets τους.</p></li>
+<li><p><strong>Διατηρούνται:</strong> οι αναφορές για παραβατική συμπεριφορά, για όσο χρειάζεται για την ασφάλεια της κοινότητας και για τη θεμελίωση, άσκηση ή υπεράσπιση νομικών αξιώσεων.</p></li>
+</ul>
+<p lang="el">Αντίγραφα ασφαλείας των παρόχων μας μπορεί να διατηρηθούν για σύντομο διάστημα μετά τη διαγραφή.</p>
 <h2>Your rights</h2>
 <p>Depending on where you live (including under the EU/UK GDPR, which applies to users in Greece and the wider EU), you have the right to:</p>
 <ul>
-  <li><strong>Access</strong> the personal data we hold about you</li>
-  <li><strong>Correct</strong> inaccurate data (most profile fields are editable directly in the app)</li>
-  <li><strong>Delete</strong> your account and associated data (available directly in Settings)</li>
-  <li><strong>Object to or restrict</strong> certain processing, such as location-based features (you can deny or revoke location/notification permissions at any time in your device settings)</li>
-  <li><strong>Data portability</strong> — request a copy of your data in a portable format</li>
+<li><p><strong>Access</strong> the personal data we hold about you</p></li>
+<li><p><strong>Correct</strong> inaccurate data (most profile fields are editable directly in the app)</p></li>
+<li><p><strong>Delete</strong> your account and associated data (available directly in Settings)</p></li>
+<li><p><strong>Object to or restrict</strong> certain processing, such as location-based features (you can deny or revoke location/notification permissions at any time in your device settings)</p></li>
+<li><p><strong>Data portability</strong> — request a copy of your data in a portable format</p></li>
 </ul>
 <p>To exercise any of these rights, email <a href="mailto:keno.app.official@gmail.com">keno.app.official@gmail.com</a>.</p>
-
 <h2>Children's privacy</h2>
-<p>Keno is intended for university students and requires a university email address to register. It is not directed at children under 16, and we do not knowingly collect data from them.</p>
-
+<p>Keno is intended for university students and requires a university email address to register. It is not directed at anyone under 17, and we do not knowingly collect data from them.</p>
 <h2>Security</h2>
 <p>We use industry-standard practices to protect your data, including encrypted connections (HTTPS) and access-controlled databases. No method of transmission or storage is 100% secure, but we work to protect your information appropriately.</p>
-
 <h2>Changes to this policy</h2>
 <p>If we make material changes to this policy, we'll update the "Last updated" date above and, where appropriate, notify you in the app.</p>
-
 <h2>Contact</h2>
 <p>Questions about this policy or your data: <a href="mailto:keno.app.official@gmail.com">keno.app.official@gmail.com</a></p>
+</div></section>
+<section style="padding-top:32px;padding-bottom:48px">
+  <div class="wrap footer">
+    <p class="footer-text">Απορίες; Γράψε μας στο <a href="mailto:keno.app.official@gmail.com" style="color:var(--acc);font-weight:600">keno.app.official@gmail.com</a></p>
+    <div class="footer-links">
+      <a href="/keno/">Home</a>
+      <a href="https://apps.apple.com/us/app/keno/id6789332791" target="_blank" rel="noopener">App Store</a>
+      <a href="https://play.google.com/store/apps/details?id=com.KeNo.app" target="_blank" rel="noopener">Google Play</a>
+      <a href="https://www.instagram.com/keno.app/" target="_blank" rel="noopener">Instagram</a>
+      <a href="https://www.tiktok.com/@keno.app" target="_blank" rel="noopener">TikTok</a>
+      <a href="/keno/docs/terms/">Terms</a>
+      <a href="/keno/docs/privacy/">Privacy</a>
+    </div>
+  </div>
+</section>
+<script>
+  function toggleTheme(){var h=document.documentElement;var n=h.getAttribute('data-theme')==='day'?'night':'day';h.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}}
+  try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}
+</script>
 </body>
 </html>

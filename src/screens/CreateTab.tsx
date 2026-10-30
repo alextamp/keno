@@ -19,6 +19,7 @@ import { EventCategory, GenderFilter } from '@/features/events/domain/entities/e
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { useEventsStore } from '@/features/events/presentation/store/events.store';
 import { eventsRepository } from '@/features/events/data/repositories/events.repository.impl';
+import { CreateEventParams } from '@/features/events/domain/repositories/events.repository';
 import { isLeft } from '@/core/utils/either';
 import { containsBlockedContent } from '@/core/utils/contentModeration';
 import { uploadEventImage } from '@/core/utils/uploadImage';
@@ -28,6 +29,11 @@ import { CategoryChip } from '@/components/ui/CategoryChip';
 import { Icon } from '@/components/ui/Icon';
 import { Card } from '@/components/ui/Card';
 import { DuotoneScene } from '@/components/ui/DuotoneScene';
+import { NewcomerMilestoneModal } from '@/components/ui/NewcomerMilestoneModal';
+import { FEATURES } from '@/core/constants/features';
+import { RepeatFrequency, SERIES_DEFAULT_COUNT, SERIES_MAX_COUNT, seriesDates } from '@/features/series/series';
+import { seriesRepository } from '@/features/series/series.repository';
+import { XP_VALUES, getLevel, isNewcomerUser } from '@/core/constants/gamification';
 import { ProgressTrack } from '@/components/ui/ProgressTrack';
 import { useGroupsStore } from '@/features/groups/presentation/store/groups.store';
 import { groupsRepository } from '@/features/groups/data/repositories/groups.repository.impl';
@@ -78,6 +84,7 @@ export default function CreateEventScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
+  const awardXP = useAuthStore((s) => s.awardXP);
   const upsertEvent = useEventsStore((s) => s.upsertEvent);
   const myGroups = useGroupsStore((s) => s.myGroups);
   const loadMyGroups = useGroupsStore((s) => s.loadMyGroups);
@@ -119,8 +126,18 @@ export default function CreateEventScreen() {
 
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [ridesEnabled, setRidesEnabled] = useState(false);
+  const [repeat, setRepeat] = useState<RepeatFrequency>('once');
+  const [repeatDays, setRepeatDays] = useState<number[]>([]);
+  const [repeatCount, setRepeatCount] = useState(SERIES_DEFAULT_COUNT);
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  // "Νέος στην πόλη" (newcomer mode) — creating your very first event while
+  // still in the mode awards enough bonus XP to level up on the spot.
+  // resetForm/goToTab are deferred to the modal's own continue button instead
+  // of firing immediately, so the celebration isn't instantly wiped by the
+  // tab switch.
+  const [newcomerLevelUp, setNewcomerLevelUp] = useState<{ xp: number; from: string; to: string } | null>(null);
 
   const pickImage = async () => {
     const uri = await pickPhoto({ aspect: [16, 9] });
@@ -204,6 +221,8 @@ export default function CreateEventScreen() {
   // only hidden, never unmounted, when you swipe away) — so without this,
   // every field from the event you just created would still be sitting
   // there filled in the next time you open Create.
+  const seriesPreview = repeat === 'once' ? [] : seriesDates(dateTime, repeat, repeatDays, repeatCount);
+
   const resetForm = () => {
     setStep(1);
     setTitle('');
@@ -223,6 +242,10 @@ export default function CreateEventScreen() {
     setSelectedUniversities(['Any']);
     setSelectedGroupId(null);
     setIsPrivate(false);
+    setRidesEnabled(false);
+    setRepeat('once');
+    setRepeatDays([]);
+    setRepeatCount(SERIES_DEFAULT_COUNT);
     setSoloFriendly(false);
     setCheckInInfoText('');
     setCheckInInfoPhotoUri(null);
@@ -280,7 +303,7 @@ export default function CreateEventScreen() {
       }
     }
 
-    const result = await eventsRepository.createEvent({
+    const params: CreateEventParams = {
       title: title.trim(),
       description: description.trim(),
       category,
@@ -302,7 +325,11 @@ export default function CreateEventScreen() {
       checkInInfo: (checkInInfoText.trim() || checkInInfoPhoto)
         ? { text: checkInInfoText.trim() || undefined, photoUri: checkInInfoPhoto }
         : undefined,
-    });
+      ridesEnabled: FEATURES.rides && ridesEnabled,
+    };
+    const result = FEATURES.recurringEvents && repeat !== 'once'
+      ? await seriesRepository.createSeries(params, { frequency: repeat, weekdays: repeatDays, count: repeatCount })
+      : await eventsRepository.createEvent(params);
     if (isLeft(result)) Alert.alert(t.createAlertSaveError, result.left.message);
     else {
       upsertEvent(result.right);
@@ -315,8 +342,22 @@ export default function CreateEventScreen() {
         isPrivate,
         hasImage: !!finalImageUri,
       });
-      resetForm();
-      goToTab(0); // go back to Feed tab
+      // createEvent() above already awarded XP_VALUES.createEvent — `user` is
+      // a stale pre-render snapshot either way, so compute both before/after
+      // level names from it directly rather than re-reading the store.
+      const isFirstEventEver = (user.createdEvents?.length ?? 0) === 0 && isNewcomerUser(user.checkInCount);
+      if (isFirstEventEver) {
+        const preXp = user.xp ?? 0;
+        await awardXP(XP_VALUES.newcomerFirstEventBonus);
+        setNewcomerLevelUp({
+          xp: XP_VALUES.createEvent + XP_VALUES.newcomerFirstEventBonus,
+          from: getLevel(preXp, user.id).name,
+          to: getLevel(preXp + XP_VALUES.createEvent + XP_VALUES.newcomerFirstEventBonus, user.id).name,
+        });
+      } else {
+        resetForm();
+        goToTab(0); // go back to Feed tab
+      }
     }
     setLoading(false);
     setUploadProgress(0);
@@ -495,7 +536,7 @@ export default function CreateEventScreen() {
                 <ToggleRow
                   icon="lock"
                   label={t.createPrivateLabel ?? 'Private Event'}
-                  hint={t.createPrivateHint ?? 'Only invited people can join'}
+                  hint={isPrivate || !FEATURES.publicEventLinks ? t.createPrivateHint : t.createPublicHint}
                   on={isPrivate}
                   onPress={() => setIsPrivate((v) => !v)}
                   plain
@@ -509,8 +550,68 @@ export default function CreateEventScreen() {
                   onPress={() => setSoloFriendly((v) => !v)}
                   plain
                 />
+                {FEATURES.rides && (
+                  <>
+                    <View style={[styles.rowDivider, { borderColor: colors.border }]} />
+                    <ToggleRow
+                      icon="users"
+                      label={t.ridesToggleLabel}
+                      hint={t.ridesToggleHint}
+                      on={ridesEnabled}
+                      onPress={() => setRidesEnabled((v) => !v)}
+                      plain
+                    />
+                  </>
+                )}
               </Card>
             </View>
+
+            {FEATURES.recurringEvents && (
+              <View style={styles.field}>
+                <Text style={[styles.fieldLabel, { color: colors.textDecor }]}>{t.seriesRepeatLabel}</Text>
+                <View style={styles.optionRow}>
+                  {(['once', 'weekly', 'biweekly'] as RepeatFrequency[]).map((f) => (
+                    <AnimatedPressable key={f} onPress={() => setRepeat(f)}
+                      style={[styles.optionChip, { borderColor: repeat === f ? colors.primary : colors.border, backgroundColor: repeat === f ? colors.accentSoft : colors.surface }]}>
+                      <Text style={[styles.optionLabel, { color: repeat === f ? colors.accentInk : colors.textSecondary, fontFamily: UIFont }]}>{t.seriesFrequency(f)}</Text>
+                    </AnimatedPressable>
+                  ))}
+                </View>
+                {repeat !== 'once' && (
+                  <Card padded style={styles.seriesCard}>
+                    <View style={styles.weekdayRow}>
+                      {[1, 2, 3, 4, 5, 6, 0].map((d) => {
+                        const isStart = d === dateTime.getDay();
+                        const on = isStart || repeatDays.includes(d);
+                        return (
+                          <AnimatedPressable
+                            key={d}
+                            disabled={isStart}
+                            onPress={() => setRepeatDays((ds) => (ds.includes(d) ? ds.filter((x) => x !== d) : [...ds, d]))}
+                            style={[styles.weekdayChip, { backgroundColor: on ? colors.primary : colors.surface, borderColor: on ? colors.primary : colors.border }]}
+                          >
+                            <Text style={[styles.weekdayText, { color: on ? '#FFFFFF' : colors.textSecondary }]}>{t.seriesWeekdaysShort[d]}</Text>
+                          </AnimatedPressable>
+                        );
+                      })}
+                    </View>
+                    <View style={styles.seriesCountRow}>
+                      <Text style={[styles.toggleLabel, { color: colors.textPrimary, flex: 1 }]}>{t.seriesEndsAfter(repeatCount)}</Text>
+                      <View style={styles.capacityBtns}>
+                        <Button label="−" variant="outline" shape="pill" size="sm" style={styles.stepperBtn} onPress={() => setRepeatCount((c) => Math.max(2, c - 1))} />
+                        <Button label="+" variant="outline" shape="pill" size="sm" style={styles.stepperBtn} onPress={() => setRepeatCount((c) => Math.min(SERIES_MAX_COUNT, c + 1))} />
+                      </View>
+                    </View>
+                    <Text style={[styles.toggleHint, { color: colors.textHint }]}>
+                      {t.seriesUpcomingDates(
+                        seriesPreview.slice(0, 4).map((d) => format(d, 'EEE d MMM', { locale: getDateLocale(language) })).join(' · '),
+                        seriesPreview.length,
+                      )}
+                    </Text>
+                  </Card>
+                )}
+              </View>
+            )}
 
             {/* Gender */}
             <View style={styles.field}>
@@ -646,6 +747,19 @@ export default function CreateEventScreen() {
           </View>
         )}
       </ScrollView>
+
+      <NewcomerMilestoneModal
+        visible={!!newcomerLevelUp}
+        variant="levelUp"
+        xpAmount={newcomerLevelUp?.xp ?? 0}
+        fromLevelName={newcomerLevelUp?.from}
+        toLevelName={newcomerLevelUp?.to}
+        onContinue={() => {
+          setNewcomerLevelUp(null);
+          resetForm();
+          goToTab(0);
+        }}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -697,6 +811,11 @@ const styles = StyleSheet.create({
   toggleSwitch: { width: 36, height: 20, borderRadius: 10, padding: 2, justifyContent: 'center' },
   toggleKnob: { width: 16, height: 16, borderRadius: 8, backgroundColor: '#fff' },
   restrictionsCard: { gap: 0 },
+  seriesCard: { marginTop: Spacing.sm, gap: Spacing.md },
+  weekdayRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 4 },
+  weekdayChip: { flex: 1, height: 36, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  weekdayText: { fontSize: FontSize.xs, fontFamily: UIFont, fontWeight: FontWeight.bold },
+  seriesCountRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   rowDivider: { borderTopWidth: 1, marginVertical: 2 },
   capacityCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   capacityValue: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, fontFamily: UIFont },

@@ -55,7 +55,14 @@ export interface UserEntity {
   /** Per-category notification toggles set from Settings. A missing key (or
    *  a missing object entirely) means "on" — this is an opt-out model so
    *  existing users keep receiving everything until they turn something off. */
-  notificationPrefs?: { eventReminders?: boolean; groupMessages?: boolean; suggestions?: boolean };
+  notificationPrefs?: {
+    eventReminders?: boolean;
+    /** How long before an event the reminder fires. Missing = 60. */
+    reminderLeadMinutes?: 30 | 60 | 120;
+    groupMessages?: boolean;
+    suggestions?: boolean;
+    rides?: boolean;
+  };
   /** Weekly quest progress (mockup screen 25), keyed by quest id (see
    *  WEEKLY_QUESTS in core/constants/quests.ts). `weekId` is an ISO-week
    *  string (getISOWeekId) — resets are lazy: a stale weekId is treated as
@@ -79,6 +86,11 @@ export interface UserEntity {
    *  label on that specific event's ticket (see Ticket usages). Never
    *  cleared once set, even if that event is later deleted. */
   firstSoloAttendanceEventId?: string;
+  /** Event id of this account's very first real check-in ever (not an RSVP —
+   *  see checkInCount's own doc comment). Set once, guards the one-time
+   *  "Νέος στην πόλη" (newcomer mode) exit bonus XP from paying out twice if
+   *  the check-in success screen's effect somehow re-fires. Never cleared. */
+  firstCheckInEventId?: string;
   /** Optional emergency contact for the Live Mode safety button — a phone
    *  number the "🆘" action messages with the attendee's current event/
    *  location, plus a one-tap 112 dial. Never required to use the app. */

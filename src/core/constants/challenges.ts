@@ -27,5 +27,9 @@ export function getChallengeDefs(user: UserEntity | null | undefined, t: Transla
     { id: 'streak_7',  emoji: '💥', title: t.challengeStreak7Title,  desc: t.challengeStreak7Desc,  xp: 30,  current: Math.min(user.currentStreak ?? 0, 7),     target: 7  },
     { id: 'follow_5',  emoji: '👥', title: t.challengeFollow5Title,  desc: t.challengeFollow5Desc,  xp: 15,  current: Math.min(user.following?.length ?? 0, 5),  target: 5  },
     { id: 'follow_10', emoji: '🌐', title: t.challengeFollow10Title, desc: t.challengeFollow10Desc, xp: 25,  current: Math.min(user.following?.length ?? 0, 10), target: 10 },
+    // Deliberately based on checkInCount (actual attendance), not
+    // joinedEvents (an RSVP) — "Νέος στην πόλη" mode is specifically about
+    // getting someone to physically show up, which join_1 doesn't capture.
+    { id: 'checkin_1', emoji: '✅', title: t.challengeCheckin1Title, desc: t.challengeCheckin1Desc, xp: 5, current: Math.min(user.checkInCount ?? 0, 1), target: 1 },
   ];
 }

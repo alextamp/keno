@@ -45,6 +45,9 @@ export default function AppLayout() {
       <Stack.Screen name="group/edit/[id]" />
       <Stack.Screen name="leaderboard" />
       <Stack.Screen name="challenges" />
+      <Stack.Screen name="wrapped" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="organiser-stats" />
+      <Stack.Screen name="event/rides/[id]" />
       <Stack.Screen name="dm/[uid]" />
       <Stack.Screen name="event-chat/[id]" />
       <Stack.Screen name="swipes/[eventId]" />

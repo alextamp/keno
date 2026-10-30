@@ -37,7 +37,27 @@ export const XP_VALUES = {
   // (functions/src/index.ts onCheckInCreated). Mirrored there since
   // Functions can't import from src/.
   groupCheckinBonus: 15,
+  // "Νέος στην πόλη" (newcomer mode, active while checkInCount is still 0) —
+  // two one-time bonuses on top of the normal createEvent/checkinBonus XP,
+  // paid entirely client-side right in the acting screen (CreateTab /
+  // checkin success) rather than through the generic challenge-claim path,
+  // so the level-up / mode-exit is instant and deterministic. 25 (createEvent)
+  // + 75 here = exactly 100 XP, the Sophomore threshold — "απευθείας" per
+  // the spec, independent of whichever challenge happens to auto-claim after.
+  newcomerFirstEventBonus: 75,
+  // 5 (checkinBonus) + 145 here = 150 XP total on your very first-ever
+  // check-in, which is also the moment newcomer mode ends (checkInCount
+  // flips from 0 to 1 — see isNewcomerUser below).
+  newcomerFirstCheckinBonus: 145,
 };
+
+// "Νέος στην πόλη" mode: active from signup until the very first real
+// check-in ever (not just an RSVP/join — see checkInCount's doc comment on
+// UserEntity). No separate field needed — checkInCount already tracks this
+// and is incremented unconditionally by checkInWithToken.
+export function isNewcomerUser(checkInCount: number | undefined): boolean {
+  return (checkInCount ?? 0) === 0;
+}
 
 // How long after an event's start time we wait, with zero sign the creator
 // showed up (no hostArrivedAt), before offering attendees the option to

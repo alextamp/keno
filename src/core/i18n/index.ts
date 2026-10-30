@@ -173,6 +173,7 @@ export type Translations = {
   createLabelEventOptions: string;
   createPrivateLabel: string;
   createPrivateHint: string;
+  createPublicHint: string;
   createSoloFriendlyLabel: string;
   createSoloFriendlyHint: string;
   eventSoloFriendlyTag: string;
@@ -329,6 +330,144 @@ export type Translations = {
   challengeFollow5Desc: string;
   challengeFollow10Title: string;
   challengeFollow10Desc: string;
+  challengeCheckin1Title: string;
+  challengeCheckin1Desc: string;
+  newcomerBadgeLabel: string;
+  newcomerChallengesIntro: string;
+  newcomerLockedNote: string;
+  newcomerLevelUpTitle: string;
+  newcomerLevelUpBody: string;
+  newcomerExitTitle: string;
+  newcomerExitBody: string;
+  newcomerBadgeRemoved: string;
+  newcomerContinueBtn: string;
+  beaconTitle: string;
+  beaconCreateTitle: string;
+  beaconCreateBody: string;
+  beaconDurationLabel: string;
+  beacon30m: string;
+  beacon1h: string;
+  beacon2h: string;
+  beaconNotePlaceholder: string;
+  beaconStartBtn: (minutes: number) => string;
+  beaconCancelBtn: string;
+  beaconTabLabel: string;
+  beaconCardTitle: (name: string) => string;
+  beaconCardSubtitle: string;
+  beaconDistanceLabel: (m: number) => string;
+  beaconActiveTitle: string;
+  beaconActiveSubtitle: (note: string) => string;
+  beaconSeenCount: (n: number) => string;
+  beaconEndEarlyBtn: string;
+  beaconContextBubble: (name: string) => string;
+  beaconQuickReply: string;
+  wrappedSemesterLabel: (season: 'fall' | 'spring', year: number) => string;
+  wrappedCardLabel: string;
+  wrappedCardOpen: string;
+  wrappedCardLocked: (remaining: number) => string;
+  wrappedEmptyTitle: string;
+  wrappedEmptyBody: (remaining: number) => string;
+  wrappedShare: string;
+  wrappedSave: string;
+  wrappedSaved: string;
+  wrappedTicketsCount: (n: number) => string;
+  wrappedTicketsSemester: string;
+  wrappedTicketsMore: (n: number) => string;
+  wrappedMapLabel: string;
+  wrappedMapHeadline: string;
+  wrappedMapAreas: string;
+  wrappedMapEvents: string;
+  wrappedMapRoute: string;
+  wrappedKm: (n: number) => string;
+  wrappedPeopleLabel: string;
+  wrappedPeopleSub: string;
+  wrappedYou: string;
+  wrappedReceiptTitle: string;
+  wrappedReceiptTotal: string;
+  wrappedReceiptNewPeople: string;
+  wrappedReceiptStreak: string;
+  wrappedReceiptCreated: string;
+  wrappedReceiptDue: string;
+  wrappedReceiptFree: string;
+  wrappedReceiptThanks: string;
+  wrappedPersonaIntro: string;
+  wrappedPersonaTitle: (id: string, weekday?: number, category?: string) => string;
+  wrappedTrait: (id: string, categoryLabel: string) => string;
+  wrappedWeeksLabel: string;
+  wrappedWeeksHeadline: string;
+  wrappedWeeksLegend: string;
+  wrappedWeeksStreak: string;
+  wrappedWeeksFreeze: string;
+  wrappedCheckins: string;
+  orgStatsTitle: string;
+  orgStatsSubtitle: (n: number) => string;
+  orgStatsEmptyTitle: string;
+  orgStatsEmptyBody: (remaining: number) => string;
+  orgStatsAttendance: string;
+  orgStatsNoShow: string;
+  orgStatsPerEvent: string;
+  orgStatsCameOf: (came: number, joined: number) => string;
+  orgStatsUnique: string;
+  orgStatsReturning: string;
+  orgStatsFeedback: string;
+  orgStatsNoFeedback: string;
+  orgStatsPositive: (pct: string, n: number) => string;
+  orgStatsPrivacyNote: string;
+  seriesRepeatLabel: string;
+  seriesFrequency: (f: string) => string;
+  seriesWeekdaysShort: string[];
+  seriesEndsAfter: (n: number) => string;
+  seriesUpcomingDates: (dates: string, total: number) => string;
+  seriesEditScopeTitle: string;
+  seriesEditThisOnly: string;
+  seriesEditFollowing: string;
+  seriesEditFollowingFailed: string;
+  seriesStopTitle: string;
+  seriesStopBody: string;
+  seriesStopConfirm: string;
+  seriesStoppedToast: string;
+  ridesToggleLabel: string;
+  ridesToggleHint: string;
+  notifSeriesNext: (title: string) => string;
+  notifRideRequest: (name: string, title: string) => string;
+  notifRideConfirmed: (name: string, title: string) => string;
+  notifRideDeclined: (title: string) => string;
+  notifRideCancelled: (name: string, title: string) => string;
+  settingsNotifRides: string;
+  ridesTitle: string;
+  ridesLinkLabel: string;
+  ridesDisclaimer: string;
+  ridesJoinFirst: string;
+  ridesEmpty: string;
+  ridesOfferBtn: string;
+  ridesAreaLabel: string;
+  ridesAreaHint: string;
+  ridesMeetingLabel: string;
+  ridesMeetingHint: string;
+  ridesLeaveLabel: string;
+  ridesLeaveBefore: (minutes: number) => string;
+  ridesSeatsLabel: string;
+  ridesCostLabel: string;
+  ridesCostHint: string;
+  ridesPublish: string;
+  ridesYourRide: string;
+  ridesSeatsLeft: (n: number) => string;
+  ridesFull: string;
+  ridesLeavesAt: (time: string) => string;
+  ridesCost: (euros: number) => string;
+  ridesFree: string;
+  ridesRequestsLabel: string;
+  ridesNoRequests: string;
+  ridesConfirm: string;
+  ridesDecline: string;
+  ridesMessage: string;
+  ridesCancelRideBtn: string;
+  ridesCancelRideConfirm: string;
+  ridesRequestBtn: string;
+  ridesPendingLabel: string;
+  ridesConfirmedLabel: string;
+  ridesDeclinedLabel: string;
+  ridesCancelSeatBtn: string;
   profileChallengesTitle: string;
   profileChallengesSeeAll: string;
   profileChallengesSectionLabel: string;
@@ -407,6 +546,8 @@ export type Translations = {
   settingsVerifiedGeneric: string;
   settingsSectionNotifications: string;
   settingsNotifEventReminders: string;
+  settingsOsNotifsOff: string;
+  settingsOsNotifsEnable: string;
   settingsNotifGroupMessages: string;
   settingsNotifSuggestions: string;
   settingsThemeAuto: string;
@@ -687,6 +828,10 @@ export type Translations = {
   // Event reminder notifications
   reminderTitle: (title: string) => string;
   reminderBody: (location: string) => string;
+  reminderTitleLead: (minutes: number, title: string) => string;
+  reminderBodyFriends: (n: number) => string;
+  reminderLeadLabel: (minutes: number) => string;
+  settingsReminderLead: string;
 
   // Groups
   groupsTitle: string;
@@ -1185,6 +1330,7 @@ const en: Translations = {
   createLabelEventOptions: 'Options',
   createPrivateLabel: 'Private Event',
   createPrivateHint: 'Only invited people can join',
+  createPublicHint: 'Off = public: anyone with the link can see the event page (title, time, area, your first name & university)',
   createSoloFriendlyLabel: 'Good to attend alone',
   createSoloFriendlyHint: 'Let people know it\'s totally fine to show up solo',
   eventSoloFriendlyTag: '🙋 Good to attend alone',
@@ -1268,6 +1414,162 @@ const en: Translations = {
   challengeFollow5Desc: 'Follow 5 people',
   challengeFollow10Title: 'Networker',
   challengeFollow10Desc: 'Follow 10 people',
+  challengeCheckin1Title: 'Go to your first event',
+  challengeCheckin1Desc: 'Actually show up and check in, not just RSVP',
+  newcomerBadgeLabel: 'NEWCOMER',
+  newcomerChallengesIntro: 'While you’re in Newcomer mode, these 2 are all that matter — everything else unlocks once you finish them.',
+  newcomerLockedNote: 'Unlocks after newcomer mode',
+  newcomerLevelUpTitle: 'You created your first event!',
+  newcomerLevelUpBody: 'You just unlocked bonus XP for still being in Newcomer mode.',
+  newcomerExitTitle: 'Welcome to Keno!',
+  newcomerExitBody: 'You just checked in to your first event. Newcomer mode is complete.',
+  newcomerBadgeRemoved: 'Your “Newcomer” badge was just removed from your profile — you now see every challenge.',
+  newcomerContinueBtn: 'Continue',
+  beaconTitle: 'I’m free',
+  beaconCreateTitle: 'I’m free',
+  beaconCreateBody: 'Everyone within 1km will see it as a card in their feed. It disappears on its own when the time is up.',
+  beaconDurationLabel: 'For how long?',
+  beacon30m: '30 min',
+  beacon1h: '1 hour',
+  beacon2h: '2 hours',
+  beaconNotePlaceholder: 'e.g. "at the cafe next to campus"',
+  beaconStartBtn: (minutes) => `Start — ends in ${minutes >= 60 ? `${minutes / 60}h` : `${minutes}m`}`,
+  beaconCancelBtn: 'Cancel',
+  beaconTabLabel: 'Free',
+  beaconCardTitle: (name) => `${name} is free right now`,
+  beaconCardSubtitle: 'Tap to say hi',
+  beaconDistanceLabel: (m) => m < 1000 ? `${m}m away` : `${(m / 1000).toFixed(1)}km away`,
+  beaconActiveTitle: 'You’re free — everyone within 1km can see it',
+  beaconActiveSubtitle: (note) => note || 'Visible to nearby students',
+  beaconSeenCount: (n) => n === 1 ? '1 person saw it' : `${n} people saw it`,
+  beaconEndEarlyBtn: 'End early',
+  beaconContextBubble: (name) => `${name} is free right now — say hi!`,
+  beaconQuickReply: 'Where are you? 👋',
+  wrappedSemesterLabel: (season, year) => `${season === 'fall' ? 'Fall' : 'Spring'} ${year}`,
+  wrappedCardLabel: 'KENO WRAPPED',
+  wrappedCardOpen: 'See your Wrapped',
+  wrappedCardLocked: (n) => `${n} more check-in${n === 1 ? '' : 's'} to unlock it`,
+  wrappedEmptyTitle: 'Your Wrapped is on its way',
+  wrappedEmptyBody: (n) => `It unlocks after 3 real check-ins this semester. You need ${n} more — go to something this week.`,
+  wrappedShare: 'Share',
+  wrappedSave: 'Save image',
+  wrappedSaved: 'Saved to your photos',
+  wrappedTicketsCount: (n) => `${n} tickets.`,
+  wrappedTicketsSemester: 'One semester.',
+  wrappedTicketsMore: (n) => `+ ${n} more ticket${n === 1 ? '' : 's'} this semester`,
+  wrappedMapLabel: 'SEMESTER MAP',
+  wrappedMapHeadline: 'This is where you were.',
+  wrappedMapAreas: 'areas',
+  wrappedMapEvents: 'events',
+  wrappedMapRoute: 'your longest stretch',
+  wrappedKm: (n) => `${n} km`,
+  wrappedPeopleLabel: 'NEW PEOPLE',
+  wrappedPeopleSub: "you didn't know at the start of the semester",
+  wrappedYou: 'you',
+  wrappedReceiptTitle: 'SEMESTER RECEIPT',
+  wrappedReceiptTotal: 'TOTAL EVENTS',
+  wrappedReceiptNewPeople: 'New people',
+  wrappedReceiptStreak: 'Streak (wks)',
+  wrappedReceiptCreated: 'Events you made',
+  wrappedReceiptDue: 'TOTAL DUE',
+  wrappedReceiptFree: 'Free, as always.',
+  wrappedReceiptThanks: 'THANKS FOR SHOWING UP',
+  wrappedPersonaIntro: 'This semester you were',
+  wrappedPersonaTitle: (id, weekday, category) => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    switch (id) {
+      case 'organizer': return 'The one who makes it happen';
+      case 'explorer': return 'The explorer';
+      case 'regularDay': return `The ${days[weekday ?? 4]} regular`;
+      case 'social': return 'The one who meets everyone';
+      case 'categoryFan': return ({
+        party: 'Life of the party', sports: 'The team player', study: 'The library regular',
+        chill: 'The easygoing one', coffee: 'The coffee devotee',
+      } as Record<string, string>)[category ?? ''] ?? 'The curious one';
+      case 'earlyBird': return 'The early bird';
+      case 'nightOwl': return 'The night owl';
+      default: return 'The regular';
+    }
+  },
+  wrappedTrait: (id, cat) => ({
+    reliable: 'always shows up', withFriends: 'goes with friends', organizes: 'hosts too',
+    meetsPeople: 'meets new people', topCategory: `${cat} no.1`,
+  } as Record<string, string>)[id] ?? '',
+  wrappedWeeksLabel: 'YOUR WEEKS',
+  wrappedWeeksHeadline: 'How often you went out.',
+  wrappedWeeksLegend: 'fewer → more events',
+  wrappedWeeksStreak: 'weeks in a row',
+  wrappedWeeksFreeze: 'freezes still banked',
+  wrappedCheckins: 'check-ins',
+  orgStatsTitle: 'Your events, in numbers',
+  orgStatsSubtitle: (n) => `Across your ${n} finished events`,
+  orgStatsEmptyTitle: 'Not enough events yet',
+  orgStatsEmptyBody: (n) => `Stats show up after 3 finished events, so the numbers actually mean something. ${n} to go.`,
+  orgStatsAttendance: 'showed up',
+  orgStatsNoShow: 'no-show',
+  orgStatsPerEvent: 'LAST EVENTS',
+  orgStatsCameOf: (came, joined) => `${came} of ${joined} came`,
+  orgStatsUnique: 'different people came',
+  orgStatsReturning: 'came back for 2+',
+  orgStatsFeedback: 'HOW IT WENT',
+  orgStatsNoFeedback: 'No feedback yet',
+  orgStatsPositive: (pct, n) => `${pct} positive · ${n} ratings`,
+  orgStatsPrivacyNote: 'Only totals — you never see who gave which rating.',
+  seriesRepeatLabel: 'REPEAT',
+  seriesFrequency: (f) => ({ once: 'Once', weekly: 'Every week', biweekly: 'Every 2 weeks' } as Record<string, string>)[f] ?? f,
+  seriesWeekdaysShort: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
+  seriesEndsAfter: (n) => `Ends after ${n} times`,
+  seriesUpcomingDates: (dates, total) => `${dates}${total > 4 ? ` … (${total} total)` : ''}`,
+  seriesEditScopeTitle: 'This is a repeating event. Apply changes to:',
+  seriesEditThisOnly: 'This event only',
+  seriesEditFollowing: 'This and following',
+  seriesEditFollowingFailed: 'Saved this event, but some of the following ones could not be updated.',
+  seriesStopTitle: 'Stop repeating?',
+  seriesStopBody: 'No new dates will be created. Events already created stay as they are.',
+  seriesStopConfirm: 'Stop the series',
+  seriesStoppedToast: 'Series stopped',
+  ridesToggleLabel: 'Rides',
+  ridesToggleHint: 'People with a car can offer seats to others going',
+  notifSeriesNext: (title) => `The next "${title}" is up — want to come again?`,
+  notifRideRequest: (name, title) => `${name} asked for a seat in your ride to "${title}"`,
+  notifRideConfirmed: (name, title) => `${name} confirmed your seat to "${title}"`,
+  notifRideDeclined: (title) => `Your ride request for "${title}" wasn't accepted`,
+  notifRideCancelled: (name, title) => `${name} cancelled a seat in the ride to "${title}"`,
+  settingsNotifRides: 'Rides',
+  ridesTitle: 'Rides',
+  ridesLinkLabel: 'Need a ride? / Offer seats',
+  ridesDisclaimer: 'Keno only connects people going to the same event. Rides are arranged between users — no payments, insurance or guarantees through the app. Any cost is informational only.',
+  ridesJoinFirst: 'Join the event to offer or book a ride.',
+  ridesEmpty: 'No rides yet. Have a car? Offer the empty seats.',
+  ridesOfferBtn: 'Offer a ride',
+  ridesAreaLabel: 'Leaving from (area)',
+  ridesAreaHint: 'Neighbourhood only, e.g. "Zografou" — everyone sees this',
+  ridesMeetingLabel: 'Exact meeting point',
+  ridesMeetingHint: 'Only shown to riders you confirm',
+  ridesLeaveLabel: 'Leaving',
+  ridesLeaveBefore: (m) => (m < 60 ? `${m}′ before` : `${m / 60}h before`),
+  ridesSeatsLabel: 'Free seats',
+  ridesCostLabel: 'Cost per person in € (optional)',
+  ridesCostHint: 'Informational only — settled between you, not in the app',
+  ridesPublish: 'Publish',
+  ridesYourRide: 'Your ride',
+  ridesSeatsLeft: (n) => (n === 1 ? '1 seat left' : `${n} seats left`),
+  ridesFull: 'Full',
+  ridesLeavesAt: (time) => `Leaves at ${time}`,
+  ridesCost: (euros) => `€${euros} per person`,
+  ridesFree: 'Free',
+  ridesRequestsLabel: 'Requests',
+  ridesNoRequests: 'No requests yet.',
+  ridesConfirm: 'Confirm',
+  ridesDecline: 'Decline',
+  ridesMessage: 'Message',
+  ridesCancelRideBtn: 'Cancel ride',
+  ridesCancelRideConfirm: 'Everyone with a seat will be notified.',
+  ridesRequestBtn: 'Request a seat',
+  ridesPendingLabel: 'Waiting for the driver to confirm',
+  ridesConfirmedLabel: 'Seat confirmed ✓',
+  ridesDeclinedLabel: "The driver couldn't take you this time.",
+  ridesCancelSeatBtn: 'Cancel my seat',
   profileChallengesTitle: '⚡ Challenges',
   profileChallengesSeeAll: 'See all challenges',
   profileChallengesSectionLabel: 'Lifetime challenges',
@@ -1343,6 +1645,8 @@ const en: Translations = {
   settingsVerifiedGeneric: 'Verified ✓',
   settingsSectionNotifications: 'Notifications',
   settingsNotifEventReminders: 'Event reminders',
+  settingsOsNotifsOff: "Notifications are off for Keno on this phone — you won't get messages, reminders or invites.",
+  settingsOsNotifsEnable: 'Turn on',
   settingsNotifGroupMessages: 'Group messages',
   settingsNotifSuggestions: 'Suggestions for you',
   settingsThemeAuto: 'Auto',
@@ -1618,6 +1922,10 @@ const en: Translations = {
 
   reminderTitle: (title) => `Starting soon: ${title}`,
   reminderBody: (location) => `📌 ${location} — in 1 hour`,
+  reminderTitleLead: (m, title) => `In ${m >= 60 ? `${m / 60} hour${m > 60 ? 's' : ''}` : `${m} min`}: ${title}`,
+  reminderBodyFriends: (n) => `${n} friend${n === 1 ? ' is' : 's are'} going. Get your ticket ready.`,
+  reminderLeadLabel: (m) => (m >= 60 ? `${m / 60}h before` : `${m}m before`),
+  settingsReminderLead: 'Remind me',
 
   groupsTitle: 'Communities',
   groupsNewBtn: '+ New',
@@ -2102,6 +2410,7 @@ const el: Translations = {
   createLabelEventOptions: 'Ρυθμίσεις',
   createPrivateLabel: 'Ιδιωτική Εκδήλωση',
   createPrivateHint: 'Μόνο με πρόσκληση',
+  createPublicHint: 'Κλειστό = δημόσιο: όποιος έχει το link βλέπει τη σελίδα του event (τίτλο, ώρα, περιοχή, μικρό όνομα & σχολή σου)',
   createCheckInInfoLabel: 'Μετά το check-in (προαιρετικό)',
   createCheckInInfoHint: 'Εμφανίζεται στους συμμετέχοντες μόλις κάνουν check-in — αριθμός τραπεζιού, τι να ψάξουν, ή φωτογραφία του σημείου συνάντησης.',
   createCheckInInfoPlaceholder: 'π.χ. "Ψάξε τις κόκκινες ομπρέλες δίπλα στο σιντριβάνι"',
@@ -2185,6 +2494,162 @@ const el: Translations = {
   challengeFollow5Desc: 'Ακολούθησε 5 άτομα',
   challengeFollow10Title: 'Δικτυωμένος',
   challengeFollow10Desc: 'Ακολούθησε 10 άτομα',
+  challengeCheckin1Title: 'Πήγαινε στο πρώτο σου event',
+  challengeCheckin1Desc: 'Κάνε πραγματικό check-in, όχι απλά συμμετοχή',
+  newcomerBadgeLabel: 'ΚΑΙΝΟΥΡΓΙΟΣ',
+  newcomerChallengesIntro: 'Όσο είσαι σε mode Καινούργιου, αυτές οι 2 είναι το μόνο που μετράει — οι υπόλοιπες ξεκλειδώνουν μόλις τις ολοκληρώσεις.',
+  newcomerLockedNote: 'Ξεκλειδώνει μετά το newcomer mode',
+  newcomerLevelUpTitle: 'Έφτιαξες το πρώτο σου event!',
+  newcomerLevelUpBody: 'Μόλις ξεκλείδωσες bonus XP επειδή είσαι ακόμα σε mode Καινούργιου.',
+  newcomerExitTitle: 'Καλώς ήρθες στο Keno!',
+  newcomerExitBody: 'Μόλις έκανες check-in στο πρώτο σου event. Το mode Καινούργιου ολοκληρώθηκε.',
+  newcomerBadgeRemoved: 'Το badge «Καινούργιος» μόλις αφαιρέθηκε από το προφίλ σου — τώρα βλέπεις όλες τις αποστολές.',
+  newcomerContinueBtn: 'Συνέχεια',
+  beaconTitle: 'Έχω κενό',
+  beaconCreateTitle: 'Έχω κενό',
+  beaconCreateBody: 'Θα το δουν όλοι σε ακτίνα 1 χλμ σαν κάρτα στο feed τους. Εξαφανίζεται μόνο του όταν λήξει ο χρόνος.',
+  beaconDurationLabel: 'Για πόση ώρα;',
+  beacon30m: '30 λεπτά',
+  beacon1h: '1 ώρα',
+  beacon2h: '2 ώρες',
+  beaconNotePlaceholder: 'π.χ. «στο καφέ δίπλα στη σχολή»',
+  beaconStartBtn: (minutes) => `Ξεκίνα — λήγει σε ${minutes >= 60 ? `${minutes / 60}ώ` : `${minutes}λ`}`,
+  beaconCancelBtn: 'Άκυρο',
+  beaconTabLabel: 'Κενό',
+  beaconCardTitle: (name) => `${name} έχει κενό`,
+  beaconCardSubtitle: 'Πάτα για να στείλεις μήνυμα',
+  beaconDistanceLabel: (m) => m < 1000 ? `${m}μ μακριά` : `${(m / 1000).toFixed(1)}χλμ μακριά`,
+  beaconActiveTitle: 'Έχεις κενό — το βλέπουν όλοι σε 1 χλμ',
+  beaconActiveSubtitle: (note) => note || 'Ορατό σε κοντινούς φοιτητές',
+  beaconSeenCount: (n) => n === 1 ? 'Το είδε 1 άτομο' : `Το είδαν ${n} άτομα`,
+  beaconEndEarlyBtn: 'Τερμάτισε νωρίτερα',
+  beaconContextBubble: (name) => `Ο/Η ${name} έχει κενό τώρα — πες γεια!`,
+  beaconQuickReply: 'Πού είσαι; 👋',
+  wrappedSemesterLabel: (season, year) => `${season === 'fall' ? 'Φθινόπωρο' : 'Άνοιξη'} ${year}`,
+  wrappedCardLabel: 'KENO WRAPPED',
+  wrappedCardOpen: 'Δες το Wrapped σου',
+  wrappedCardLocked: (n) => `${n} ακόμα check-in για να ξεκλειδώσει`,
+  wrappedEmptyTitle: 'Το Wrapped σου έρχεται',
+  wrappedEmptyBody: (n) => `Ξεκλειδώνει μετά από 3 πραγματικά check-in αυτό το εξάμηνο. Σου λείπουν ${n} — πήγαινε κάπου αυτή την εβδομάδα.`,
+  wrappedShare: 'Κοινοποίηση',
+  wrappedSave: 'Αποθήκευση',
+  wrappedSaved: 'Αποθηκεύτηκε στις φωτογραφίες σου',
+  wrappedTicketsCount: (n) => `${n} εισιτήρια.`,
+  wrappedTicketsSemester: 'Ένα εξάμηνο.',
+  wrappedTicketsMore: (n) => `+ ${n} ακόμα ${n === 1 ? 'εισιτήριο' : 'εισιτήρια'} αυτό το εξάμηνο`,
+  wrappedMapLabel: 'ΧΑΡΤΗΣ ΕΞΑΜΗΝΟΥ',
+  wrappedMapHeadline: 'Εδώ βρέθηκες.',
+  wrappedMapAreas: 'περιοχές',
+  wrappedMapEvents: 'events',
+  wrappedMapRoute: 'η μεγαλύτερη απόσταση',
+  wrappedKm: (n) => `${n} χλμ`,
+  wrappedPeopleLabel: 'ΝΕΟΙ ΑΝΘΡΩΠΟΙ',
+  wrappedPeopleSub: 'που δεν ήξερες στην αρχή του εξαμήνου',
+  wrappedYou: 'εσύ',
+  wrappedReceiptTitle: 'ΑΠΟΔΕΙΞΗ ΕΞΑΜΗΝΟΥ',
+  wrappedReceiptTotal: 'ΣΥΝΟΛΟ EVENTS',
+  wrappedReceiptNewPeople: 'Νέοι άνθρωποι',
+  wrappedReceiptStreak: 'Streak (εβδ.)',
+  wrappedReceiptCreated: 'Events που έφτιαξες',
+  wrappedReceiptDue: 'ΠΛΗΡΩΤΕΟ',
+  wrappedReceiptFree: 'Δωρεάν, όπως πάντα.',
+  wrappedReceiptThanks: 'ΕΥΧΑΡΙΣΤΟΥΜΕ ΠΟΥ ΗΡΘΕΣ',
+  wrappedPersonaIntro: 'Φέτος ήσουν',
+  wrappedPersonaTitle: (id, weekday, category) => {
+    const days = ['της Κυριακής', 'της Δευτέρας', 'της Τρίτης', 'της Τετάρτης', 'της Πέμπτης', 'της Παρασκευής', 'του Σαββάτου'];
+    switch (id) {
+      case 'organizer': return 'Αυτός που τα στήνει';
+      case 'explorer': return 'Ο εξερευνητής';
+      case 'regularDay': return `Ο σταθερός ${days[weekday ?? 4]}`;
+      case 'social': return 'Αυτός που γνωρίζει όλους';
+      case 'categoryFan': return ({
+        party: 'Η ψυχή του πάρτι', sports: 'Ο παίκτης της παρέας', study: 'Ο μόνιμος της βιβλιοθήκης',
+        chill: 'Ο χαλαρός της παρέας', coffee: 'Ο λάτρης του καφέ',
+      } as Record<string, string>)[category ?? ''] ?? 'Ο ανήσυχος τύπος';
+      case 'earlyBird': return 'Ο πρωινός τύπος';
+      case 'nightOwl': return 'Ο νυχτερινός τύπος';
+      default: return 'Ο τακτικός';
+    }
+  },
+  wrappedTrait: (id, cat) => ({
+    reliable: 'πάντα εμφανίζεσαι', withFriends: 'πας με φίλους', organizes: 'στήνεις κι εσύ',
+    meetsPeople: 'γνωρίζεις κόσμο', topCategory: `${cat} νο1`,
+  } as Record<string, string>)[id] ?? '',
+  wrappedWeeksLabel: 'ΟΙ ΕΒΔΟΜΑΔΕΣ ΣΟΥ',
+  wrappedWeeksHeadline: 'Πόσες φορές βγήκες.',
+  wrappedWeeksLegend: 'λιγότερα → περισσότερα events',
+  wrappedWeeksStreak: 'εβδομάδες στη σειρά',
+  wrappedWeeksFreeze: 'freeze που κράτησες',
+  wrappedCheckins: 'check-ins',
+  orgStatsTitle: 'Τα events σου σε νούμερα',
+  orgStatsSubtitle: (n) => `Από τα ${n} events σου που έχουν ολοκληρωθεί`,
+  orgStatsEmptyTitle: 'Χρειάζονται λίγα ακόμα events',
+  orgStatsEmptyBody: (n) => `Τα στατιστικά εμφανίζονται μετά από 3 ολοκληρωμένα events, για να βγάζουν νόημα τα νούμερα. Σου λείπουν ${n}.`,
+  orgStatsAttendance: 'ήρθαν',
+  orgStatsNoShow: 'δεν εμφανίστηκαν',
+  orgStatsPerEvent: 'ΤΕΛΕΥΤΑΙΑ EVENTS',
+  orgStatsCameOf: (came, joined) => `ήρθαν ${came} από ${joined}`,
+  orgStatsUnique: 'διαφορετικά άτομα ήρθαν',
+  orgStatsReturning: 'ξαναήρθαν 2+ φορές',
+  orgStatsFeedback: 'ΠΩΣ ΠΗΓΑΝ',
+  orgStatsNoFeedback: 'Δεν υπάρχει ακόμα αξιολόγηση',
+  orgStatsPositive: (pct, n) => `${pct} θετικά · ${n} αξιολογήσεις`,
+  orgStatsPrivacyNote: 'Μόνο σύνολα — δεν βλέπεις ποτέ ποιος έδωσε ποια αξιολόγηση.',
+  seriesRepeatLabel: 'ΕΠΑΝΑΛΗΨΗ',
+  seriesFrequency: (f) => ({ once: 'Μία φορά', weekly: 'Κάθε εβδομάδα', biweekly: 'Κάθε 2 εβδομάδες' } as Record<string, string>)[f] ?? f,
+  seriesWeekdaysShort: ['Κυ', 'Δε', 'Τρ', 'Τε', 'Πε', 'Πα', 'Σα'],
+  seriesEndsAfter: (n) => `Τελειώνει μετά από ${n} φορές`,
+  seriesUpcomingDates: (dates, total) => `${dates}${total > 4 ? ` … (${total} συνολικά)` : ''}`,
+  seriesEditScopeTitle: 'Αυτό το event επαναλαμβάνεται. Εφαρμογή αλλαγών σε:',
+  seriesEditThisOnly: 'Μόνο αυτό',
+  seriesEditFollowing: 'Αυτό και τα επόμενα',
+  seriesEditFollowingFailed: 'Αποθηκεύτηκε αυτό το event, αλλά κάποια από τα επόμενα δεν ενημερώθηκαν.',
+  seriesStopTitle: 'Σταματάς την επανάληψη;',
+  seriesStopBody: 'Δεν θα δημιουργηθούν νέες ημερομηνίες. Όσα events υπάρχουν ήδη μένουν ως έχουν.',
+  seriesStopConfirm: 'Σταμάτα τη σειρά',
+  seriesStoppedToast: 'Η σειρά σταμάτησε',
+  ridesToggleLabel: 'Μεταφορά',
+  ridesToggleHint: 'Όσοι έχουν αυτοκίνητο μπορούν να προσφέρουν θέσεις σε άλλους',
+  notifSeriesNext: (title) => `Το επόμενο «${title}» μπήκε στο feed — θα έρθεις ξανά;`,
+  notifRideRequest: (name, title) => `Ο/Η ${name} ζήτησε θέση στη μεταφορά σου για «${title}»`,
+  notifRideConfirmed: (name, title) => `Ο/Η ${name} επιβεβαίωσε τη θέση σου για «${title}»`,
+  notifRideDeclined: (title) => `Το αίτημά σου για μεταφορά στο «${title}» δεν έγινε δεκτό`,
+  notifRideCancelled: (name, title) => `Ο/Η ${name} ακύρωσε τη θέση του/της στη μεταφορά για «${title}»`,
+  settingsNotifRides: 'Μεταφορά',
+  ridesTitle: 'Μεταφορά',
+  ridesLinkLabel: 'Θες να σε πάρει κάποιος; / Πρόσφερε θέσεις',
+  ridesDisclaimer: 'Το Keno απλώς φέρνει σε επαφή όσους πάνε στο ίδιο event. Η μεταφορά κανονίζεται μεταξύ των χρηστών — καμία πληρωμή, ασφάλιση ή εγγύηση μέσω της εφαρμογής. Το κόστος είναι μόνο ενδεικτικό.',
+  ridesJoinFirst: 'Κάνε συμμετοχή στο event για να προσφέρεις ή να κλείσεις θέση.',
+  ridesEmpty: 'Δεν υπάρχουν ακόμα διαδρομές. Έχεις αμάξι; Πρόσφερε τις άδειες θέσεις.',
+  ridesOfferBtn: 'Πρόσφερε διαδρομή',
+  ridesAreaLabel: 'Αναχώρηση από (περιοχή)',
+  ridesAreaHint: 'Μόνο περιοχή, π.χ. «Ζωγράφου» — τη βλέπουν όλοι',
+  ridesMeetingLabel: 'Ακριβές σημείο συνάντησης',
+  ridesMeetingHint: 'Το βλέπουν μόνο όσοι επιβεβαιώσεις',
+  ridesLeaveLabel: 'Αναχώρηση',
+  ridesLeaveBefore: (m) => (m < 60 ? `${m}′ πριν` : `${m / 60}ω πριν`),
+  ridesSeatsLabel: 'Ελεύθερες θέσεις',
+  ridesCostLabel: 'Κόστος ανά άτομο σε € (προαιρετικό)',
+  ridesCostHint: 'Μόνο ενδεικτικό — κανονίζεται μεταξύ σας, όχι στην εφαρμογή',
+  ridesPublish: 'Δημοσίευση',
+  ridesYourRide: 'Η διαδρομή σου',
+  ridesSeatsLeft: (n) => (n === 1 ? '1 θέση' : `${n} θέσεις`),
+  ridesFull: 'Γεμάτο',
+  ridesLeavesAt: (time) => `Φεύγει ${time}`,
+  ridesCost: (euros) => `${euros}€ το άτομο`,
+  ridesFree: 'Δωρεάν',
+  ridesRequestsLabel: 'Αιτήματα',
+  ridesNoRequests: 'Κανένα αίτημα ακόμα.',
+  ridesConfirm: 'Αποδοχή',
+  ridesDecline: 'Απόρριψη',
+  ridesMessage: 'Μήνυμα',
+  ridesCancelRideBtn: 'Ακύρωση διαδρομής',
+  ridesCancelRideConfirm: 'Θα ειδοποιηθούν όλοι όσοι έχουν θέση.',
+  ridesRequestBtn: 'Ζήτα θέση',
+  ridesPendingLabel: 'Περιμένεις επιβεβαίωση από τον οδηγό',
+  ridesConfirmedLabel: 'Η θέση επιβεβαιώθηκε ✓',
+  ridesDeclinedLabel: 'Ο οδηγός δεν μπορεί να σε πάρει αυτή τη φορά.',
+  ridesCancelSeatBtn: 'Ακύρωσε τη θέση μου',
   profileChallengesTitle: '⚡ Αποστολές',
   profileChallengesSeeAll: 'Δες όλες τις αποστολές',
   profileChallengesSectionLabel: 'Διαχρονικές αποστολές',
@@ -2260,6 +2725,8 @@ const el: Translations = {
   settingsVerifiedGeneric: 'Επαλήθευση ✓',
   settingsSectionNotifications: 'Ειδοποιήσεις',
   settingsNotifEventReminders: 'Υπενθυμίσεις εκδηλώσεων',
+  settingsOsNotifsOff: 'Οι ειδοποιήσεις του Keno είναι κλειστές σε αυτό το κινητό — δεν θα σου έρχονται μηνύματα, υπενθυμίσεις ή προσκλήσεις.',
+  settingsOsNotifsEnable: 'Άνοιξέ τες',
   settingsNotifGroupMessages: 'Μηνύματα ομάδων',
   settingsNotifSuggestions: 'Προτάσεις για εσένα',
   settingsThemeAuto: 'Αυτόματο',
@@ -2535,6 +3002,10 @@ const el: Translations = {
 
   reminderTitle: (title) => `Ξεκινά σύντομα: ${title}`,
   reminderBody: (location) => `📌 ${location} — σε 1 ώρα`,
+  reminderTitleLead: (m, title) => `Σε ${m >= 60 ? `${m / 60} ${m > 60 ? 'ώρες' : 'ώρα'}` : `${m} λεπτά`}: ${title}`,
+  reminderBodyFriends: (n) => `${n === 1 ? 'Πάει 1 φίλος σου' : `Πάνε ${n} φίλοι σου`}. Ετοίμασε το εισιτήριό σου.`,
+  reminderLeadLabel: (m) => (m >= 60 ? `${m / 60}ώ πριν` : `${m}λ πριν`),
+  settingsReminderLead: 'Υπενθύμιση',
 
   groupsTitle: 'Παρέες',
   groupsNewBtn: '+ Νέα',

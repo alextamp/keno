@@ -13,7 +13,7 @@ import { useThemeStore } from '@/core/theme/theme.store';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { getTranslations, useLanguageStore } from '@/core/i18n';
 import { useEventsStore } from '@/features/events/presentation/store/events.store';
-import { syncEventReminders, ensureAndroidNotificationChannel } from '@/core/utils/eventReminders';
+import { syncEventReminders, ensureAndroidNotificationChannel, reminderContextFor } from '@/core/utils/eventReminders';
 import { usePreferencesStore } from '@/core/store/preferences.store';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { Button } from '@/components/ui/Button';
@@ -117,14 +117,27 @@ function RootLayout() {
     return unsubscribe;
   }, []);
 
+  // Re-sync whenever anything a reminder depends on changes — an edited start
+  // time, a new join, a check-in, or the reminder settings — not just the
+  // event count, which an edit to an existing event never changes.
+  const reminderKey = user
+    ? [
+        events.filter((e) => user.joinedEvents.includes(e.id)).map((e) => `${e.id}:${e.dateTime.getTime()}`).join(','),
+        user.notificationPrefs?.eventReminders,
+        user.notificationPrefs?.reminderLeadMinutes,
+        Object.keys(user.attendanceHistory ?? {}).length,
+      ].join('|')
+    : '';
+
   useEffect(() => {
     if (!user || events.length === 0) return;
     // Note: this no longer prompts for OS notification permission — that ask
     // is reserved for the notification-permission screen (shown once, after
     // the user's first event join). syncEventReminders/scheduleEventReminder
     // silently no-op for users who haven't granted permission yet.
-    syncEventReminders(user.joinedEvents, events).catch(() => {});
-  }, [user?.id, events.length]);
+    const checkedIn = Object.entries(user.attendanceHistory ?? {}).filter(([, h]) => h.checkedIn).map(([id]) => id);
+    syncEventReminders(user.joinedEvents, events, reminderContextFor(user), checkedIn).catch(() => {});
+  }, [user?.id, reminderKey]);
 
   // Android's hardware back button falls through to exiting the app when
   // nothing intercepts it. This should only happen at the true root of the
@@ -157,6 +170,8 @@ function RootLayout() {
         router.push(`/(app)/group/${data.eventId}` as any);
       } else if (data.type === 'event_message' && data.eventId) {
         router.push(`/(app)/event-chat/${data.eventId}` as any);
+      } else if (data.type?.startsWith('ride_') && data.eventId) {
+        router.push(`/(app)/event/rides/${data.eventId}` as any);
       } else if (data.eventId) {
         router.push(`/(app)/event/${data.eventId}` as any);
       }
