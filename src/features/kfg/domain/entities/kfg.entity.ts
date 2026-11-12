@@ -1,0 +1,95 @@
+import { KfgCreatorType, KfgMissionKind, KfgSlot } from '@/core/constants/kfg';
+
+export type KfgCause = 'food' | 'animals' | 'environment' | 'recycling' | 'people' | 'other';
+export type KfgMissionStatus = 'pending' | 'published' | 'rejected' | 'cancelled';
+export type KfgParticipationStatus =
+  | 'joined' | 'checkedIn' | 'verified' | 'inReview' | 'completed' | 'rejected' | 'cancelled' | 'expired';
+
+export interface KfgMission {
+  id: string;
+  creatorId: string;
+  creatorType: KfgCreatorType;
+  creatorName: string;
+  title: string;
+  description: string;
+  infoText?: string;
+  kind: KfgMissionKind;
+  cause: KfgCause;
+  startsAt: Date;
+  endsAt: Date;
+  minDurationMin: number;
+  areaLabel: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  capacity: number;
+  points: number;
+  status: KfgMissionStatus;
+  participantCount: number;
+  participantIds: string[];
+  verifiedCount: number;
+  finalized: boolean;
+  rejectionReason?: string;
+}
+
+/** What a completion paid, as stored by the server on the participation. */
+export interface KfgAward {
+  points: number;
+  countsForLeaderboard: boolean;
+  levelBefore: number;
+  levelAfter: number;
+  unlocked: string[];
+}
+
+export interface KfgParticipation {
+  id: string;
+  uid: string;
+  missionId: string;
+  missionCreatorId: string;
+  kind: KfgMissionKind;
+  creatorType: KfgCreatorType;
+  status: KfgParticipationStatus;
+  joinedAt?: Date;
+  checkInAt?: Date;
+  checkOutAt?: Date;
+  award?: KfgAward;
+  photos: { before?: string; after?: string };
+  reviewState?: 'auto' | 'queued' | 'approved' | 'rejected';
+  rejectionReason?: string;
+}
+
+export interface KfgProfile {
+  uid: string;
+  lifetimePoints: number;
+  balance: number;
+  /** Already zeroed client-side when the stored month isn't the current one. */
+  monthPoints: number;
+  streakWeeks: number;
+  trustScore: number;
+  university?: string;
+  equipped: Record<KfgSlot, string | null>;
+  rankAtWeekStart?: number;
+  rankWeekId?: string;
+}
+
+export interface KfgLeaderboardEntry {
+  uid: string;
+  name: string;
+  points: number;
+  university?: string;
+  avatarColor?: string;
+  photoUri?: string;
+}
+
+export interface KfgLeaderboard {
+  monthId: string;
+  final: boolean;
+  totalRanked: number;
+  top: KfgLeaderboardEntry[];
+  universities: { name: string; points: number }[];
+}
+
+export const EMPTY_KFG_PROFILE: Omit<KfgProfile, 'uid'> = {
+  lifetimePoints: 0, balance: 0, monthPoints: 0, streakWeeks: 0, trustScore: 0.5,
+  equipped: { head: null, face: null, neck: null },
+};

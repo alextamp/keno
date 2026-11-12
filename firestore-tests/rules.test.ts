@@ -7,7 +7,7 @@ import {
   assertFails,
 } from '@firebase/rules-unit-testing';
 import {
-  doc, setDoc, updateDoc, getDoc, addDoc, collection, arrayUnion, Timestamp, Firestore,
+  doc, setDoc, updateDoc, getDoc, getDocs, addDoc, collection, arrayUnion, Timestamp, Firestore, query, where,
 } from 'firebase/firestore';
 
 const PROJECT_ID = 'demo-keno-test';
@@ -348,5 +348,18 @@ describe('Keno for Good', () => {
     await assertSucceeds(getDoc(doc(asUser(USER_A), 'kfgLedger', 'e1')));
     await assertFails(getDoc(doc(asUser(USER_B), 'kfgLedger', 'e1')));
     await assertFails(updateDoc(doc(asUser(USER_A), 'kfgLedger', 'e1'), { delta: 9999 }));
+  });
+
+  test('the app\'s list queries are allowed, and only for your own data', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'kfgParticipations', `m1_${USER_B}`), { uid: USER_B, missionId: 'm1', missionCreatorId: USER_A, status: 'joined' });
+      await setDoc(doc(db, 'kfgMissions', 'm1'), { creatorId: USER_A, status: 'published', startsAt: Timestamp.now() });
+    });
+    await assertSucceeds(getDocs(query(collection(asUser(USER_B), 'kfgParticipations'), where('uid', '==', USER_B))));
+    await assertFails(getDocs(query(collection(asUser(USER_C), 'kfgParticipations'), where('uid', '==', USER_B))));
+    await assertSucceeds(getDocs(query(collection(asUser(USER_A), 'kfgParticipations'),
+      where('missionId', '==', 'm1'), where('missionCreatorId', '==', USER_A))));
+    await assertSucceeds(getDocs(query(collection(asUser(USER_C), 'kfgMissions'), where('status', '==', 'published'))));
+    await assertFails(getDocs(query(collection(asUser(USER_C), 'kfgMissions'), where('status', '==', 'pending'))));
   });
 });
