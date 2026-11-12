@@ -30,6 +30,9 @@ export interface UserEntity {
   idVerificationStatus?: 'pending' | 'approved' | 'rejected';
   /** Awarded to everyone who signed up during closed testing, before the app left beta. */
   isBetaTester?: boolean;
+  /** Keno for Good partner account (food bank, shelter, municipality…). Set by an
+   *  admin when approving the account; the user can't set it (firestore.rules). */
+  isOrganization?: boolean;
   /** Users this account has blocked. Blocked users' content (events, chat
    *  messages) is filtered out of everything this account sees. */
   blockedUserIds?: string[];

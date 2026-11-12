@@ -34,6 +34,8 @@ import { beaconsRepository } from '@/features/beacons/beacons.repository';
 import { BeaconEntity } from '@/features/beacons/beacon.entity';
 import { BeaconCard } from '@/components/ui/BeaconCard';
 import { CreateBeaconSheet } from '@/components/ui/CreateBeaconSheet';
+import { KfgEntryCard } from '@/components/kfg/KfgEntryCard';
+import { FEATURES } from '@/core/constants/features';
 
 const FILTER_DEFS: { value: EventCategory | null; key: string }[] = [
   { key: 'catAll',    value: null },
@@ -596,6 +598,8 @@ export default function FeedScreen() {
           })}
         </View>
       )}
+
+      {FEATURES.kenoForGood && !searchActive && <KfgEntryCard />}
 
       {/* Category tags + For You/Friends/Filters row — fixed above the list,
           not scrolled away with the events underneath it. */}

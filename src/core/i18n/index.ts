@@ -399,6 +399,47 @@ export type Translations = {
   wrappedWeeksStreak: string;
   wrappedWeeksFreeze: string;
   wrappedCheckins: string;
+  kfgTabMissions: string;
+  kfgTabCharacter: string;
+  kfgTabLeaderboard: string;
+  kfgBackA11y: string;
+  kfgOpenA11y: string;
+  kfgPoints: (formatted: string) => string;
+  kfgPointsShort: (formatted: string) => string;
+  kfgLevel: (level: number) => string;
+  kfgFeedTitle: (n: number) => string;
+  kfgFeedMeta: (level: number, points: string) => string;
+  kfgMissionsTitle: string;
+  kfgPointsToLevel: (points: string, level: number) => string;
+  kfgMaxLevel: string;
+  kfgStreakWeeks: (n: number) => string;
+  kfgThisWeek: string;
+  kfgVerifyLabel: (kind: string, studentRun: boolean) => string;
+  kfgSpotsLeft: (n: number) => string;
+  kfgJoinedTag: string;
+  kfgEmptyTitle: string;
+  kfgEmptyBody: string;
+  kfgNewMission: string;
+  kfgEyebrow: (kind: string, studentRun: boolean) => string;
+  kfgDuration: (hours: number, minutes: number) => string;
+  kfgMinDuration: (duration: string) => string;
+  kfgOrganizerRow: string;
+  kfgVerifyRow: string;
+  kfgVerifyHow: (kind: string, studentRun: boolean) => string;
+  kfgParticipants: (name: string, others: number) => string;
+  kfgNoParticipants: string;
+  kfgFooter: (points: string, taken: number, capacity: number) => string;
+  kfgJoinBtn: string;
+  kfgLeaveBtn: string;
+  kfgLeaveConfirm: string;
+  kfgVerifyBtn: string;
+  kfgFullBtn: string;
+  kfgOverBtn: string;
+  kfgPhotoNotRanked: string;
+  kfgStudentRule: (min: number) => string;
+  kfgInfoTitle: string;
+  kfgStatusLine: (status: string) => string;
+  kfgError: (code: string) => string;
   orgStatsTitle: string;
   orgStatsSubtitle: (n: number) => string;
   orgStatsEmptyTitle: string;
@@ -1501,6 +1542,73 @@ const en: Translations = {
   wrappedWeeksStreak: 'weeks in a row',
   wrappedWeeksFreeze: 'freezes still banked',
   wrappedCheckins: 'check-ins',
+  kfgTabMissions: 'Actions',
+  kfgTabCharacter: 'Character',
+  kfgTabLeaderboard: 'Ranking',
+  kfgBackA11y: 'Back to Keno',
+  kfgOpenA11y: 'Open Keno for Good',
+  kfgPoints: (p) => `${p} points`,
+  kfgPointsShort: (p) => `${p} pts`,
+  kfgLevel: (level) => `Level ${level}`,
+  kfgFeedTitle: (n) => (n === 0 ? 'Do some good this week' : n === 1 ? '1 mission waiting for you' : `${n} missions waiting for you`),
+  kfgFeedMeta: (level, points) => `Level ${level} · ${points} points`,
+  kfgMissionsTitle: 'For good',
+  kfgPointsToLevel: (points, level) => `${points} points to level ${level}`,
+  kfgMaxLevel: 'Top level reached',
+  kfgStreakWeeks: (n) => (n === 1 ? '1 week in a row' : `${n} weeks in a row`),
+  kfgThisWeek: 'This week',
+  kfgVerifyLabel: (kind, studentRun) => (kind === 'group' ? 'Group' : kind === 'photo' ? 'Photo' : studentRun ? 'Organizer QR' : 'Partner QR'),
+  kfgSpotsLeft: (n) => (n <= 0 ? 'Full' : n === 1 ? '1 spot left' : `${n} spots left`),
+  kfgJoinedTag: 'Signed up',
+  kfgEmptyTitle: 'No missions this week',
+  kfgEmptyBody: 'Check back in a few days — or create one yourself.',
+  kfgNewMission: 'New mission',
+  kfgEyebrow: (kind, studentRun) => (studentRun ? 'Student-run mission' : kind === 'group' ? 'Group mission' : kind === 'photo' ? 'Photo mission' : 'Partner mission'),
+  kfgDuration: (h, m) => [h ? `${h} h` : '', m ? `${m} min` : ''].filter(Boolean).join(' ') || '0 min',
+  kfgMinDuration: (d) => `at least ${d}`,
+  kfgOrganizerRow: 'Organizer',
+  kfgVerifyRow: 'How it’s verified',
+  kfgVerifyHow: (kind, studentRun) => (kind === 'group'
+    ? 'Participants confirm each other afterwards'
+    : kind === 'photo'
+      ? 'A before and an after photo from the in-app camera'
+      : studentRun
+        ? 'The organizer scans your code when you arrive and leave'
+        : 'The partner scans your code when you arrive and leave'),
+  kfgParticipants: (name, others) => (others === 0 ? `${name} is going` : `${name} and ${others} more`),
+  kfgNoParticipants: 'Be the first to sign up',
+  kfgFooter: (points, taken, capacity) => `+${points} points · ${taken} of ${capacity} spots`,
+  kfgJoinBtn: "I'm in",
+  kfgLeaveBtn: 'Cancel my spot',
+  kfgLeaveConfirm: 'Give your spot to someone else?',
+  kfgVerifyBtn: 'Verify attendance',
+  kfgFullBtn: 'Full',
+  kfgOverBtn: 'Finished',
+  kfgPhotoNotRanked: 'Photo points raise your level but don’t count toward the ranking.',
+  kfgStudentRule: (min) => `Counts toward the ranking if at least ${min} people take part.`,
+  kfgInfoTitle: 'Good to know',
+  kfgStatusLine: (status) => ({
+    checkedIn: 'You’re checked in',
+    verified: 'Attendance confirmed — points arrive when the mission closes',
+    inReview: 'Your photos are being reviewed',
+    completed: 'Done — points added',
+    rejected: 'Not verified',
+    expired: 'Not verified in time',
+  } as Record<string, string>)[status] ?? '',
+  kfgError: (code) => ({
+    full: 'The spots just filled up.',
+    'too-many-open': 'You already have 5 open missions.',
+    'not-verified': 'Your account isn’t verified yet.',
+    'organizations-cannot-join': 'Organization accounts can’t sign up for missions.',
+    over: 'This mission has ended.',
+    'not-published': 'This mission isn’t open yet.',
+    'monthly-limit': 'You’ve created 2 missions this month already.',
+    'not-enough-points': 'Not enough points.',
+    'invalid-code': 'Invalid or expired code — ask them to refresh it.',
+    'outside-window': 'Outside the mission’s time.',
+    'not-your-mission': 'This code is for someone else’s mission.',
+    'resource-exhausted': 'Too many tries — wait a moment.',
+  } as Record<string, string>)[code] ?? 'Something went wrong. Please try again.',
   orgStatsTitle: 'Your events, in numbers',
   orgStatsSubtitle: (n) => `Across your ${n} finished events`,
   orgStatsEmptyTitle: 'Not enough events yet',
@@ -2581,6 +2689,73 @@ const el: Translations = {
   wrappedWeeksStreak: 'εβδομάδες στη σειρά',
   wrappedWeeksFreeze: 'freeze που κράτησες',
   wrappedCheckins: 'check-ins',
+  kfgTabMissions: 'Δράσεις',
+  kfgTabCharacter: 'Χαρακτήρας',
+  kfgTabLeaderboard: 'Κατάταξη',
+  kfgBackA11y: 'Πίσω στο Keno',
+  kfgOpenA11y: 'Άνοιξε το Keno for Good',
+  kfgPoints: (p) => `${p} πόντοι`,
+  kfgPointsShort: (p) => `${p} π.`,
+  kfgLevel: (level) => `Επίπεδο ${level}`,
+  kfgFeedTitle: (n) => (n === 0 ? 'Κάνε κάτι καλό αυτή τη βδομάδα' : n === 1 ? '1 αποστολή σε περιμένει' : `${n} αποστολές σε περιμένουν`),
+  kfgFeedMeta: (level, points) => `Επίπεδο ${level} · ${points} πόντοι`,
+  kfgMissionsTitle: 'Για το καλό',
+  kfgPointsToLevel: (points, level) => `${points} πόντοι για το επίπεδο ${level}`,
+  kfgMaxLevel: 'Έφτασες στο ανώτατο επίπεδο',
+  kfgStreakWeeks: (n) => (n === 1 ? '1 εβδομάδα σερί' : `${n} εβδομάδες σερί`),
+  kfgThisWeek: 'Αυτή τη βδομάδα',
+  kfgVerifyLabel: (kind, studentRun) => (kind === 'group' ? 'Ομαδική' : kind === 'photo' ? 'Φωτογραφία' : studentRun ? 'QR διοργανωτή' : 'QR συνεργάτη'),
+  kfgSpotsLeft: (n) => (n <= 0 ? 'Γεμάτο' : n === 1 ? '1 θέση' : `${n} θέσεις`),
+  kfgJoinedTag: 'Δηλώθηκες',
+  kfgEmptyTitle: 'Καμία αποστολή αυτή τη βδομάδα',
+  kfgEmptyBody: 'Ξαναδές σε λίγες μέρες — ή φτιάξε μία εσύ.',
+  kfgNewMission: 'Νέα αποστολή',
+  kfgEyebrow: (kind, studentRun) => (studentRun ? 'Αποστολή από φοιτητή' : kind === 'group' ? 'Ομαδική αποστολή' : kind === 'photo' ? 'Αποστολή με φωτογραφία' : 'Αποστολή με συνεργάτη'),
+  kfgDuration: (h, m) => [h ? (h === 1 ? '1 ώρα' : `${h} ώρες`) : '', m ? `${m} λεπ.` : ''].filter(Boolean).join(' ') || '0 λεπ.',
+  kfgMinDuration: (d) => `ελάχ. ${d}`,
+  kfgOrganizerRow: 'Διοργανωτής',
+  kfgVerifyRow: 'Πώς επιβεβαιώνεται',
+  kfgVerifyHow: (kind, studentRun) => (kind === 'group'
+    ? 'Οι συμμετέχοντες επιβεβαιώνουν ο ένας τον άλλον μετά'
+    : kind === 'photo'
+      ? 'Μια φωτογραφία πριν και μία μετά, από την κάμερα της εφαρμογής'
+      : studentRun
+        ? 'Ο διοργανωτής σκανάρει το QR σου στην άφιξη και στην αποχώρηση'
+        : 'Ο συνεργάτης σκανάρει το QR σου στην άφιξη και στην αποχώρηση'),
+  kfgParticipants: (name, others) => (others === 0 ? `${name} συμμετέχει` : `${name} και ${others} ακόμα`),
+  kfgNoParticipants: 'Δήλωσε πρώτος συμμετοχή',
+  kfgFooter: (points, taken, capacity) => `+${points} πόντοι · ${taken} από ${capacity} θέσεις`,
+  kfgJoinBtn: 'Δηλώνω συμμετοχή',
+  kfgLeaveBtn: 'Ακύρωση συμμετοχής',
+  kfgLeaveConfirm: 'Να αφήσεις τη θέση σου σε κάποιον άλλον;',
+  kfgVerifyBtn: 'Επιβεβαίωση συμμετοχής',
+  kfgFullBtn: 'Γεμάτο',
+  kfgOverBtn: 'Ολοκληρώθηκε',
+  kfgPhotoNotRanked: 'Οι πόντοι από φωτογραφία ανεβάζουν επίπεδο, αλλά δεν μετράνε στην κατάταξη.',
+  kfgStudentRule: (min) => `Μετράει στην κατάταξη αν συμμετέχουν τουλάχιστον ${min} άτομα.`,
+  kfgInfoTitle: 'Καλό να ξέρεις',
+  kfgStatusLine: (status) => ({
+    checkedIn: 'Έκανες check-in',
+    verified: 'Η συμμετοχή σου επιβεβαιώθηκε — οι πόντοι έρχονται όταν κλείσει η αποστολή',
+    inReview: 'Οι φωτογραφίες σου ελέγχονται',
+    completed: 'Ολοκληρώθηκε — οι πόντοι προστέθηκαν',
+    rejected: 'Δεν επιβεβαιώθηκε',
+    expired: 'Δεν επιβεβαιώθηκε εγκαίρως',
+  } as Record<string, string>)[status] ?? '',
+  kfgError: (code) => ({
+    full: 'Οι θέσεις μόλις γέμισαν.',
+    'too-many-open': 'Έχεις ήδη 5 ανοιχτές αποστολές.',
+    'not-verified': 'Ο λογαριασμός σου δεν έχει επαληθευτεί ακόμα.',
+    'organizations-cannot-join': 'Οι λογαριασμοί οργανισμών δεν δηλώνουν συμμετοχή.',
+    over: 'Η αποστολή έχει τελειώσει.',
+    'not-published': 'Η αποστολή δεν έχει ανοίξει ακόμα.',
+    'monthly-limit': 'Έφτιαξες ήδη 2 αποστολές αυτόν τον μήνα.',
+    'not-enough-points': 'Δεν έχεις αρκετούς πόντους.',
+    'invalid-code': 'Μη έγκυρος ή παλιός κωδικός — ζήτα να τον ανανεώσει.',
+    'outside-window': 'Εκτός ώρας της αποστολής.',
+    'not-your-mission': 'Ο κωδικός είναι για αποστολή άλλου διοργανωτή.',
+    'resource-exhausted': 'Πολλές προσπάθειες — περίμενε λίγο.',
+  } as Record<string, string>)[code] ?? 'Κάτι πήγε στραβά. Δοκίμασε ξανά.',
   orgStatsTitle: 'Τα events σου σε νούμερα',
   orgStatsSubtitle: (n) => `Από τα ${n} events σου που έχουν ολοκληρωθεί`,
   orgStatsEmptyTitle: 'Χρειάζονται λίγα ακόμα events',

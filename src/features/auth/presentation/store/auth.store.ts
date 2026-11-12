@@ -283,6 +283,7 @@ async function loadUserFromFirestore(uid: string, attempt = 0): Promise<UserEnti
     lastAttendedDate: d.lastAttendedDate,
     idVerificationStatus: d.idVerificationStatus,
     isBetaTester: d.isBetaTester,
+    isOrganization: d.isOrganization === true,
     createdAt: d.createdAt?.toDate?.() ?? undefined,
     blockedUserIds: d.blockedUserIds ?? [],
     profileVisibility: d.profileVisibility,
