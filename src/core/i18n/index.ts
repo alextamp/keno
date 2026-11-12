@@ -509,6 +509,20 @@ export type Translations = {
   kfgBuyConfirm: (name: string, price: string) => string;
   kfgBuyBtn: string;
   kfgBalanceLine: (points: string) => string;
+  kfgRankSubtitle: (days: number) => string;
+  kfgRankPeople: string;
+  kfgRankSchools: string;
+  kfgRankFriends: string;
+  kfgYou: string;
+  kfgRankDelta: (delta: number) => string;
+  kfgTowardsTop: (top: number) => string;
+  kfgPointsToTop: (points: string, top: number) => string;
+  kfgInTop: (top: number) => string;
+  kfgPrizeRule: (winners: number) => string;
+  kfgRankEmpty: string;
+  kfgNoRankYet: string;
+  kfgFriendsEmpty: string;
+  kfgRankUpdated: string;
   orgStatsTitle: string;
   orgStatsSubtitle: (n: number) => string;
   orgStatsEmptyTitle: string;
@@ -1753,6 +1767,20 @@ const en: Translations = {
   kfgBuyConfirm: (name, price) => `“${name}” for ${price} points. Spending points never lowers your level or your ranking.`,
   kfgBuyBtn: 'Get it',
   kfgBalanceLine: (p) => `${p} points to spend`,
+  kfgRankSubtitle: (d) => `All of Greece · resets in ${d === 1 ? '1 day' : `${d} days`}`,
+  kfgRankPeople: 'People',
+  kfgRankSchools: 'Schools',
+  kfgRankFriends: 'Friends',
+  kfgYou: 'You',
+  kfgRankDelta: (d) => (d > 0 ? `+${d} places this week` : d < 0 ? `${d} places this week` : 'Same place as last week'),
+  kfgTowardsTop: (top) => `Toward the top ${top}`,
+  kfgPointsToTop: (p, top) => `${p} points to the top ${top}`,
+  kfgInTop: (top) => `You’re in the top ${top} — hold on to it`,
+  kfgPrizeRule: (w) => `The top ${w} of the month win a prize. Only partner-QR and group-confirmed missions count; photo missions only raise your level.`,
+  kfgRankEmpty: 'Nobody has points yet this month.',
+  kfgNoRankYet: 'Complete a QR or group mission to get on the board.',
+  kfgFriendsEmpty: 'None of the people you follow have points this month.',
+  kfgRankUpdated: 'Updates every half hour',
   orgStatsTitle: 'Your events, in numbers',
   orgStatsSubtitle: (n) => `Across your ${n} finished events`,
   orgStatsEmptyTitle: 'Not enough events yet',
@@ -2975,6 +3003,20 @@ const el: Translations = {
   kfgBuyConfirm: (name, price) => `«${name}» με ${price} πόντους. Όταν ξοδεύεις πόντους δεν πέφτει ούτε το επίπεδο ούτε η θέση σου στην κατάταξη.`,
   kfgBuyBtn: 'Το παίρνω',
   kfgBalanceLine: (p) => `${p} πόντοι για ξόδεμα`,
+  kfgRankSubtitle: (d) => `Όλη η Ελλάδα · μηδενίζει σε ${d === 1 ? '1 μέρα' : `${d} μέρες`}`,
+  kfgRankPeople: 'Άτομα',
+  kfgRankSchools: 'Σχολές',
+  kfgRankFriends: 'Φίλοι',
+  kfgYou: 'Εσύ',
+  kfgRankDelta: (d) => (d > 0 ? `+${d} θέσεις αυτή τη βδομάδα` : d < 0 ? `${d} θέσεις αυτή τη βδομάδα` : 'Ίδια θέση με την περασμένη βδομάδα'),
+  kfgTowardsTop: (top) => `Προς το top ${top}`,
+  kfgPointsToTop: (p, top) => `${p} πόντοι για το top ${top}`,
+  kfgInTop: (top) => `Είσαι στο top ${top} — κράτα τη θέση σου`,
+  kfgPrizeRule: (w) => `Οι ${w} πρώτοι του μήνα κερδίζουν δώρο. Μετράνε μόνο αποστολές με QR συνεργάτη ή ομαδική επιβεβαίωση· οι αποστολές με φωτογραφία ανεβάζουν μόνο επίπεδο.`,
+  kfgRankEmpty: 'Κανείς δεν έχει πόντους ακόμα αυτόν τον μήνα.',
+  kfgNoRankYet: 'Κάνε μια αποστολή με QR ή ομαδική για να μπεις στην κατάταξη.',
+  kfgFriendsEmpty: 'Όσοι ακολουθείς δεν έχουν πόντους αυτόν τον μήνα.',
+  kfgRankUpdated: 'Ενημερώνεται κάθε μισή ώρα',
   orgStatsTitle: 'Τα events σου σε νούμερα',
   orgStatsSubtitle: (n) => `Από τα ${n} events σου που έχουν ολοκληρωθεί`,
   orgStatsEmptyTitle: 'Χρειάζονται λίγα ακόμα events',
