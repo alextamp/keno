@@ -23,7 +23,8 @@ import {
 //     /private/qr                     that user's QR secret
 //   kfgVerifications/{id}             QR scans, peer votes, photo submissions
 //   kfgLedger/{id}                    append-only points log (the source of truth)
-//   kfgProfiles/{uid}                 running totals, streak, trust, equipped
+//   kfgProfiles/{uid}                 running totals, streak, equipped (public)
+//   kfgTrust/{uid}                    peer-confirmation trust score (server-only)
 //     /cosmetics/{itemId}             owned items
 //   kfgLeaderboards/{monthId}         monthly snapshot (final: true once the month is over)
 
@@ -33,6 +34,9 @@ const VERIFICATIONS = 'kfgVerifications';
 const LEDGER = 'kfgLedger';
 const PROFILES = 'kfgProfiles';
 const LEADERBOARDS = 'kfgLeaderboards';
+// Peer-confirmation trust is kept apart from the public profile: only these
+// functions read or write it (firestore.rules lets admins read it, nobody write).
+const TRUST = 'kfgTrust';
 const KINDS: KfgMissionKind[] = ['partnerQr', 'group', 'photo'];
 const CAUSES = ['food', 'animals', 'environment', 'recycling', 'people', 'other'];
 const OPEN_STATUSES = ['joined', 'checkedIn'];
@@ -104,7 +108,7 @@ export async function awardPoints(uid: string, delta: number, meta: AwardMeta): 
     };
     if (!profileSnap.exists) {
       Object.assign(update, {
-        trustScore: KFG_LIMITS.initialTrust, streakWeeks: 0, lastWeekId: null,
+        streakWeeks: 0, lastWeekId: null,
         equipped: { head: null, face: null, neck: null }, monthId, monthPoints: 0,
       });
     }
@@ -632,9 +636,9 @@ async function finalizeMission(missionDoc: admin.firestore.QueryDocumentSnapshot
     const uids = members.map((d) => d.data().uid as string);
     const votesSnap = await db.collection(VERIFICATIONS).where('missionId', '==', missionId).where('type', '==', 'peer').get();
     const votes = votesSnap.docs.map((d) => ({ from: d.data().uid as string, to: d.data().to as string }));
-    const profiles = await Promise.all(uids.map((u) => db.doc(`${PROFILES}/${u}`).get()));
+    const trustDocs = await Promise.all(uids.map((u) => db.doc(`${TRUST}/${u}`).get()));
     const trust: Record<string, number> = {};
-    profiles.forEach((s, i) => { trust[uids[i]] = s.data()?.trustScore ?? KFG_LIMITS.initialTrust; });
+    trustDocs.forEach((s, i) => { trust[uids[i]] = s.data()?.score ?? KFG_LIMITS.initialTrust; });
 
     const { verified, trustDelta } = resolveGroup(uids, votes, trust);
     for (const d of members) {
@@ -642,8 +646,8 @@ async function finalizeMission(missionDoc: admin.firestore.QueryDocumentSnapshot
       await payParticipant(d.ref, d.data().uid, m, missionId, true);
       paid.add(d.id);
     }
-    await Promise.all(Object.entries(trustDelta).map(([u, delta]) => db.doc(`${PROFILES}/${u}`).set(
-      { trustScore: clampTrust((trust[u] ?? KFG_LIMITS.initialTrust) + delta) }, { merge: true },
+    await Promise.all(Object.entries(trustDelta).map(([u, delta]) => db.doc(`${TRUST}/${u}`).set(
+      { score: clampTrust((trust[u] ?? KFG_LIMITS.initialTrust) + delta), updatedAt: FieldValue.serverTimestamp() }, { merge: true },
     )));
     await missionDoc.ref.update({ verifiedCount: verified.length });
   }
@@ -773,6 +777,7 @@ export async function deleteKfgUserData(uid: string): Promise<void> {
   await Promise.all(files.map((f) => f.delete({ ignoreNotFound: true })));
 
   await db.recursiveDelete(db.doc(`${PROFILES}/${uid}`));
+  await db.doc(`${TRUST}/${uid}`).delete();
   const participations = await db.collection(PARTICIPATIONS).where('uid', '==', uid).get();
   for (const p of participations.docs) {
     if (OPEN_STATUSES.includes(p.data().status)) {

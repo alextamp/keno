@@ -362,4 +362,10 @@ describe('Keno for Good', () => {
     await assertSucceeds(getDocs(query(collection(asUser(USER_C), 'kfgMissions'), where('status', '==', 'published'))));
     await assertFails(getDocs(query(collection(asUser(USER_C), 'kfgMissions'), where('status', '==', 'pending'))));
   });
+
+  test('trust scores are not readable by users', async () => {
+    await seed(async (db) => { await setDoc(doc(db, 'kfgTrust', USER_A), { score: 0.5 }); });
+    await assertFails(getDoc(doc(asUser(USER_A), 'kfgTrust', USER_A)));
+    await assertFails(getDoc(doc(asUser(USER_B), 'kfgTrust', USER_A)));
+  });
 });

@@ -537,6 +537,12 @@ service cloud.firestore {
       );
     }
 
+    // Group-mission trust score — server-only, never on the public profile.
+    match /kfgTrust/{userId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     match /kfgLeaderboards/{monthId} {
       allow read: if signedIn();
       allow write: if false;

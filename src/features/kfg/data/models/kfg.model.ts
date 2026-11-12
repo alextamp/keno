@@ -69,7 +69,6 @@ export function profileFromFirestore(uid: string, d: DocumentData | undefined, n
     balance: d.balance ?? 0,
     monthPoints: currentMonth ? (d.monthPoints ?? 0) : 0,
     streakWeeks: d.streakWeeks ?? 0,
-    trustScore: d.trustScore ?? 0.5,
     university: opt(d.university),
     equipped: { head: null, face: null, neck: null, ...(d.equipped ?? {}) },
     rankAtWeekStart: opt(d.rankAtWeekStart),

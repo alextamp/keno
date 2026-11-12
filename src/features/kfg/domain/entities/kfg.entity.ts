@@ -67,7 +67,6 @@ export interface KfgProfile {
   /** Already zeroed client-side when the stored month isn't the current one. */
   monthPoints: number;
   streakWeeks: number;
-  trustScore: number;
   university?: string;
   equipped: Record<KfgSlot, string | null>;
   rankAtWeekStart?: number;
@@ -92,6 +91,6 @@ export interface KfgLeaderboard {
 }
 
 export const EMPTY_KFG_PROFILE: Omit<KfgProfile, 'uid'> = {
-  lifetimePoints: 0, balance: 0, monthPoints: 0, streakWeeks: 0, trustScore: 0.5,
+  lifetimePoints: 0, balance: 0, monthPoints: 0, streakWeeks: 0,
   equipped: { head: null, face: null, neck: null },
 };

@@ -35,7 +35,8 @@ async function waitFor(check, label) { if (!(await check())) throw new Error('FA
   ok((await db.doc('kfgParticipations/grp_g1').get()).data().status === 'completed', 'g1 confirmed by two peers');
   ok((await db.doc('kfgParticipations/grp_g2').get()).data().status === 'completed', 'g2 confirmed (group of 3 needs 1)');
   ok((await db.doc('kfgParticipations/grp_g3').get()).data().status === 'expired', 'g3 unconfirmed');
-  ok((await db.doc('kfgProfiles/g3').get()).data().trustScore < 0.5, 'unconfirmed member loses trust');
+  ok((await db.doc('kfgTrust/g3').get()).data().score < 0.5, 'unconfirmed member loses trust');
+  ok(!('trustScore' in ((await db.doc('kfgProfiles/g1').get()).data())), 'trust is not on the public profile');
 
   console.log('Leaderboard');
   await trigger('kfgUpdateLeaderboard');
