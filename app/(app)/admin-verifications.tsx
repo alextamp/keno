@@ -4,6 +4,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { collection, doc, getDoc, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
+import { FEATURES } from '@/core/constants/features';
 import { db } from '@/lib/firebase';
 import { useTheme } from '@/core/theme';
 import { UIFont, UIFontLight, TitleFont, FontSize, FontWeight, Spacing, BorderRadius } from '@/core/constants/theme';
@@ -55,11 +56,16 @@ export default function AdminVerificationsScreen() {
     return unsub;
   }, []);
 
-  const decide = async (uid: string, status: 'approved' | 'rejected') => {
+  // asOrganization: a Keno for Good partner who sent a photo of the
+  // organization instead of a student ID (after we've been in touch).
+  const decide = async (uid: string, status: 'approved' | 'rejected', asOrganization = false) => {
     setBusyId(uid);
     try {
-      await updateDoc(doc(db, 'users', uid), { idVerificationStatus: status });
-      if (adminUid) logAdminAction(adminUid, 'idVerification', { targetUid: uid, status });
+      await updateDoc(doc(db, 'users', uid), {
+        idVerificationStatus: status,
+        ...(asOrganization ? { isOrganization: true } : {}),
+      });
+      if (adminUid) logAdminAction(adminUid, 'idVerification', { targetUid: uid, status, asOrganization: asOrganization ? 'true' : undefined });
     } catch {
       Alert.alert(t.createAlertSaveError, t.authErrGeneric);
     } finally {
@@ -114,6 +120,15 @@ export default function AdminVerificationsScreen() {
                     <Text style={[styles.actionText, { color: '#fff' }]}>{t.adminVerificationsApprove}</Text>
                   </AnimatedPressable>
                 </View>
+                {FEATURES.kenoForGood && (
+                  <AnimatedPressable
+                    onPress={() => decide(u.id, 'approved', true)}
+                    disabled={isBusy}
+                    style={[styles.actionBtn, { borderColor: colors.categorySports }]}
+                  >
+                    <Text style={[styles.actionText, { color: colors.categorySports }]}>{t.adminVerificationsApproveOrg}</Text>
+                  </AnimatedPressable>
+                )}
               </View>
             );
           })}

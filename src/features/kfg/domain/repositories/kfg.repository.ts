@@ -42,6 +42,8 @@ export interface KfgRepository {
   getMyRank(monthPoints: number): Promise<Either<Failure, number | null>>;
   getMyMissions(uid: string): Promise<Either<Failure, KfgMission[]>>;
   getPendingMissions(): Promise<Either<Failure, KfgMission[]>>;
+  /** Admin: photo pairs waiting for a human decision, with readable photo URLs. */
+  getPhotoReviewQueue(): Promise<Either<Failure, { participation: KfgParticipation; before?: string; after?: string }[]>>;
 
   createMission(params: CreateKfgMissionParams): Promise<Either<Failure, { missionId: string; status: 'pending' | 'published' }>>;
   reviewMission(missionId: string, approve: boolean, reason?: string): Promise<Either<Failure, void>>;

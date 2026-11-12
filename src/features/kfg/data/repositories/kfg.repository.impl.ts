@@ -2,7 +2,7 @@ import {
   collection, doc, documentId, getCountFromServer, getDoc, getDocs, onSnapshot, orderBy, query, Timestamp, updateDoc, where,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { ref, uploadBytes } from 'firebase/storage';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { db, functions, storage } from '@/lib/firebase';
 import { Failure, ServerFailure } from '@/core/errors/failures';
 import { Either, left, right } from '@/core/utils/either';
@@ -108,6 +108,18 @@ export const kfgRepository: KfgRepository = {
     return attempt(async () => {
       const snap = await getDocs(query(collection(db, MISSIONS), where('status', '==', 'pending'), orderBy('startsAt', 'asc')));
       return snap.docs.map(missionFromFirestore);
+    });
+  },
+
+  getPhotoReviewQueue() {
+    return attempt(async () => {
+      const snap = await getDocs(query(collection(db, PARTICIPATIONS), where('reviewState', '==', 'queued')));
+      const url = (path?: string) => (path ? getDownloadURL(ref(storage, path)).catch(() => undefined) : Promise.resolve(undefined));
+      return Promise.all(snap.docs.map(async (d) => {
+        const participation = participationFromFirestore(d);
+        const [before, after] = await Promise.all([url(participation.photos.before), url(participation.photos.after)]);
+        return { participation, before, after };
+      }));
     });
   },
 

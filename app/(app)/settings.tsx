@@ -616,6 +616,12 @@ export default function SettingsScreen() {
           <SettingRow icon="flag" label={t.settingsAdminReports} onPress={() => router.push('/(app)/admin-reports')} />
           <Divider />
           <SettingRow icon="shield" label={t.settingsAdminVerifications} onPress={() => router.push('/(app)/admin-verifications' as any)} />
+          {FEATURES.kenoForGood && (
+            <>
+              <Divider />
+              <SettingRow icon="heart" label={t.settingsAdminKfg} onPress={() => router.push('/(app)/kfg/admin' as any)} />
+            </>
+          )}
         </Section>
       )}
 

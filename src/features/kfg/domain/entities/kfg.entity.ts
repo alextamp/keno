@@ -56,6 +56,8 @@ export interface KfgParticipation {
   photos: { before?: string; after?: string };
   reviewState?: 'auto' | 'queued' | 'approved' | 'rejected';
   rejectionReason?: string;
+  /** Automatic photo checks that failed ('faces', 'distance', 'day', 'order', 'window'). */
+  reviewProblems?: string[];
 }
 
 export interface KfgProfile {

@@ -54,6 +54,7 @@ export function participationFromFirestore(snap: DocumentSnapshot<DocumentData>)
     photos: d.photos ?? {},
     reviewState: opt(d.reviewState),
     rejectionReason: opt(d.rejectionReason),
+    reviewProblems: opt(d.reviewProblems),
   };
 }
 

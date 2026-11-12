@@ -523,6 +523,14 @@ export type Translations = {
   kfgNoRankYet: string;
   kfgFriendsEmpty: string;
   kfgRankUpdated: string;
+  settingsAdminKfg: string;
+  adminVerificationsApproveOrg: string;
+  kfgAdminPendingMissions: string;
+  kfgAdminPhotoQueue: string;
+  kfgAdminApprove: string;
+  kfgAdminReject: string;
+  kfgAdminEmpty: string;
+  kfgAdminProblems: (problems: string[]) => string;
   orgStatsTitle: string;
   orgStatsSubtitle: (n: number) => string;
   orgStatsEmptyTitle: string;
@@ -1781,6 +1789,16 @@ const en: Translations = {
   kfgNoRankYet: 'Complete a QR or group mission to get on the board.',
   kfgFriendsEmpty: 'None of the people you follow have points this month.',
   kfgRankUpdated: 'Updates every half hour',
+  settingsAdminKfg: 'Keno for Good review',
+  adminVerificationsApproveOrg: 'Approve as organization',
+  kfgAdminPendingMissions: 'Student missions to approve',
+  kfgAdminPhotoQueue: 'Photos to check',
+  kfgAdminApprove: 'Approve',
+  kfgAdminReject: 'Reject',
+  kfgAdminEmpty: 'Nothing waiting.',
+  kfgAdminProblems: (p) => (p.length
+    ? `Automatic checks flagged: ${p.map((x) => ({ faces: 'faces', distance: 'different spot', day: 'different day', order: 'after before before', window: 'outside mission time' } as Record<string, string>)[x] ?? x).join(', ')}`
+    : 'Random spot check — points already given'),
   orgStatsTitle: 'Your events, in numbers',
   orgStatsSubtitle: (n) => `Across your ${n} finished events`,
   orgStatsEmptyTitle: 'Not enough events yet',
@@ -3017,6 +3035,16 @@ const el: Translations = {
   kfgNoRankYet: 'Κάνε μια αποστολή με QR ή ομαδική για να μπεις στην κατάταξη.',
   kfgFriendsEmpty: 'Όσοι ακολουθείς δεν έχουν πόντους αυτόν τον μήνα.',
   kfgRankUpdated: 'Ενημερώνεται κάθε μισή ώρα',
+  settingsAdminKfg: 'Keno for Good: έλεγχος',
+  adminVerificationsApproveOrg: 'Έγκριση ως οργανισμός',
+  kfgAdminPendingMissions: 'Αποστολές φοιτητών προς έγκριση',
+  kfgAdminPhotoQueue: 'Φωτογραφίες προς έλεγχο',
+  kfgAdminApprove: 'Έγκριση',
+  kfgAdminReject: 'Απόρριψη',
+  kfgAdminEmpty: 'Τίποτα σε αναμονή.',
+  kfgAdminProblems: (p) => (p.length
+    ? `Ο αυτόματος έλεγχος βρήκε: ${p.map((x) => ({ faces: 'πρόσωπα', distance: 'άλλο σημείο', day: 'άλλη μέρα', order: 'το «μετά» πριν το «πριν»', window: 'εκτός ώρας αποστολής' } as Record<string, string>)[x] ?? x).join(', ')}`
+    : 'Τυχαίος έλεγχος — οι πόντοι έχουν ήδη δοθεί'),
   orgStatsTitle: 'Τα events σου σε νούμερα',
   orgStatsSubtitle: (n) => `Από τα ${n} events σου που έχουν ολοκληρωθεί`,
   orgStatsEmptyTitle: 'Χρειάζονται λίγα ακόμα events',
