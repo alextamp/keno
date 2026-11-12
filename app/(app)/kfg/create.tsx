@@ -28,6 +28,8 @@ const KINDS: KfgMissionKind[] = ['partnerQr', 'group', 'photo'];
 const KIND_ICONS: Record<KfgMissionKind, IconName> = { partnerQr: 'qr', group: 'users', photo: 'camera' };
 const POINT_OPTIONS = [KFG_POINTS.partnerQrMin, KFG_POINTS.partnerQrDefault, KFG_POINTS.partnerQrMax];
 
+const isPast = (d: Date) => d.getTime() <= Date.now();
+
 function defaultStart(): Date {
   const d = new Date(Date.now() + 2 * 86_400_000);
   d.setHours(10, 0, 0, 0);
@@ -112,7 +114,7 @@ function CreateInner() {
 
   const submit = async () => {
     if (!valid || saving) return;
-    if (startsAt.getTime() <= Date.now()) {
+    if (isPast(startsAt)) {
       Alert.alert(t.kfgCreateTitle, t.kfgInvalidTimes(KFG_LIMITS.maxDurationHours));
       return;
     }
