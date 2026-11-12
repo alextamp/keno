@@ -254,3 +254,99 @@ describe('events: referredBy', () => {
     await assertFails(updateDoc(doc(asUser(USER_A), 'events', 'e-ref'), { referredBy: { [USER_A]: USER_B } }));
   });
 });
+
+describe('users: isOrganization (Keno for Good)', () => {
+  test('nobody can sign up as an organization', async () => {
+    await assertFails(setDoc(doc(asUser(USER_A), 'users', USER_A), { name: 'A', isOrganization: true }));
+    await assertSucceeds(setDoc(doc(asUser(USER_B), 'users', USER_B), { name: 'B' }));
+  });
+
+  test('an owner cannot flip themselves to organization', async () => {
+    await seed(async (db) => { await setDoc(doc(db, 'users', USER_A), { name: 'A' }); });
+    await assertFails(updateDoc(doc(asUser(USER_A), 'users', USER_A), { isOrganization: true }));
+    await assertSucceeds(updateDoc(doc(asUser(USER_A), 'users', USER_A), { name: 'A2' }));
+  });
+
+  test('an admin can mark an account as an organization', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'admins', ADMIN), {});
+      await setDoc(doc(db, 'users', USER_A), { name: 'A' });
+    });
+    await assertSucceeds(updateDoc(doc(asUser(ADMIN), 'users', USER_A), { isOrganization: true }));
+  });
+});
+
+describe('Keno for Good', () => {
+  test('clients cannot create missions, participations, ledger entries or profiles', async () => {
+    const db = asUser(USER_A);
+    await assertFails(setDoc(doc(db, 'kfgMissions', 'm1'), { creatorId: USER_A, status: 'published' }));
+    await assertFails(setDoc(doc(db, 'kfgParticipations', `m1_${USER_A}`), { uid: USER_A, status: 'completed' }));
+    await assertFails(setDoc(doc(db, 'kfgLedger', 'e1'), { uid: USER_A, delta: 10000 }));
+    await assertFails(setDoc(doc(db, 'kfgProfiles', USER_A), { lifetimePoints: 10000 }));
+    await assertFails(setDoc(doc(db, 'kfgLeaderboards', '2026-11'), { top: [] }));
+  });
+
+  test('a user cannot edit their own points', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'kfgProfiles', USER_A), { lifetimePoints: 100, balance: 100, monthPoints: 100, equipped: {} });
+    });
+    await assertFails(updateDoc(doc(asUser(USER_A), 'kfgProfiles', USER_A), { lifetimePoints: 9999 }));
+    await assertFails(updateDoc(doc(asUser(USER_A), 'kfgProfiles', USER_A), { monthPoints: 9999 }));
+  });
+
+  test('a user can wear an item they own in the right slot, nothing else', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'kfgProfiles', USER_A), { lifetimePoints: 0, equipped: { head: null, face: null, neck: null } });
+      await setDoc(doc(db, 'kfgProfiles', USER_A, 'cosmetics', 'scarf'), { slot: 'neck' });
+    });
+    const db = asUser(USER_A);
+    await assertSucceeds(updateDoc(doc(db, 'kfgProfiles', USER_A), { equipped: { head: null, face: null, neck: 'scarf' } }));
+    await assertFails(updateDoc(doc(db, 'kfgProfiles', USER_A), { equipped: { head: 'scarf', face: null, neck: null } }));
+    await assertFails(updateDoc(doc(db, 'kfgProfiles', USER_A), { equipped: { head: 'beanie', face: null, neck: null } }));
+    await assertFails(updateDoc(doc(asUser(USER_B), 'kfgProfiles', USER_A), { equipped: { head: null, face: null, neck: null } }));
+  });
+
+  test('pending missions are only visible to their creator and admins', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'admins', ADMIN), {});
+      await setDoc(doc(db, 'kfgMissions', 'pending1'), { creatorId: USER_A, status: 'pending', title: 'x' });
+      await setDoc(doc(db, 'kfgMissions', 'pub1'), { creatorId: USER_A, status: 'published', title: 'y' });
+    });
+    await assertSucceeds(getDoc(doc(asUser(USER_A), 'kfgMissions', 'pending1')));
+    await assertSucceeds(getDoc(doc(asUser(ADMIN), 'kfgMissions', 'pending1')));
+    await assertFails(getDoc(doc(asUser(USER_B), 'kfgMissions', 'pending1')));
+    await assertSucceeds(getDoc(doc(asUser(USER_B), 'kfgMissions', 'pub1')));
+  });
+
+  test('a creator can edit the text of their mission but not its points or status', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'kfgMissions', 'm1'), { creatorId: USER_A, status: 'pending', title: 'x', points: 150 });
+    });
+    const db = asUser(USER_A);
+    await assertSucceeds(updateDoc(doc(db, 'kfgMissions', 'm1'), { title: 'better' }));
+    await assertFails(updateDoc(doc(db, 'kfgMissions', 'm1'), { points: 300 }));
+    await assertFails(updateDoc(doc(db, 'kfgMissions', 'm1'), { status: 'published' }));
+    await assertFails(updateDoc(doc(asUser(USER_B), 'kfgMissions', 'm1'), { title: 'hijack' }));
+  });
+
+  test('participations are visible to the participant and the mission creator only', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'kfgParticipations', `m1_${USER_B}`), { uid: USER_B, missionId: 'm1', missionCreatorId: USER_A, status: 'joined' });
+      await setDoc(doc(db, 'kfgParticipations', `m1_${USER_B}`, 'private', 'qr'), { secret: 's' });
+    });
+    await assertSucceeds(getDoc(doc(asUser(USER_B), 'kfgParticipations', `m1_${USER_B}`)));
+    await assertSucceeds(getDoc(doc(asUser(USER_A), 'kfgParticipations', `m1_${USER_B}`)));
+    await assertFails(getDoc(doc(asUser(USER_C), 'kfgParticipations', `m1_${USER_B}`)));
+    await assertSucceeds(getDoc(doc(asUser(USER_B), 'kfgParticipations', `m1_${USER_B}`, 'private', 'qr')));
+    await assertFails(getDoc(doc(asUser(USER_A), 'kfgParticipations', `m1_${USER_B}`, 'private', 'qr')));
+  });
+
+  test('the ledger is readable only by its owner', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'kfgLedger', 'e1'), { uid: USER_A, delta: 250 });
+    });
+    await assertSucceeds(getDoc(doc(asUser(USER_A), 'kfgLedger', 'e1')));
+    await assertFails(getDoc(doc(asUser(USER_B), 'kfgLedger', 'e1')));
+    await assertFails(updateDoc(doc(asUser(USER_A), 'kfgLedger', 'e1'), { delta: 9999 }));
+  });
+});

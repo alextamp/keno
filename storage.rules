@@ -61,5 +61,23 @@ service firebase.storage {
                    && request.resource.size < 8 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
     }
+
+    // Keno for Good photo missions. The app uploads the raw camera file to
+    // kfg-photos-raw/; the kfgProcessPhoto function re-encodes it (dropping
+    // EXIF incl. GPS), checks it, writes the clean copy to kfg-photos/ and
+    // deletes the raw one. Nobody can read a raw upload, not even its owner.
+    match /kfg-photos-raw/{uid}/{filename} {
+      allow read: if false;
+      allow create: if request.auth != null
+                    && request.auth.uid == uid
+                    && request.resource.size < 10 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+    }
+
+    match /kfg-photos/{uid}/{filename} {
+      allow read: if request.auth != null
+                  && (request.auth.uid == uid || request.auth.uid == 'Ijfcvx8cqGb1WNnOZxWgGUuGD6N2');
+      allow write: if false;
+    }
   }
 }
