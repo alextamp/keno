@@ -126,7 +126,7 @@ function MissionInner() {
       ? <Button label={t.kfgScanBtn} onPress={() => router.push(`/(app)/kfg/scan?missionId=${mission.id}` as any)} disabled={over} />
       : null;
   } else if (status === 'completed' || status === 'verified' || status === 'inReview') {
-    action = <Button label={t.kfgOverBtn} disabled onPress={() => {}} />;
+    action = <Button label={t.kfgOverBtn} variant="soft" onPress={() => router.push(`/(app)/kfg/complete/${mission.id}` as any)} />;
   } else if (canVerify) {
     action = <Button label={t.kfgVerifyBtn} onPress={() => router.push(`/(app)/kfg/verify/${mission.id}` as any)} />;
   } else if (over) {

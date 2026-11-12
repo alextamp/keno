@@ -490,6 +490,17 @@ export type Translations = {
   kfgCheckOutAllBtn: string;
   kfgCheckOutAllConfirm: string;
   kfgCheckOutAllResult: (done: number, early: number) => string;
+  kfgWellDone: string;
+  kfgAwardPill: (points: string, ranked: boolean) => string;
+  kfgPendingPayout: string;
+  kfgPhotosInReview: string;
+  kfgLevelUp: (from: string, to: string) => string;
+  kfgUnlocked: string;
+  kfgWearIt: string;
+  kfgWearing: string;
+  kfgShareStory: string;
+  kfgShareSoon: string;
+  kfgBackToMissions: string;
   orgStatsTitle: string;
   orgStatsSubtitle: (n: number) => string;
   orgStatsEmptyTitle: string;
@@ -1715,6 +1726,17 @@ const en: Translations = {
   kfgCheckOutAllBtn: 'Check everyone out',
   kfgCheckOutAllConfirm: 'Everyone who stayed the minimum time gets their points. Others don’t.',
   kfgCheckOutAllResult: (done, early) => (early ? `${done} checked out · ${early} hadn’t stayed long enough` : `${done} checked out`),
+  kfgWellDone: 'Well done',
+  kfgAwardPill: (p, ranked) => `+${p} points · ${ranked ? 'count toward the ranking' : 'level only'}`,
+  kfgPendingPayout: 'Your attendance is confirmed. Points arrive when the mission closes.',
+  kfgPhotosInReview: 'Your photos are with the Keno team for a quick check. Points arrive once approved.',
+  kfgLevelUp: (from, to) => `Level up: ${from} → ${to}`,
+  kfgUnlocked: 'Unlocked',
+  kfgWearIt: 'Wear it',
+  kfgWearing: 'Wearing it',
+  kfgShareStory: 'Share to story',
+  kfgShareSoon: 'Sharing to your story is coming soon.',
+  kfgBackToMissions: 'Back to actions',
   orgStatsTitle: 'Your events, in numbers',
   orgStatsSubtitle: (n) => `Across your ${n} finished events`,
   orgStatsEmptyTitle: 'Not enough events yet',
@@ -2918,6 +2940,17 @@ const el: Translations = {
   kfgCheckOutAllBtn: 'Check-out όλων',
   kfgCheckOutAllConfirm: 'Όσοι έμειναν τον ελάχιστο χρόνο παίρνουν τους πόντους τους. Οι υπόλοιποι όχι.',
   kfgCheckOutAllResult: (done, early) => (early ? `${done} έκαναν check-out · ${early} δεν είχαν μείνει αρκετά` : `${done} έκαναν check-out`),
+  kfgWellDone: 'Μπράβο σου',
+  kfgAwardPill: (p, ranked) => `+${p} πόντοι · ${ranked ? 'μετράνε στην κατάταξη' : 'μόνο για επίπεδο'}`,
+  kfgPendingPayout: 'Η συμμετοχή σου επιβεβαιώθηκε. Οι πόντοι έρχονται όταν κλείσει η αποστολή.',
+  kfgPhotosInReview: 'Οι φωτογραφίες σου περνούν έναν γρήγορο έλεγχο από την ομάδα του Keno. Οι πόντοι έρχονται μόλις εγκριθούν.',
+  kfgLevelUp: (from, to) => `Ανέβηκες επίπεδο: ${from} → ${to}`,
+  kfgUnlocked: 'Ξεκλείδωσες',
+  kfgWearIt: 'Φόρεσέ το',
+  kfgWearing: 'Το φοράς',
+  kfgShareStory: 'Μοιράσου στο story',
+  kfgShareSoon: 'Η κοινοποίηση στο story έρχεται σύντομα.',
+  kfgBackToMissions: 'Πίσω στις δράσεις',
   orgStatsTitle: 'Τα events σου σε νούμερα',
   orgStatsSubtitle: (n) => `Από τα ${n} events σου που έχουν ολοκληρωθεί`,
   orgStatsEmptyTitle: 'Χρειάζονται λίγα ακόμα events',
