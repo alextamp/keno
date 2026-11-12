@@ -501,6 +501,14 @@ export type Translations = {
   kfgShareStory: string;
   kfgShareSoon: string;
   kfgBackToMissions: string;
+  kfgWardrobe: string;
+  kfgOwned: string;
+  kfgLockedLevel: (level: number) => string;
+  kfgLockedTop: (top: number) => string;
+  kfgBuyTitle: string;
+  kfgBuyConfirm: (name: string, price: string) => string;
+  kfgBuyBtn: string;
+  kfgBalanceLine: (points: string) => string;
   orgStatsTitle: string;
   orgStatsSubtitle: (n: number) => string;
   orgStatsEmptyTitle: string;
@@ -1737,6 +1745,14 @@ const en: Translations = {
   kfgShareStory: 'Share to story',
   kfgShareSoon: 'Sharing to your story is coming soon.',
   kfgBackToMissions: 'Back to actions',
+  kfgWardrobe: 'Wardrobe',
+  kfgOwned: 'Yours',
+  kfgLockedLevel: (level) => `Level ${level}`,
+  kfgLockedTop: (top) => `Top ${top}`,
+  kfgBuyTitle: 'Get it?',
+  kfgBuyConfirm: (name, price) => `“${name}” for ${price} points. Spending points never lowers your level or your ranking.`,
+  kfgBuyBtn: 'Get it',
+  kfgBalanceLine: (p) => `${p} points to spend`,
   orgStatsTitle: 'Your events, in numbers',
   orgStatsSubtitle: (n) => `Across your ${n} finished events`,
   orgStatsEmptyTitle: 'Not enough events yet',
@@ -2951,6 +2967,14 @@ const el: Translations = {
   kfgShareStory: 'Μοιράσου στο story',
   kfgShareSoon: 'Η κοινοποίηση στο story έρχεται σύντομα.',
   kfgBackToMissions: 'Πίσω στις δράσεις',
+  kfgWardrobe: 'Ντουλάπα',
+  kfgOwned: 'Δικό σου',
+  kfgLockedLevel: (level) => `Επίπεδο ${level}`,
+  kfgLockedTop: (top) => `Top ${top}`,
+  kfgBuyTitle: 'Να το πάρεις;',
+  kfgBuyConfirm: (name, price) => `«${name}» με ${price} πόντους. Όταν ξοδεύεις πόντους δεν πέφτει ούτε το επίπεδο ούτε η θέση σου στην κατάταξη.`,
+  kfgBuyBtn: 'Το παίρνω',
+  kfgBalanceLine: (p) => `${p} πόντοι για ξόδεμα`,
   orgStatsTitle: 'Τα events σου σε νούμερα',
   orgStatsSubtitle: (n) => `Από τα ${n} events σου που έχουν ολοκληρωθεί`,
   orgStatsEmptyTitle: 'Χρειάζονται λίγα ακόμα events',
