@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "test": "jest",
     "test:rules": "firebase emulators:exec --only firestore --project demo-keno-test \"jest --config firestore-tests/jest.config.js\"",
-    "import:events": "node scripts/import-events.js"
+    "import:events": "node scripts/import-events.js",
+    "test:kfg": "cd functions && npm run build && cd .. && firebase emulators:exec --only functions,firestore,auth --project demo-keno-test \"node firestore-tests/kfg/kfg-e2e.cjs\" && firebase emulators:exec --only firestore --project demo-keno-test \"node firestore-tests/kfg/kfg-sched.cjs\" && firebase emulators:exec --only functions,firestore,storage --project demo-keno-test \"node firestore-tests/kfg/kfg-photo.cjs\""
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -42,6 +43,7 @@
     "expo-splash-screen": "~57.0.9",
     "expo-status-bar": "~57.0.1",
     "firebase": "^10.12.2",
+    "js-sha256": "^0.11.1",
     "posthog-react-native": "^4.61.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
