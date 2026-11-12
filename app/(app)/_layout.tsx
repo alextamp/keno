@@ -49,6 +49,7 @@ export default function AppLayout() {
       <Stack.Screen name="organiser-stats" />
       <Stack.Screen name="kfg/index" />
       <Stack.Screen name="kfg/mission/[id]" />
+      <Stack.Screen name="kfg/create" />
       <Stack.Screen name="event/rides/[id]" />
       <Stack.Screen name="dm/[uid]" />
       <Stack.Screen name="event-chat/[id]" />

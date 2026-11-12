@@ -440,6 +440,29 @@ export type Translations = {
   kfgInfoTitle: string;
   kfgStatusLine: (status: string) => string;
   kfgError: (code: string) => string;
+  kfgScanBtn: string;
+  kfgCreateTitle: string;
+  kfgCreateStudentNote: (max: number) => string;
+  kfgFieldTitle: string;
+  kfgFieldDescription: string;
+  kfgFieldCause: string;
+  kfgCause: (cause: string) => string;
+  kfgFieldKind: string;
+  kfgFieldDate: string;
+  kfgFieldStart: string;
+  kfgFieldEnd: string;
+  kfgFieldMinDuration: string;
+  kfgFieldArea: string;
+  kfgFieldAreaHint: string;
+  kfgFieldAddress: string;
+  kfgFieldCapacity: string;
+  kfgFieldPoints: string;
+  kfgFieldInfo: string;
+  kfgFieldInfoHint: string;
+  kfgPublishBtn: string;
+  kfgSubmitForReviewBtn: string;
+  kfgCreatedPending: string;
+  kfgInvalidTimes: (maxHours: number) => string;
   orgStatsTitle: string;
   orgStatsSubtitle: (n: number) => string;
   orgStatsEmptyTitle: string;
@@ -1587,6 +1610,7 @@ const en: Translations = {
   kfgPhotoNotRanked: 'Photo points raise your level but don’t count toward the ranking.',
   kfgStudentRule: (min) => `Counts toward the ranking if at least ${min} people take part.`,
   kfgInfoTitle: 'Good to know',
+  kfgScanBtn: 'Scan codes',
   kfgStatusLine: (status) => ({
     checkedIn: 'You’re checked in',
     verified: 'Attendance confirmed — points arrive when the mission closes',
@@ -1609,6 +1633,28 @@ const en: Translations = {
     'not-your-mission': 'This code is for someone else’s mission.',
     'resource-exhausted': 'Too many tries — wait a moment.',
   } as Record<string, string>)[code] ?? 'Something went wrong. Please try again.',
+  kfgCreateTitle: 'New mission',
+  kfgCreateStudentNote: (max) => `The Keno team checks student missions before they go live. Up to ${max} a month; you scan people's codes yourself on the day.`,
+  kfgFieldTitle: 'Title',
+  kfgFieldDescription: 'What we’ll do',
+  kfgFieldCause: 'Cause',
+  kfgCause: (c) => ({ food: 'Food', animals: 'Animals', environment: 'Environment', recycling: 'Recycling', people: 'People', other: 'Other' } as Record<string, string>)[c] ?? c,
+  kfgFieldKind: 'How it’s verified',
+  kfgFieldDate: 'Date',
+  kfgFieldStart: 'Starts',
+  kfgFieldEnd: 'Ends',
+  kfgFieldMinDuration: 'Minimum stay',
+  kfgFieldArea: 'Area',
+  kfgFieldAreaHint: 'Shown to everyone, e.g. “Rouf”',
+  kfgFieldAddress: 'Address (optional)',
+  kfgFieldCapacity: 'Spots',
+  kfgFieldPoints: 'Points',
+  kfgFieldInfo: 'Good to know (optional)',
+  kfgFieldInfoHint: 'e.g. wear closed shoes, meet at the side entrance',
+  kfgPublishBtn: 'Publish',
+  kfgSubmitForReviewBtn: 'Send for approval',
+  kfgCreatedPending: 'Sent for approval — it goes live once the Keno team approves it.',
+  kfgInvalidTimes: (max) => `The end has to be after the start, at most ${max} hours later.`,
   orgStatsTitle: 'Your events, in numbers',
   orgStatsSubtitle: (n) => `Across your ${n} finished events`,
   orgStatsEmptyTitle: 'Not enough events yet',
@@ -2734,6 +2780,7 @@ const el: Translations = {
   kfgPhotoNotRanked: 'Οι πόντοι από φωτογραφία ανεβάζουν επίπεδο, αλλά δεν μετράνε στην κατάταξη.',
   kfgStudentRule: (min) => `Μετράει στην κατάταξη αν συμμετέχουν τουλάχιστον ${min} άτομα.`,
   kfgInfoTitle: 'Καλό να ξέρεις',
+  kfgScanBtn: 'Σκανάρισμα QR',
   kfgStatusLine: (status) => ({
     checkedIn: 'Έκανες check-in',
     verified: 'Η συμμετοχή σου επιβεβαιώθηκε — οι πόντοι έρχονται όταν κλείσει η αποστολή',
@@ -2756,6 +2803,28 @@ const el: Translations = {
     'not-your-mission': 'Ο κωδικός είναι για αποστολή άλλου διοργανωτή.',
     'resource-exhausted': 'Πολλές προσπάθειες — περίμενε λίγο.',
   } as Record<string, string>)[code] ?? 'Κάτι πήγε στραβά. Δοκίμασε ξανά.',
+  kfgCreateTitle: 'Νέα αποστολή',
+  kfgCreateStudentNote: (max) => `Οι αποστολές φοιτητών ελέγχονται από την ομάδα του Keno πριν εμφανιστούν. Έως ${max} τον μήνα· την ημέρα σκανάρεις εσύ τα QR των συμμετεχόντων.`,
+  kfgFieldTitle: 'Τίτλος',
+  kfgFieldDescription: 'Τι θα κάνουμε',
+  kfgFieldCause: 'Σκοπός',
+  kfgCause: (c) => ({ food: 'Τρόφιμα', animals: 'Ζώα', environment: 'Περιβάλλον', recycling: 'Ανακύκλωση', people: 'Άνθρωποι', other: 'Άλλο' } as Record<string, string>)[c] ?? c,
+  kfgFieldKind: 'Πώς επιβεβαιώνεται',
+  kfgFieldDate: 'Ημερομηνία',
+  kfgFieldStart: 'Αρχή',
+  kfgFieldEnd: 'Τέλος',
+  kfgFieldMinDuration: 'Ελάχιστη παραμονή',
+  kfgFieldArea: 'Περιοχή',
+  kfgFieldAreaHint: 'Τη βλέπουν όλοι, π.χ. «Ρουφ»',
+  kfgFieldAddress: 'Διεύθυνση (προαιρετικό)',
+  kfgFieldCapacity: 'Θέσεις',
+  kfgFieldPoints: 'Πόντοι',
+  kfgFieldInfo: 'Καλό να ξέρουν (προαιρετικό)',
+  kfgFieldInfoHint: 'π.χ. φόρεσε κλειστά παπούτσια, συνάντηση στην πλαϊνή είσοδο',
+  kfgPublishBtn: 'Δημοσίευση',
+  kfgSubmitForReviewBtn: 'Αποστολή για έγκριση',
+  kfgCreatedPending: 'Στάλθηκε για έγκριση — θα εμφανιστεί μόλις την εγκρίνει η ομάδα του Keno.',
+  kfgInvalidTimes: (max) => `Το τέλος πρέπει να είναι μετά την αρχή, έως ${max} ώρες αργότερα.`,
   orgStatsTitle: 'Τα events σου σε νούμερα',
   orgStatsSubtitle: (n) => `Από τα ${n} events σου που έχουν ολοκληρωθεί`,
   orgStatsEmptyTitle: 'Χρειάζονται λίγα ακόμα events',

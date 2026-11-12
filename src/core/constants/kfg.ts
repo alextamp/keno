@@ -48,6 +48,8 @@ export const KFG_LIMITS = {
   /** Shown as "Προς το top N" on the leaderboard; also unlocks the matching cosmetic. */
   leaderboardTop: 100,
   prizeWinners: 3,
+  maxCapacity: 200,
+  maxDurationHours: 12,
 } as const;
 
 /** Which completions count toward the monthly leaderboard (photo missions only ever raise the level). */
