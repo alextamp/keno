@@ -1,3 +1,4 @@
+import { createContext, useContext } from 'react';
 import { useThemeStore } from './theme.store';
 
 // Warm Paper design system (design/KENO_WARM_PAPER_SPEC.md + KENO_v3_ADDENDUM.md).
@@ -27,6 +28,15 @@ export const LightColors = {
   categoryChill: '#B2537A',
   categoryCoffee: '#A0702C',
   categoryOther: '#7A6E62',
+
+  // Keno for Good accent — green instead of terracotta, used only inside the
+  // KfG section (via AccentScopeProvider below, never referenced directly by
+  // screens outside it).
+  kfgAccent: '#3F7A55',
+  kfgAccentLight: '#4E8F66',
+  kfgAccentDark: '#2F5C40',
+  kfgAccentSoft: '#E6EFE9',
+  kfgAccentInk: '#2F5C40',
 
   error: '#DC2626',
   success: '#16A34A',
@@ -64,6 +74,12 @@ export const DarkColors = {
   categoryCoffee: '#A0702C',
   categoryOther: '#9D8F7E',
 
+  kfgAccent: '#5FA478',
+  kfgAccentLight: '#7FBF95',
+  kfgAccentDark: '#3F7A55',
+  kfgAccentSoft: '#1C2A21',
+  kfgAccentInk: '#7FBF95',
+
   error: '#F87171',
   success: '#4ADE80',
   white: '#FFFFFF',
@@ -71,11 +87,43 @@ export const DarkColors = {
   overlay: 'rgba(0,0,0,0.7)',
 } as const;
 
-export type AppColors = typeof LightColors;
+// Widened from the literal hex types so the dark palette and the KfG-scoped
+// palettes below are all the same type.
+export type AppColors = { readonly [K in keyof typeof LightColors]: string };
+
+// Swaps the action color for a whole subtree. Keno for Good wraps its screens
+// in <AccentScopeProvider value="kfg"> so every shared component (Button,
+// SegmentedTabs, ProgressTrack, Tag…) turns green without a KfG-specific copy
+// of any of them. Outside that provider nothing changes.
+export type AccentScope = 'default' | 'kfg';
+const AccentScopeContext = createContext<AccentScope>('default');
+export const AccentScopeProvider = AccentScopeContext.Provider;
+
+function withKfgAccent(c: AppColors): AppColors {
+  return {
+    ...c,
+    primary: c.kfgAccent,
+    primaryLight: c.kfgAccentLight,
+    primaryDark: c.kfgAccentDark,
+    accentSoft: c.kfgAccentSoft,
+    accentInk: c.kfgAccentInk,
+  };
+}
+
+// Built once so useTheme() keeps returning the same object per theme — callers
+// use `colors` in effect/memo deps.
+const KfgLightColors = withKfgAccent(LightColors);
+const KfgDarkColors = withKfgAccent(DarkColors);
+
+export function resolveColors(isDark: boolean, scope: AccentScope): AppColors {
+  if (scope === 'kfg') return isDark ? KfgDarkColors : KfgLightColors;
+  return isDark ? DarkColors : LightColors;
+}
 
 export function useTheme(): { colors: AppColors; isDark: boolean } {
   const isDark = useThemeStore((s) => s.isDark);
-  return { colors: (isDark ? DarkColors : LightColors) as AppColors, isDark };
+  const scope = useContext(AccentScopeContext);
+  return { colors: resolveColors(isDark, scope), isDark };
 }
 
 export const EVENT_CATEGORY_THEME_COLORS = {

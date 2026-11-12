@@ -1,18 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle, useSharedValue, withSpring, withSequence, interpolate, Extrapolation,
-} from 'react-native-reanimated';
+import { Pressable, StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import PagerView from 'react-native-pager-view';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/core/theme';
-import { UIFont, FontSize, FontWeight } from '@/core/constants/theme';
 import { useNotificationsStore } from '@/features/notifications/notifications.store';
 import { useTabNavigation } from '@/core/tabNavigation';
 import { useCreateFlowStore } from '@/core/store/createFlow.store';
 import { usePressAnimation } from '@/core/hooks/usePressAnimation';
 import { useTranslation } from '@/core/i18n';
 import { Icon, IconName } from '@/components/ui/Icon';
+import { TabBar, TabBarItem } from '@/components/ui/TabBar';
 import { haptics } from '@/core/utils/haptics';
 
 import FeedTab from '@/screens/FeedTab';
@@ -28,61 +25,7 @@ const TAB_ICONS: IconName[] = ['home', 'map', 'plus', 'trophy', 'user'];
 const FAB_INDEX = 2;
 const LEADERBOARD_INDEX = 3;
 
-function TabBarItem({
-  icon, label, focused, badge, onPress,
-}: {
-  icon: IconName;
-  label: string;
-  focused: boolean;
-  badge?: number;
-  onPress: () => void;
-}) {
-  const { colors } = useTheme();
-  const { animatedStyle: pressStyle, onPressIn, onPressOut } = usePressAnimation(0.88);
-  const focusAnim = useSharedValue(focused ? 1 : 0);
-  // Separate from focusAnim on purpose: this always settles back to exactly 1,
-  // so the active tab's icon never sits at a fractional scale (that soft/blurry
-  // look) — it only pulses at the instant of switching, then snaps crisp.
-  const pulse = useSharedValue(1);
-
-  useEffect(() => {
-    focusAnim.value = withSpring(focused ? 1 : 0, { damping: 18, stiffness: 240 });
-    if (focused) {
-      pulse.value = withSequence(
-        withSpring(1.22, { damping: 10, stiffness: 350 }),
-        withSpring(1, { damping: 12, stiffness: 280 }),
-      );
-    }
-  }, [focused]);
-
-  const pillStyle = useAnimatedStyle(() => ({
-    opacity: focusAnim.value,
-    transform: [{ scale: interpolate(focusAnim.value, [0, 1], [0.5, 1], Extrapolation.CLAMP) }],
-  }));
-
-  const iconWrapStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulse.value }],
-  }));
-
-  const color = focused ? colors.primary : colors.textDecor;
-
-  return (
-    <AnimatedPressable onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut} style={[styles.tabItem, pressStyle]}>
-      <Animated.View style={[styles.iconWrap, iconWrapStyle]}>
-        <Animated.View style={[styles.activePill, { backgroundColor: colors.accentSoft }, pillStyle]} />
-        <Icon name={icon} size={23} color={color} strokeWidth={1.8} />
-        {!!badge && badge > 0 && (
-          <View style={[styles.notifBadge, { backgroundColor: colors.primary, borderColor: colors.surface }]}>
-            <Text style={styles.notifBadgeText}>{badge > 9 ? '9+' : badge}</Text>
-          </View>
-        )}
-      </Animated.View>
-      <Text style={[styles.tabLabel, { color, fontFamily: UIFont, opacity: focused ? 1 : 0.8 }]}>{label}</Text>
-    </AnimatedPressable>
-  );
-}
-
-function FabItem({ onPress }: { onPress: () => void }) {
+function FabItem({ label, onPress }: { label: string; onPress: () => void }) {
   const { colors } = useTheme();
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation(0.92);
   return (
@@ -90,6 +33,8 @@ function FabItem({ onPress }: { onPress: () => void }) {
       onPress={() => { haptics.medium(); onPress(); }}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
+      accessibilityRole="button"
+      accessibilityLabel={label}
       style={[styles.fabWrap, animatedStyle]}
     >
       <View style={[styles.fabRing, { backgroundColor: colors.background, borderColor: colors.border }]}>
@@ -102,8 +47,6 @@ function FabItem({ onPress }: { onPress: () => void }) {
 }
 
 export default function AppHub() {
-  const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const t = useTranslation();
   const LABELS = [t.tabFeed, t.tabMap, '', t.leaderboardTitle, t.profileTitle];
   const unreadCount = useNotificationsStore((s) => s.unreadCount);
@@ -134,8 +77,6 @@ export default function AppHub() {
       clearPendingTab();
     }
   }, [pendingTab]);
-
-  const tabBarHeight = 58 + insets.bottom;
 
   return (
     <View style={styles.root}>
@@ -191,20 +132,11 @@ export default function AppHub() {
         </View>
       </PagerView>
 
-      {/* Tab bar */}
-      <View style={[
-        styles.tabBar,
-        {
-          height: tabBarHeight,
-          paddingBottom: insets.bottom + 4,
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-        },
-      ]}>
+      <TabBar>
         {TAB_ICONS.map((icon, i) =>
           i === FAB_INDEX ? (
-            <View key="fab" style={styles.tabItem}>
-              <FabItem onPress={() => goTo(i)} />
+            <View key="fab" style={styles.fabSlot}>
+              <FabItem label={t.tabCreate} onPress={() => goTo(i)} />
             </View>
           ) : (
             <TabBarItem
@@ -217,7 +149,7 @@ export default function AppHub() {
             />
           ),
         )}
-      </View>
+      </TabBar>
     </View>
   );
 }
@@ -226,30 +158,7 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   pager: { flex: 1 },
   page: { flex: 1 },
-  tabBar: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    paddingTop: 8,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#241F19',
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-      },
-      android: { elevation: 8 },
-    }),
-  },
-  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 5 },
-  tabLabel: {
-    fontSize: FontSize.xs, fontWeight: FontWeight.bold, letterSpacing: 0.15,
-    includeFontPadding: false, textAlignVertical: 'center',
-  },
-  iconWrap: { width: 46, height: 32, alignItems: 'center', justifyContent: 'center' },
-  activePill: {
-    position: 'absolute',
-    width: 40, height: 32, borderRadius: 13,
-  },
+  fabSlot: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   fabWrap: { alignItems: 'center', justifyContent: 'center' },
   fabRing: {
     width: 66, height: 66, borderRadius: 33, borderWidth: 1,
@@ -263,11 +172,4 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 10,
   },
-  notifBadge: {
-    position: 'absolute', top: -2, right: 2,
-    minWidth: 15, height: 15, borderRadius: 8, borderWidth: 1.5,
-    alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: 3,
-  },
-  notifBadgeText: { color: '#fff', fontSize: 9, fontWeight: FontWeight.bold },
 });

@@ -7,4 +7,6 @@ export const FEATURES = {
   /** Ride offers/bookings (departure area, meeting point). Needs a Terms disclaimer. */
   rides: true,
   recurringEvents: true,
+  /** Keno for Good section (volunteering missions, KfG points, character). */
+  kenoForGood: false,
 } as const;
