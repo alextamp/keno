@@ -463,6 +463,33 @@ export type Translations = {
   kfgSubmitForReviewBtn: string;
   kfgCreatedPending: string;
   kfgInvalidTimes: (maxHours: number) => string;
+  kfgVerifyTitle: string;
+  kfgQrHint: string;
+  kfgQrRefreshes: string;
+  kfgOnSite: (elapsed: string) => string;
+  kfgOnSiteMin: (min: string) => string;
+  kfgQrOffline: string;
+  kfgPhotoBefore: string;
+  kfgPhotoAfter: string;
+  kfgPhotoTake: string;
+  kfgPhotoUploading: string;
+  kfgPhotoUploaded: string;
+  kfgPhotoRules: string[];
+  kfgPhotoLocationNeeded: string;
+  kfgPhotoAfterFirst: string;
+  kfgCameraNeeded: string;
+  kfgCameraAllow: string;
+  kfgGroupIntro: string;
+  kfgGroupNotYet: string;
+  kfgGroupConfirmBtn: (n: number) => string;
+  kfgGroupSaved: string;
+  kfgScanTitle: string;
+  kfgScanHint: string;
+  kfgScanResult: (result: string, name: string, extra?: number) => string;
+  kfgScanStats: (present: number, done: number) => string;
+  kfgCheckOutAllBtn: string;
+  kfgCheckOutAllConfirm: string;
+  kfgCheckOutAllResult: (done: number, early: number) => string;
   orgStatsTitle: string;
   orgStatsSubtitle: (n: number) => string;
   orgStatsEmptyTitle: string;
@@ -1655,6 +1682,39 @@ const en: Translations = {
   kfgSubmitForReviewBtn: 'Send for approval',
   kfgCreatedPending: 'Sent for approval — it goes live once the Keno team approves it.',
   kfgInvalidTimes: (max) => `The end has to be after the start, at most ${max} hours later.`,
+  kfgVerifyTitle: 'Verify',
+  kfgQrHint: 'Show this code to the organizer when you arrive and again when you leave.',
+  kfgQrRefreshes: 'The code changes every 30 seconds — screenshots won’t work.',
+  kfgOnSite: (e) => `You’ve been here ${e}`,
+  kfgOnSiteMin: (m) => `min. ${m}`,
+  kfgQrOffline: 'Couldn’t load your code. Check your connection and try again.',
+  kfgPhotoBefore: 'Before',
+  kfgPhotoAfter: 'After',
+  kfgPhotoTake: 'Take photo',
+  kfgPhotoUploading: 'Uploading…',
+  kfgPhotoUploaded: 'Uploaded',
+  kfgPhotoRules: ['No faces — show the place or the result, never people', 'The same spot in both photos', 'Both on the same day, during the mission'],
+  kfgPhotoLocationNeeded: 'Photo missions need your location at the moment you take each photo, to check it’s the same spot.',
+  kfgPhotoAfterFirst: 'Take the “before” photo first.',
+  kfgCameraNeeded: 'Keno needs the camera for this.',
+  kfgCameraAllow: 'Allow camera',
+  kfgGroupIntro: 'Tick everyone who was really there. Points go to people at least two others confirm.',
+  kfgGroupNotYet: 'You can confirm the others once the mission has started.',
+  kfgGroupConfirmBtn: (n) => (n === 1 ? 'Confirm 1 person' : `Confirm ${n} people`),
+  kfgGroupSaved: 'Saved. You can change it until 24 hours after the end.',
+  kfgScanTitle: 'Scan codes',
+  kfgScanHint: 'Point at a participant’s Keno for Good code',
+  kfgScanResult: (r, name, extra) => ({
+    checkedIn: `${name} checked in`,
+    completed: `${name} done — points added`,
+    verified: `${name} confirmed`,
+    alreadyDone: `${name} is already done`,
+    tooEarly: `${name}: ${extra ?? 0} min to go`,
+  } as Record<string, string>)[r] ?? name,
+  kfgScanStats: (present, done) => `${present} here · ${done} done`,
+  kfgCheckOutAllBtn: 'Check everyone out',
+  kfgCheckOutAllConfirm: 'Everyone who stayed the minimum time gets their points. Others don’t.',
+  kfgCheckOutAllResult: (done, early) => (early ? `${done} checked out · ${early} hadn’t stayed long enough` : `${done} checked out`),
   orgStatsTitle: 'Your events, in numbers',
   orgStatsSubtitle: (n) => `Across your ${n} finished events`,
   orgStatsEmptyTitle: 'Not enough events yet',
@@ -2825,6 +2885,39 @@ const el: Translations = {
   kfgSubmitForReviewBtn: 'Αποστολή για έγκριση',
   kfgCreatedPending: 'Στάλθηκε για έγκριση — θα εμφανιστεί μόλις την εγκρίνει η ομάδα του Keno.',
   kfgInvalidTimes: (max) => `Το τέλος πρέπει να είναι μετά την αρχή, έως ${max} ώρες αργότερα.`,
+  kfgVerifyTitle: 'Επιβεβαίωση',
+  kfgQrHint: 'Δείξε τον κωδικό στον διοργανωτή όταν φτάσεις και ξανά όταν φεύγεις.',
+  kfgQrRefreshes: 'Ο κωδικός αλλάζει κάθε 30 δευτερόλεπτα — τα screenshot δεν περνάνε.',
+  kfgOnSite: (e) => `Είσαι στο σημείο ${e}`,
+  kfgOnSiteMin: (m) => `ελάχ. ${m}`,
+  kfgQrOffline: 'Δεν φόρτωσε ο κωδικός σου. Έλεγξε τη σύνδεση και ξαναδοκίμασε.',
+  kfgPhotoBefore: 'Πριν',
+  kfgPhotoAfter: 'Μετά',
+  kfgPhotoTake: 'Τράβηξε φωτογραφία',
+  kfgPhotoUploading: 'Ανεβαίνει…',
+  kfgPhotoUploaded: 'Ανέβηκε',
+  kfgPhotoRules: ['Χωρίς πρόσωπα — δείξε τον χώρο ή το αποτέλεσμα, όχι ανθρώπους', 'Το ίδιο σημείο και στις δύο', 'Και οι δύο την ίδια μέρα, την ώρα της αποστολής'],
+  kfgPhotoLocationNeeded: 'Οι αποστολές με φωτογραφία χρειάζονται την τοποθεσία σου τη στιγμή της λήψης, για να ελεγχθεί ότι είναι το ίδιο σημείο.',
+  kfgPhotoAfterFirst: 'Τράβηξε πρώτα τη φωτογραφία «πριν».',
+  kfgCameraNeeded: 'Το Keno χρειάζεται την κάμερα γι’ αυτό.',
+  kfgCameraAllow: 'Άδεια κάμερας',
+  kfgGroupIntro: 'Τσέκαρε όσους ήταν πραγματικά εκεί. Πόντους παίρνει όποιος επιβεβαιωθεί από τουλάχιστον δύο άλλους.',
+  kfgGroupNotYet: 'Θα επιβεβαιώσεις τους υπόλοιπους μόλις ξεκινήσει η αποστολή.',
+  kfgGroupConfirmBtn: (n) => (n === 1 ? 'Επιβεβαίωσε 1 άτομο' : `Επιβεβαίωσε ${n} άτομα`),
+  kfgGroupSaved: 'Αποθηκεύτηκε. Μπορείς να το αλλάξεις έως 24 ώρες μετά το τέλος.',
+  kfgScanTitle: 'Σκανάρισμα QR',
+  kfgScanHint: 'Στόχευσε τον κωδικό Keno for Good ενός συμμετέχοντα',
+  kfgScanResult: (r, name, extra) => ({
+    checkedIn: `${name}: check-in`,
+    completed: `${name}: ολοκληρώθηκε — πήρε τους πόντους`,
+    verified: `${name}: επιβεβαιώθηκε`,
+    alreadyDone: `${name}: έχει ήδη ολοκληρώσει`,
+    tooEarly: `${name}: λείπουν ${extra ?? 0} λεπ.`,
+  } as Record<string, string>)[r] ?? name,
+  kfgScanStats: (present, done) => `${present} παρόντες · ${done} ολοκλήρωσαν`,
+  kfgCheckOutAllBtn: 'Check-out όλων',
+  kfgCheckOutAllConfirm: 'Όσοι έμειναν τον ελάχιστο χρόνο παίρνουν τους πόντους τους. Οι υπόλοιποι όχι.',
+  kfgCheckOutAllResult: (done, early) => (early ? `${done} έκαναν check-out · ${early} δεν είχαν μείνει αρκετά` : `${done} έκαναν check-out`),
   orgStatsTitle: 'Τα events σου σε νούμερα',
   orgStatsSubtitle: (n) => `Από τα ${n} events σου που έχουν ολοκληρωθεί`,
   orgStatsEmptyTitle: 'Χρειάζονται λίγα ακόμα events',
