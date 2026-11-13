@@ -61,7 +61,7 @@ export default function EventChatScreen() {
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
   const [editingMsgText, setEditingMsgText] = useState('');
 
-  const chatScrollRef = useRef<ScrollView>(null);
+  const chatScrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 

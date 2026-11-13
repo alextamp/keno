@@ -3,7 +3,8 @@ import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Alert, Image, SectionList, StyleSheet, Text, View } from 'react-native';
-import { Swipeable } from 'react-native-gesture-handler';
+// The legacy Swipeable was removed in gesture-handler 3; same props.
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { isToday, isYesterday } from 'date-fns';

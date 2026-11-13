@@ -51,8 +51,8 @@ export default function AccountStep() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [uniMismatch, setUniMismatch] = useState(false);
 
-  const passwordRef = useRef<TextInput>(null);
-  const scrollRef = useRef<ScrollView>(null);
+  const passwordRef = useRef<React.ComponentRef<typeof TextInput>>(null);
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
 
   const pickIdPhoto = async () => {
     const uri = await pickImage();

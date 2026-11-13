@@ -135,9 +135,9 @@ export default function EventDetailScreen() {
   const [wallPhotos, setWallPhotos] = useState<{ id: string; uri: string; uploaderUid: string; uploaderName: string; uploaderAvatarColor: string }[]>([]);
   const [uploadingWallPhoto, setUploadingWallPhoto] = useState(false);
   const [savePhotoUri, setSavePhotoUri] = useState<string | null>(null);
-  const scrollRef = useRef<ScrollView>(null);
-  const shareCardRef = useRef<View>(null);
-  const recapCardRef = useRef<View>(null);
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const shareCardRef = useRef<React.ComponentRef<typeof View>>(null);
+  const recapCardRef = useRef<React.ComponentRef<typeof View>>(null);
 
   useEffect(() => { if (id) loadEvent(); }, [id]);
 
