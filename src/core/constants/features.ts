@@ -8,5 +8,5 @@ export const FEATURES = {
   rides: true,
   recurringEvents: true,
   /** Keno for Good section (volunteering missions, KfG points, character). */
-  kenoForGood: false,
+  kenoForGood: __DEV__,
 } as const;
