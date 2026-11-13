@@ -114,7 +114,15 @@ function CreateInner() {
   const effectiveKind: KfgMissionKind = isOrg ? kind : 'partnerQr';
   const endsAt = new Date(startsAt.getTime() + durationMin * 60_000);
   const minStay = Math.min(minStayMin, durationMin);
-  const valid = title.trim().length >= 3 && description.trim().length >= 10 && areaLabel.trim().length >= 2;
+  const MIN = { title: 3, description: 10, area: 2 } as const;
+  const missing = {
+    title: title.trim().length < MIN.title,
+    description: description.trim().length < MIN.description,
+    area: areaLabel.trim().length < MIN.area,
+  };
+  const valid = !missing.title && !missing.description && !missing.area;
+  // Errors only show after a submit attempt, not while the form is still empty.
+  const [tried, setTried] = useState(false);
 
   const pickCover = async () => {
     const uri = await pickPhoto({ aspect: [16, 9] });
@@ -137,7 +145,17 @@ function CreateInner() {
   };
 
   const submit = async () => {
-    if (!valid || saving) return;
+    if (saving) return;
+    if (!valid) {
+      setTried(true);
+      const fields = [
+        missing.title && t.kfgFieldTitle,
+        missing.description && t.kfgFieldDescription,
+        missing.area && t.kfgFieldArea,
+      ].filter((f): f is string => !!f);
+      Alert.alert(t.kfgCreateTitle, t.kfgMissingFields(fields));
+      return;
+    }
     if (isPast(startsAt)) {
       Alert.alert(t.kfgCreateTitle, t.kfgInvalidTimes(KFG_LIMITS.maxDurationHours));
       return;
@@ -228,8 +246,22 @@ function CreateInner() {
           </AnimatedPressable>
         )}
 
-        <Input label={t.kfgFieldTitle} value={title} onChangeText={setTitle} maxLength={80} />
-        <Input label={t.kfgFieldDescription} value={description} onChangeText={setDescription} maxLength={1000} multiline />
+        <Input
+          label={t.kfgFieldTitle}
+          value={title}
+          onChangeText={setTitle}
+          maxLength={80}
+          error={tried && missing.title ? t.kfgMinChars(MIN.title) : undefined}
+        />
+        <Input
+          label={t.kfgFieldDescription}
+          value={description}
+          onChangeText={setDescription}
+          maxLength={1000}
+          multiline
+          hint={t.kfgMinChars(MIN.description)}
+          error={tried && missing.description ? t.kfgMinChars(MIN.description) : undefined}
+        />
 
         <SectionLabel label={t.kfgFieldCause} />
         <View style={styles.chips}>
@@ -287,7 +319,14 @@ function CreateInner() {
           </View>
         )}
 
-        <Input label={t.kfgFieldArea} hint={t.kfgFieldAreaHint} value={areaLabel} onChangeText={setAreaLabel} maxLength={60} />
+        <Input
+          label={t.kfgFieldArea}
+          hint={t.kfgFieldAreaHint}
+          value={areaLabel}
+          onChangeText={setAreaLabel}
+          maxLength={60}
+          error={tried && missing.area ? t.kfgMinChars(MIN.area) : undefined}
+        />
         <Input label={t.kfgFieldAddress} value={address} onChangeText={setAddress} maxLength={160} />
 
         <View style={styles.stepRow}>
@@ -345,7 +384,6 @@ function CreateInner() {
           label={isOrg ? t.kfgPublishBtn : t.kfgSubmitForReviewBtn}
           onPress={submit}
           loading={saving}
-          disabled={!valid}
           fullWidth
         />
       </ScrollView>

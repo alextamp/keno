@@ -466,6 +466,8 @@ export type Translations = {
   kfgNotEligibleBtn: string;
   kfgMyProfile: string;
   kfgOpenProfileA11y: string;
+  kfgMinChars: (n: number) => string;
+  kfgMissingFields: (fields: string[]) => string;
   kfgMyMissions: string;
   kfgMissionState: (status: string, over: boolean) => string;
   kfgAwaitingApproval: string;
@@ -1739,6 +1741,8 @@ const en: Translations = {
   kfgNotEligibleBtn: 'Not eligible',
   kfgMyProfile: 'My profile',
   kfgOpenProfileA11y: 'Open your Keno profile',
+  kfgMinChars: (n) => `At least ${n} characters`,
+  kfgMissingFields: (fields) => `Fill in: ${fields.join(', ')}`,
   kfgMyMissions: 'My missions',
   kfgMissionState: (status, over) => (status === 'published' && over ? 'Finished' : ({
     pending: 'Awaiting approval', published: 'Live', rejected: 'Not approved', cancelled: 'Cancelled',
@@ -3000,6 +3004,8 @@ const el: Translations = {
   kfgNotEligibleBtn: 'Δεν πληροίς τα κριτήρια',
   kfgMyProfile: 'Το προφίλ μου',
   kfgOpenProfileA11y: 'Άνοιγμα του προφίλ σου στο Keno',
+  kfgMinChars: (n) => `Τουλάχιστον ${n} χαρακτήρες`,
+  kfgMissingFields: (fields) => `Συμπλήρωσε: ${fields.join(', ')}`,
   kfgMyMissions: 'Οι αποστολές μου',
   kfgMissionState: (status, over) => (status === 'published' && over ? 'Ολοκληρώθηκε' : ({
     pending: 'Σε αναμονή έγκρισης', published: 'Δημοσιευμένη', rejected: 'Δεν εγκρίθηκε', cancelled: 'Ακυρώθηκε',
