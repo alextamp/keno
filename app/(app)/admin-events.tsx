@@ -152,6 +152,14 @@ export default function AdminEventsScreen() {
     >
       <ScreenHeader title={t.adminEventsTitle} />
 
+      {/* Volunteer missions first — the daily events batch can be long, and
+          these are few, so they'd otherwise sit far below the fold. */}
+      {FEATURES.kenoForGood && (
+        <AccentScopeProvider value="kfg">
+          <KfgPendingMissions />
+        </AccentScopeProvider>
+      )}
+
       {loading ? (
         <ActivityIndicator style={{ marginTop: Spacing.xl }} color={colors.primary} />
       ) : loadError ? (
@@ -213,11 +221,6 @@ export default function AdminEventsScreen() {
         </View>
       )}
 
-      {FEATURES.kenoForGood && (
-        <AccentScopeProvider value="kfg">
-          <KfgPendingMissions />
-        </AccentScopeProvider>
-      )}
     </ScrollView>
   );
 }
@@ -249,6 +252,7 @@ function KfgPendingMissions() {
   };
 
   const bs = colors.border;
+  if (missions !== null && missions.length === 0 && !error) return null;
   return (
     <View style={styles.list}>
       <SectionLabel label={t.kfgAdminPendingMissions} />
@@ -256,8 +260,6 @@ function KfgPendingMissions() {
         <ActivityIndicator color={colors.primary} />
       ) : error ? (
         <Text style={[styles.meta, { color: colors.error }]}>{error}</Text>
-      ) : missions.length === 0 ? (
-        <Text style={[styles.meta, { color: colors.textHint }]}>{t.kfgAdminEmpty}</Text>
       ) : missions.map((m) => {
         const isBusy = busyId === m.id;
         return (
