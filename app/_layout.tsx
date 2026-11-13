@@ -97,7 +97,7 @@ function AuthGate() {
 }
 
 function RootLayout() {
-  const { isDark } = useTheme();
+  const { colors, isDark } = useTheme();
   const [fontsLoaded] = useFonts({ Lora_600SemiBold, Lora_700Bold, Inter_400Regular, Inter_700Bold });
   const isInitializing = useAuthStore((s) => s.isInitializing);
   const initializeAuth = useAuthStore((s) => s.initializeAuth);
@@ -183,10 +183,13 @@ function RootLayout() {
 
   return (
     <Sentry.ErrorBoundary fallback={({ resetError }) => <ErrorFallback resetError={resetError} />}>
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      {/* Theme background on the root and on every screen container, so the
+          navigation library's default (light) background never shows through
+          — e.g. as a pale strip under the status bar in dark mode. */}
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>
         <StatusBar style={isDark ? 'light' : 'dark'} />
         <AuthGate />
-        <Stack screenOptions={{ headerShown: false }} />
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }} />
       </GestureHandlerRootView>
     </Sentry.ErrorBoundary>
   );

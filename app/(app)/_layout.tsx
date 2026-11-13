@@ -3,8 +3,10 @@ import { useEffect } from 'react';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { useNotificationsStore } from '@/features/notifications/notifications.store';
 import { useDmUnreadStore } from '@/core/store/dmUnread.store';
+import { useTheme } from '@/core/theme';
 
 export default function AppLayout() {
+  const { colors } = useTheme();
   const user = useAuthStore((s) => s.user);
   const subscribe = useNotificationsStore((s) => s.subscribe);
   const clear = useNotificationsStore((s) => s.clear);
@@ -24,7 +26,7 @@ export default function AppLayout() {
   }, [user?.id]);
 
   return (
-    <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+    <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right', contentStyle: { backgroundColor: colors.background } }}>
       <Stack.Screen name="index" options={{ animation: 'none' }} />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="notification-permission" options={{ presentation: 'modal' }} />
