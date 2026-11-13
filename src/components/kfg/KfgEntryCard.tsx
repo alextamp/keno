@@ -12,16 +12,17 @@ import { formatPoints, kfgLevelInfo } from '@/features/kfg/format';
 import { openMissionsFor } from '@/features/kfg/missions';
 import { KfgCharacter } from './KfgCharacter';
 
-/** The quiet Feed card that leads into Keno for Good. */
-export function KfgEntryCard() {
+/** The quiet Feed card that leads into Keno for Good. `flush` drops its own
+ *  side/bottom margins, for screens whose content is already padded (Profile). */
+export function KfgEntryCard({ flush = false }: { flush?: boolean }) {
   return (
     <AccentScopeProvider value="kfg">
-      <EntryCardInner />
+      <EntryCardInner flush={flush} />
     </AccentScopeProvider>
   );
 }
 
-function EntryCardInner() {
+function EntryCardInner({ flush }: { flush: boolean }) {
   const { colors } = useTheme();
   const t = useTranslation();
   const router = useRouter();
@@ -49,7 +50,7 @@ function EntryCardInner() {
       onPress={() => router.push('/(app)/kfg' as any)}
       accessibilityRole="button"
       accessibilityLabel={t.kfgOpenA11y}
-      style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      style={[styles.card, flush && styles.flush, { backgroundColor: colors.surface, borderColor: colors.border }]}
     >
       <View style={[styles.thumb, { backgroundColor: colors.accentSoft }]}>
         <KfgCharacter size={50} equipped={profile?.equipped} character={profile?.character} />
@@ -75,6 +76,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderRadius: BorderRadius.lg, padding: Spacing.md,
     marginHorizontal: Spacing.gutter, marginBottom: Spacing.md,
   },
+  flush: { marginHorizontal: 0, marginBottom: 0 },
   thumb: { width: 56, height: 56, borderRadius: BorderRadius.sm, alignItems: 'center', justifyContent: 'flex-end', overflow: 'hidden' },
   text: { flex: 1, gap: 2 },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },

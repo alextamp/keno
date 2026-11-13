@@ -311,7 +311,7 @@ export default function ProfileScreen() {
       )}
 
       {/* ── Keno for Good: same account, so your character/points live on your profile too ── */}
-      {!editing && FEATURES.kenoForGood && <KfgEntryCard />}
+      {!editing && FEATURES.kenoForGood && <KfgEntryCard flush />}
 
       {/* ── Keno Wrapped — computed from the same attended-events list this
           screen already loads (myEvents), so the card costs no extra read. ── */}
