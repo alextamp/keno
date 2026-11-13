@@ -7,7 +7,7 @@ import {
   assertFails,
 } from '@firebase/rules-unit-testing';
 import {
-  doc, setDoc, updateDoc, getDoc, getDocs, addDoc, collection, arrayUnion, Timestamp, Firestore, query, where,
+  doc, setDoc, updateDoc, getDoc, getDocs, addDoc, collection, arrayUnion, Timestamp, Firestore, query, where, orderBy, limit,
 } from 'firebase/firestore';
 
 const PROJECT_ID = 'demo-keno-test';
@@ -352,8 +352,10 @@ describe('Keno for Good', () => {
 
   test('the app\'s list queries are allowed, and only for your own data', async () => {
     await seed(async (db) => {
+      await setDoc(doc(db, 'admins', ADMIN), {});
       await setDoc(doc(db, 'kfgParticipations', `m1_${USER_B}`), { uid: USER_B, missionId: 'm1', missionCreatorId: USER_A, status: 'joined' });
       await setDoc(doc(db, 'kfgMissions', 'm1'), { creatorId: USER_A, status: 'published', startsAt: Timestamp.now() });
+      await setDoc(doc(db, 'kfgMissions', 'p1'), { creatorId: USER_A, status: 'pending', startsAt: Timestamp.now() });
     });
     await assertSucceeds(getDocs(query(collection(asUser(USER_B), 'kfgParticipations'), where('uid', '==', USER_B))));
     await assertFails(getDocs(query(collection(asUser(USER_C), 'kfgParticipations'), where('uid', '==', USER_B))));
@@ -361,6 +363,16 @@ describe('Keno for Good', () => {
       where('missionId', '==', 'm1'), where('missionCreatorId', '==', USER_A))));
     await assertSucceeds(getDocs(query(collection(asUser(USER_C), 'kfgMissions'), where('status', '==', 'published'))));
     await assertFails(getDocs(query(collection(asUser(USER_C), 'kfgMissions'), where('status', '==', 'pending'))));
+    // Admin approval queue (admin-events.tsx) and the creator's "My missions" list.
+    await assertSucceeds(getDocs(query(collection(asUser(ADMIN), 'kfgMissions'), where('status', '==', 'pending'), orderBy('startsAt', 'asc'))));
+    await assertSucceeds(getDocs(query(collection(asUser(USER_A), 'kfgMissions'), where('creatorId', '==', USER_A), orderBy('startsAt', 'desc'), limit(20))));
+    // The "keno" events account reviews the same queue, but not the photo queue.
+    const KENO = 'ObDcfgYrUJQVHYhLcyZ5WetCxSE3';
+    await assertSucceeds(getDocs(query(collection(asUser(KENO), 'kfgMissions'), where('status', '==', 'pending'), orderBy('startsAt', 'asc'))));
+    await assertFails(getDocs(query(collection(asUser(KENO), 'kfgParticipations'), where('reviewState', '==', 'queued'))));
+    // Admin photo review queue (kfg/admin.tsx).
+    await assertSucceeds(getDocs(query(collection(asUser(ADMIN), 'kfgParticipations'), where('reviewState', '==', 'queued'))));
+    await assertFails(getDocs(query(collection(asUser(USER_C), 'kfgParticipations'), where('reviewState', '==', 'queued'))));
   });
 
   test('trust scores are not readable by users', async () => {

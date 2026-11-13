@@ -471,10 +471,13 @@ service cloud.firestore {
     // missions need admin approval, monthly limits, point bounds). The
     // creator may still edit the descriptive text of their own mission.
     match /kfgMissions/{missionId} {
+      // isEventsManager: the "keno" account approves student missions on
+      // the same screen as pending events (admin-events.tsx).
       allow read: if signedIn() && (
         resource.data.status == 'published' ||
         resource.data.creatorId == request.auth.uid ||
-        isAdmin()
+        isAdmin() ||
+        isEventsManager()
       );
       allow update: if signedIn() && resource.data.creatorId == request.auth.uid &&
         onlyChangedFields(['title', 'description', 'infoText']);

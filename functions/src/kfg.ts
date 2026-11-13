@@ -54,6 +54,11 @@ async function isAdminUid(uid: string): Promise<boolean> {
   return (await db.doc(`admins/${uid}`).get()).exists;
 }
 
+// The "keno" account that reviews pending events every day (firestore.rules
+// isEventsManager, src/core/constants/eventsAccount.ts). It may also approve
+// student missions — that queue sits on the same screen — and nothing else.
+const KENO_EVENTS_UID = 'ObDcfgYrUJQVHYhLcyZ5WetCxSE3';
+
 function str(v: unknown, field: string, min: number, max: number): string {
   if (typeof v !== 'string' || v.trim().length < min || v.trim().length > max) {
     throw new HttpsError('invalid-argument', `${field} must be ${min}–${max} characters.`);
@@ -247,7 +252,7 @@ export const kfgCreateMission = onCall(async (request) => {
 
 export const kfgReviewMission = onCall(async (request) => {
   const uid = requireUid(request);
-  if (!(await isAdminUid(uid))) throw new HttpsError('permission-denied', 'admin-only');
+  if (uid !== KENO_EVENTS_UID && !(await isAdminUid(uid))) throw new HttpsError('permission-denied', 'admin-only');
   const { missionId, approve, reason } = request.data ?? {};
   const ref = db.doc(`${MISSIONS}/${String(missionId)}`);
   await db.runTransaction(async (tx) => {
