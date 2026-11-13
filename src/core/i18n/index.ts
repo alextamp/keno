@@ -442,7 +442,7 @@ export type Translations = {
   kfgError: (code: string) => string;
   kfgScanBtn: string;
   kfgCreateTitle: string;
-  kfgCreateStudentNote: (max: number) => string;
+  kfgCreateStudentNote: string;
   kfgFieldTitle: string;
   kfgFieldDescription: string;
   kfgFieldCause: string;
@@ -1709,7 +1709,6 @@ const en: Translations = {
     'organizations-cannot-join': 'Organization accounts can’t sign up for missions.',
     over: 'This mission has ended.',
     'not-published': 'This mission isn’t open yet.',
-    'monthly-limit': 'You’ve created 2 missions this month already.',
     'not-enough-points': 'Not enough points.',
     'invalid-code': 'Invalid or expired code — ask them to refresh it.',
     'outside-window': 'Outside the mission’s time.',
@@ -1717,7 +1716,7 @@ const en: Translations = {
     'resource-exhausted': 'Too many tries — wait a moment.',
   } as Record<string, string>)[code] ?? 'Something went wrong. Please try again.',
   kfgCreateTitle: 'New mission',
-  kfgCreateStudentNote: (max) => `The Keno team checks student missions before they go live. Up to ${max} a month; you scan people's codes yourself on the day.`,
+  kfgCreateStudentNote: 'The Keno team checks student missions before they go live. On the day, you scan people’s codes yourself.',
   kfgFieldTitle: 'Title',
   kfgFieldDescription: 'What we’ll do',
   kfgFieldCause: 'Cause',
@@ -2972,7 +2971,6 @@ const el: Translations = {
     'organizations-cannot-join': 'Οι λογαριασμοί οργανισμών δεν δηλώνουν συμμετοχή.',
     over: 'Η αποστολή έχει τελειώσει.',
     'not-published': 'Η αποστολή δεν έχει ανοίξει ακόμα.',
-    'monthly-limit': 'Έφτιαξες ήδη 2 αποστολές αυτόν τον μήνα.',
     'not-enough-points': 'Δεν έχεις αρκετούς πόντους.',
     'invalid-code': 'Μη έγκυρος ή παλιός κωδικός — ζήτα να τον ανανεώσει.',
     'outside-window': 'Εκτός ώρας της αποστολής.',
@@ -2980,7 +2978,7 @@ const el: Translations = {
     'resource-exhausted': 'Πολλές προσπάθειες — περίμενε λίγο.',
   } as Record<string, string>)[code] ?? 'Κάτι πήγε στραβά. Δοκίμασε ξανά.',
   kfgCreateTitle: 'Νέα αποστολή',
-  kfgCreateStudentNote: (max) => `Οι αποστολές φοιτητών ελέγχονται από την ομάδα του Keno πριν εμφανιστούν. Έως ${max} τον μήνα· την ημέρα σκανάρεις εσύ τα QR των συμμετεχόντων.`,
+  kfgCreateStudentNote: 'Οι αποστολές φοιτητών ελέγχονται από την ομάδα του Keno πριν εμφανιστούν. Την ημέρα σκανάρεις εσύ τα QR των συμμετεχόντων.',
   kfgFieldTitle: 'Τίτλος',
   kfgFieldDescription: 'Τι θα κάνουμε',
   kfgFieldCause: 'Σκοπός',

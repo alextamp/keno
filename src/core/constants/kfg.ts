@@ -29,7 +29,6 @@ export const KFG_LIMITS = {
   maxOpenParticipations: 5,
   photoMissionsPerDay: 1,
   photoMissionsPerWeek: 5,
-  studentMissionsPerMonth: 2,
   /** A student mission only pays out (and only counts for the leaderboard) with this many verified participants. */
   studentMinVerified: 3,
   /** Scans are accepted from this long before the mission starts until this long after it ends. */

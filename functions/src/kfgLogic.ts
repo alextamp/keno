@@ -21,7 +21,6 @@ export const KFG_LIMITS = {
   maxOpenParticipations: 5,
   photoMissionsPerDay: 1,
   photoMissionsPerWeek: 5,
-  studentMissionsPerMonth: 2,
   studentMinVerified: 3,
   scanWindowMinutes: 30,
   qrBucketMs: 30_000,

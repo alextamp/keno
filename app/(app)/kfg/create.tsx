@@ -220,7 +220,7 @@ function CreateInner() {
       </View>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]} keyboardShouldPersistTaps="handled">
         {!isOrg && (
-          <Text style={[styles.note, { color: colors.textHint }]}>{t.kfgCreateStudentNote(KFG_LIMITS.studentMissionsPerMonth)}</Text>
+          <Text style={[styles.note, { color: colors.textHint }]}>{t.kfgCreateStudentNote}</Text>
         )}
 
         {imageUri ? (

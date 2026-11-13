@@ -174,7 +174,7 @@ async function payParticipant(
 /**
  * Organizations (users.isOrganization, admin-granted) publish straight away
  * and choose the kind. Students may only create QR missions they verify
- * themselves, at most KFG_LIMITS.studentMissionsPerMonth a month, and those
+ * themselves (no monthly cap — the 5/hour rate limit above stops spam), and those
  * wait for admin approval.
  */
 export const kfgCreateMission = onCall(async (request) => {
@@ -213,11 +213,6 @@ export const kfgCreateMission = onCall(async (request) => {
   const imageUri = coverImage(d.imageUri);
 
   const monthId = athensMonthId(new Date());
-  if (creatorType === 'student') {
-    const mine = await db.collection(MISSIONS)
-      .where('creatorId', '==', uid).where('createdMonthId', '==', monthId).count().get();
-    if (mine.data().count >= KFG_LIMITS.studentMissionsPerMonth) throw new HttpsError('resource-exhausted', 'monthly-limit');
-  }
 
   const ref = await db.collection(MISSIONS).add({
     creatorId: uid,

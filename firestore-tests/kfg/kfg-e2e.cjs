@@ -86,7 +86,8 @@ const qr = async (pid) => {
   ok(sm.kind === 'partnerQr' && sm.points === 150, 'student mission forced to QR, 150 points');
   await fails(s1.call('kfgJoin', { missionId: st.missionId }), 'not-published', 'cannot join before approval');
   await host.call('kfgCreateMission', { title: 'Δεύτερη', description: 'Δεύτερη αποστολή μου.', startsAt: start.toISOString(), endsAt: end.toISOString(), capacity: 5, areaLabel: 'Αθήνα' });
-  await fails(host.call('kfgCreateMission', { title: 'Τρίτη', description: 'Τρίτη αποστολή μου.', startsAt: start.toISOString(), endsAt: end.toISOString(), capacity: 5, areaLabel: 'Αθήνα' }), 'monthly-limit', 'student monthly limit');
+  const third = await host.call('kfgCreateMission', { title: 'Τρίτη', description: 'Τρίτη αποστολή μου.', startsAt: start.toISOString(), endsAt: end.toISOString(), capacity: 5, areaLabel: 'Αθήνα' });
+  ok(third.status === 'pending', 'no monthly cap on student missions');
   await fails(s1.call('kfgReviewMission', { missionId: st.missionId, approve: true }), 'admin-only', 'only admins approve');
   await db.doc('admins/s4').set({});
   const adminC = await signIn('s4');
