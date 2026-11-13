@@ -51,7 +51,8 @@ export interface KfgRepository {
   getProfiles(uids: string[]): Promise<Either<Failure, KfgProfile[]>>;
   /** 1-based rank this month, or null with no points yet. */
   getMyRank(monthPoints: number): Promise<Either<Failure, number | null>>;
-  getPendingMissions(): Promise<Either<Failure, KfgMission[]>>;
+  /** Admin: live list of student missions waiting for approval. onError gets the Firestore message. */
+  subscribePendingMissions(onChange: (missions: KfgMission[]) => void, onError: (message: string) => void): () => void;
   /** Admin: photo pairs waiting for a human decision, with readable photo URLs. */
   getPhotoReviewQueue(): Promise<Either<Failure, { participation: KfgParticipation; before?: string; after?: string }[]>>;
 

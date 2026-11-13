@@ -111,11 +111,9 @@ export const kfgRepository: KfgRepository = {
     });
   },
 
-  getPendingMissions() {
-    return attempt(async () => {
-      const snap = await getDocs(query(collection(db, MISSIONS), where('status', '==', 'pending'), orderBy('startsAt', 'asc')));
-      return snap.docs.map(missionFromFirestore);
-    });
+  subscribePendingMissions(onChange, onError) {
+    const q = query(collection(db, MISSIONS), where('status', '==', 'pending'), orderBy('startsAt', 'asc'));
+    return onSnapshot(q, (snap) => onChange(snap.docs.map(missionFromFirestore)), (err) => onError(err.message ?? String(err)));
   },
 
   getPhotoReviewQueue() {

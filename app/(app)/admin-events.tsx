@@ -233,12 +233,12 @@ function KfgPendingMissions() {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  useEffect(() => {
-    kfgRepository.getPendingMissions().then((r) => {
-      if (isLeft(r)) { setError(r.left.message); setMissions([]); return; }
-      setMissions(r.right);
-    });
-  }, []);
+  // Live, like the events list above — a mission submitted while this screen
+  // is open shows up without leaving and coming back.
+  useEffect(() => kfgRepository.subscribePendingMissions(
+    (list) => { setError(null); setMissions(list); },
+    (message) => { setError(message); setMissions([]); },
+  ), []);
 
   const decide = async (m: KfgMission, approve: boolean) => {
     setBusyId(m.id);
@@ -246,7 +246,6 @@ function KfgPendingMissions() {
     setBusyId(null);
     if (isLeft(r)) { Alert.alert(m.title, t.kfgError(r.left.message)); return; }
     if (adminUid) logAdminAction(adminUid, 'kfgMissionReview', { missionId: m.id, approve: String(approve) });
-    setMissions((list) => list?.filter((x) => x.id !== m.id) ?? null);
   };
 
   const bs = colors.border;
