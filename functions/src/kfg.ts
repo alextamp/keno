@@ -10,8 +10,8 @@ import { ImageAnnotatorClient } from '@google-cloud/vision';
 import { db, checkRateLimit } from './shared';
 import {
   athensDayId, athensMonthId, athensWeekId, clampTrust, countsForLeaderboard, isInScanWindow, isQrValid,
-  KFG_COSMETICS, KFG_LIMITS, KFG_POINTS, KfgCreatorType, KfgMissionKind, kfgLevel, levelUnlocks, missionPoints,
-  nextStreak, parseQrCode, PhotoShot, photoPairProblems, resolveGroup,
+  KFG_COSMETICS, KFG_LIMITS, KFG_POINTS, KfgCreatorType, KfgMissionKind, kfgLevel, levelUnlocks, missionEligibility,
+  missionPoints, nextStreak, sanitizeMissionFilters, parseQrCode, PhotoShot, photoPairProblems, resolveGroup,
 } from './kfgLogic';
 
 // ── Keno for Good ───────────────────────────────────────────────────────────
@@ -64,6 +64,15 @@ function str(v: unknown, field: string, min: number, max: number): string {
 function optStr(v: unknown, field: string, max: number): string | null {
   if (v == null || v === '') return null;
   return str(v, field, 1, max);
+}
+
+// A cover photo must be one the app uploaded to our own bucket's events/
+// folder (same place as regular event covers) — never an arbitrary URL.
+function coverImage(v: unknown): string | null {
+  if (v == null || v === '') return null;
+  const prefix = `https://firebasestorage.googleapis.com/v0/b/${admin.storage().bucket().name}/o/events%2F`;
+  if (typeof v !== 'string' || v.length > 600 || !v.startsWith(prefix)) throw new HttpsError('invalid-argument', 'imageUri');
+  return v;
 }
 
 // ── Points ──────────────────────────────────────────────────────────────────
@@ -194,6 +203,9 @@ export const kfgCreateMission = onCall(async (request) => {
   if (!(capacity >= 1 && capacity <= KFG_LIMITS.maxCapacity)) throw new HttpsError('invalid-argument', 'capacity');
   const lat = typeof d.lat === 'number' && Number.isFinite(d.lat) ? d.lat : null;
   const lng = typeof d.lng === 'number' && Number.isFinite(d.lng) ? d.lng : null;
+  const filters = sanitizeMissionFilters(d);
+  if (!filters) throw new HttpsError('invalid-argument', 'ages');
+  const imageUri = coverImage(d.imageUri);
 
   const monthId = athensMonthId(new Date());
   if (creatorType === 'student') {
@@ -219,6 +231,8 @@ export const kfgCreateMission = onCall(async (request) => {
     lat,
     lng,
     capacity,
+    imageUri,
+    ...filters,
     points: missionPoints(kind, creatorType, d.points),
     status: creatorType === 'organization' ? 'published' : 'pending',
     participantCount: 0,
@@ -297,6 +311,8 @@ export const kfgJoin = onCall(async (request) => {
     if (m.creatorId === uid) throw new HttpsError('failed-precondition', 'own-mission');
     if (m.endsAt.toMillis() <= Date.now()) throw new HttpsError('failed-precondition', 'over');
     if (pSnap.exists && pSnap.data()!.status !== 'cancelled') return; // already in — idempotent
+    const ineligible = missionEligibility(m, user);
+    if (ineligible) throw new HttpsError('permission-denied', ineligible);
     if ((m.participantCount ?? 0) >= m.capacity) throw new HttpsError('resource-exhausted', 'full');
 
     tx.set(participationRef, {

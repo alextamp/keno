@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -22,11 +22,17 @@ import { containsBlockedContent } from '@/core/utils/contentModeration';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { kfgRepository } from '@/features/kfg/data/repositories/kfg.repository.impl';
 import { KfgCause } from '@/features/kfg/domain/entities/kfg.entity';
+import { GenderFilter } from '@/features/events/domain/entities/event.entity';
+import { pickImage as pickPhoto } from '@/core/utils/imagePicker';
+import { uploadEventImage } from '@/core/utils/uploadImage';
+import { GREEK_UNIVERSITIES, universityLabel } from '@/core/constants/universities';
 
 const CAUSES: KfgCause[] = ['food', 'animals', 'environment', 'recycling', 'people', 'other'];
 const KINDS: KfgMissionKind[] = ['partnerQr', 'group', 'photo'];
 const KIND_ICONS: Record<KfgMissionKind, IconName> = { partnerQr: 'qr', group: 'users', photo: 'camera' };
 const POINT_OPTIONS = [KFG_POINTS.partnerQrMin, KFG_POINTS.partnerQrDefault, KFG_POINTS.partnerQrMax];
+const AGE_OPTIONS = [18, 19, 20, 21, 22, 23, 24, 25, 26];
+const GENDERS: GenderFilter[] = ['any', 'male', 'female'];
 
 const isPast = (d: Date) => d.getTime() <= Date.now();
 
@@ -95,6 +101,13 @@ function CreateInner() {
   const [address, setAddress] = useState('');
   const [capacity, setCapacity] = useState(10);
   const [points, setPoints] = useState<number>(KFG_POINTS.partnerQrDefault);
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [genderFilter, setGenderFilter] = useState<GenderFilter>('any');
+  const [ageLimit, setAgeLimit] = useState(false);
+  const [minAge, setMinAge] = useState(18);
+  const [maxAge, setMaxAge] = useState(26);
+  const [universities, setUniversities] = useState<string[]>([]);
+  const [soloFriendly, setSoloFriendly] = useState(false);
   const [picker, setPicker] = useState<'date' | 'start' | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -102,6 +115,17 @@ function CreateInner() {
   const endsAt = new Date(startsAt.getTime() + durationMin * 60_000);
   const minStay = Math.min(minStayMin, durationMin);
   const valid = title.trim().length >= 3 && description.trim().length >= 10 && areaLabel.trim().length >= 2;
+
+  const pickCover = async () => {
+    const uri = await pickPhoto({ aspect: [16, 9] });
+    if (uri) setImageUri(uri);
+  };
+
+  const toggleUniversity = (u: string) =>
+    setUniversities((list) => (list.includes(u) ? list.filter((x) => x !== u) : [...list, u]));
+
+  const genderLabel = (g: GenderFilter) =>
+    (g === 'male' ? t.createGenderMale : g === 'female' ? t.createGenderFemale : t.createGenderAny);
 
   const onPick = (_: unknown, selected?: Date) => {
     if (Platform.OS === 'android') setPicker(null);
@@ -123,6 +147,16 @@ function CreateInner() {
       return;
     }
     setSaving(true);
+    let coverUrl: string | undefined;
+    if (imageUri) {
+      try {
+        coverUrl = await uploadEventImage(imageUri);
+      } catch {
+        setSaving(false);
+        Alert.alert(t.kfgCreateTitle, t.kfgError('imageUri'));
+        return;
+      }
+    }
     let coords: { latitude: number; longitude: number } | null = null;
     if (address.trim()) {
       // Best effort, for the distance shown on the mission page.
@@ -137,6 +171,12 @@ function CreateInner() {
       areaLabel: areaLabel.trim(), address: address.trim() || undefined,
       latitude: coords?.latitude, longitude: coords?.longitude,
       capacity, points: isOrg && effectiveKind === 'partnerQr' ? points : undefined,
+      imageUri: coverUrl,
+      minAge: ageLimit ? minAge : undefined,
+      maxAge: ageLimit ? maxAge : undefined,
+      allowedUniversities: universities,
+      genderFilter,
+      soloFriendly,
     });
     setSaving(false);
     if (isLeft(r)) {
@@ -163,6 +203,29 @@ function CreateInner() {
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]} keyboardShouldPersistTaps="handled">
         {!isOrg && (
           <Text style={[styles.note, { color: colors.textHint }]}>{t.kfgCreateStudentNote(KFG_LIMITS.studentMissionsPerMonth)}</Text>
+        )}
+
+        {imageUri ? (
+          <View style={[styles.cover, { borderColor: colors.border }]}>
+            <Image source={{ uri: imageUri }} style={styles.coverImg} />
+            <AnimatedPressable onPress={() => setImageUri(null)} style={styles.coverRemove} hitSlop={8} accessibilityRole="button" accessibilityLabel="✕">
+              <Icon name="x" size={13} color="#fff" />
+            </AnimatedPressable>
+            <AnimatedPressable onPress={pickCover} style={styles.coverChange} accessibilityRole="button">
+              <Icon name="camera" size={13} color="#fff" />
+              <Text style={styles.coverChangeText}>{t.editEventChangeCover}</Text>
+            </AnimatedPressable>
+          </View>
+        ) : (
+          <AnimatedPressable
+            onPress={pickCover}
+            accessibilityRole="button"
+            style={[styles.cover, styles.coverEmpty, { borderColor: colors.border, backgroundColor: colors.accentSoft }]}
+          >
+            <Icon name="camera" size={24} color={colors.primary} />
+            <Text style={[styles.label, { color: colors.accentInk }]}>{t.createPhotoBtnLabel}</Text>
+            <Text style={[styles.note, { color: colors.textHint }]}>{t.createPhotoOptional}</Text>
+          </AnimatedPressable>
         )}
 
         <Input label={t.kfgFieldTitle} value={title} onChangeText={setTitle} maxLength={80} />
@@ -241,6 +304,41 @@ function CreateInner() {
           </>
         )}
 
+        <SectionLabel label={t.kfgFiltersTitle} />
+        <Text style={[styles.label, { color: colors.textPrimary }]}>{t.createLabelGender}</Text>
+        <View style={styles.chips}>
+          {GENDERS.map((g) => <Chip key={g} label={genderLabel(g)} on={genderFilter === g} onPress={() => setGenderFilter(g)} />)}
+        </View>
+
+        <Text style={[styles.label, { color: colors.textPrimary }]}>{t.createLabelAgeRange}</Text>
+        <View style={styles.chips}>
+          <Chip label={t.kfgAgesAll} on={!ageLimit} onPress={() => setAgeLimit(false)} />
+          <Chip label={`${minAge}–${maxAge}`} on={ageLimit} onPress={() => setAgeLimit(true)} />
+        </View>
+        {ageLimit && (
+          <>
+            <Text style={[styles.note, { color: colors.textHint }]}>{t.createAgeFrom}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ageRow}>
+              {AGE_OPTIONS.filter((a) => a < maxAge).map((a) => <Chip key={a} label={String(a)} on={minAge === a} onPress={() => setMinAge(a)} />)}
+            </ScrollView>
+            <Text style={[styles.note, { color: colors.textHint }]}>{t.createAgeTo}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ageRow}>
+              {AGE_OPTIONS.filter((a) => a > minAge).map((a) => <Chip key={a} label={String(a)} on={maxAge === a} onPress={() => setMaxAge(a)} />)}
+            </ScrollView>
+          </>
+        )}
+
+        <Text style={[styles.label, { color: colors.textPrimary }]}>{t.createLabelUniversity}</Text>
+        <View style={styles.chips}>
+          <Chip label={t.createGenderAny} on={universities.length === 0} onPress={() => setUniversities([])} />
+          {GREEK_UNIVERSITIES.map((u) => (
+            <Chip key={u} label={universityLabel(u, language)} on={universities.includes(u)} onPress={() => toggleUniversity(u)} />
+          ))}
+        </View>
+
+        <Chip label={t.createSoloFriendlyLabel} icon="users" on={soloFriendly} onPress={() => setSoloFriendly((v) => !v)} />
+        <Text style={[styles.note, { color: colors.textHint }]}>{t.createSoloFriendlyHint}</Text>
+
         <Input label={t.kfgFieldInfo} hint={t.kfgFieldInfoHint} value={infoText} onChangeText={setInfoText} maxLength={500} multiline />
 
         <Button
@@ -265,6 +363,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44,
     borderWidth: 1, borderRadius: BorderRadius.full, paddingHorizontal: 14,
   },
+  ageRow: { gap: 8 },
+  cover: { height: 160, borderRadius: BorderRadius.lg, borderWidth: 1, overflow: 'hidden' },
+  coverEmpty: { alignItems: 'center', justifyContent: 'center', gap: 4, borderStyle: 'dashed' },
+  coverImg: { width: '100%', height: '100%' },
+  coverRemove: {
+    position: 'absolute', top: 10, right: 10, width: 28, height: 28, borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center',
+  },
+  coverChange: {
+    position: 'absolute', bottom: 10, right: 10, flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: BorderRadius.full, paddingHorizontal: 12, paddingVertical: 6,
+  },
+  coverChangeText: { color: '#fff', fontFamily: UIFont, fontSize: FontSize.sm, fontWeight: FontWeight.bold },
   chipText: { fontFamily: UIFont, fontSize: FontSize.md, fontWeight: FontWeight.bold },
   dateRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   stepRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },

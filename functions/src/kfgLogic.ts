@@ -236,3 +236,48 @@ export function photoPairProblems(
     || distanceM(before.lat, before.lng, after.lat, after.lng) > KFG_LIMITS.photoMaxDistanceM) problems.push('distance');
   return problems;
 }
+
+// ── Who may join (mirrors the regular events' filters) ──────────────────────
+
+export type KfgGenderFilter = 'any' | 'male' | 'female';
+
+export interface KfgMissionFilters {
+  minAge: number | null;
+  maxAge: number | null;
+  allowedUniversities: string[];
+  genderFilter: KfgGenderFilter;
+  soloFriendly: boolean;
+}
+
+const ageOrNull = (v: unknown): number | null =>
+  (typeof v === 'number' && Number.isInteger(v) && v >= 16 && v <= 99 ? v : null);
+
+/** Normalizes the creator's filters; returns null when the age range is impossible. */
+export function sanitizeMissionFilters(d: Record<string, unknown>): KfgMissionFilters | null {
+  const minAge = ageOrNull(d.minAge);
+  const maxAge = ageOrNull(d.maxAge);
+  if (minAge != null && maxAge != null && minAge > maxAge) return null;
+  const unis = Array.isArray(d.allowedUniversities) ? d.allowedUniversities : [];
+  const allowedUniversities = [...new Set(unis.filter(
+    (u): u is string => typeof u === 'string' && u.trim().length > 0 && u.length <= 80 && u !== 'Any',
+  ).map((u) => u.trim()))].slice(0, 30);
+  const genderFilter: KfgGenderFilter = d.genderFilter === 'male' || d.genderFilter === 'female' ? d.genderFilter : 'any';
+  return { minAge, maxAge, allowedUniversities, genderFilter, soloFriendly: d.soloFriendly === true };
+}
+
+/**
+ * Same rule as the regular event page: an unknown age or university doesn't
+ * block (those are optional profile fields); a known one outside the filter does.
+ * Gender has no profile field, so it's a label only, as on regular events.
+ */
+export function missionEligibility(
+  m: { minAge?: number | null; maxAge?: number | null; allowedUniversities?: string[] | null },
+  u: { age?: unknown; universityName?: unknown },
+): 'age-restricted' | 'uni-restricted' | null {
+  const age = typeof u.age === 'number' ? u.age : null;
+  if (age != null && ((m.minAge != null && age < m.minAge) || (m.maxAge != null && age > m.maxAge))) return 'age-restricted';
+  const unis = m.allowedUniversities ?? [];
+  const uni = typeof u.universityName === 'string' && u.universityName ? u.universityName : null;
+  if (uni && unis.length > 0 && !unis.includes(uni)) return 'uni-restricted';
+  return null;
+}

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { collection, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -267,6 +267,7 @@ function KfgPendingMissions() {
               <Icon name="heart" size={13} color={colors.accentInk} />
               <Text style={[styles.reviewTagText, { color: colors.accentInk }]}>Keno for Good · {m.creatorName}</Text>
             </View>
+            {!!m.imageUri && <Image source={{ uri: m.imageUri }} style={styles.cover} />}
             <Text style={[styles.name, { color: colors.textPrimary }]}>{m.title}</Text>
             <Text style={[styles.meta, { color: colors.textSecondary }]}>
               {formatMessageTime(m.startsAt, language)} · {m.areaLabel} · {m.capacity}
@@ -310,6 +311,7 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: FontSize.xl, fontWeight: FontWeight.bold, fontFamily: TitleFont },
   emptyBody: { fontSize: FontSize.sm, fontFamily: UIFontLight, textAlign: 'center', lineHeight: 20 },
   list: { gap: Spacing.md },
+  cover: { width: '100%', height: 140, borderRadius: BorderRadius.md },
   card: { borderWidth: 1, borderRadius: BorderRadius.lg, padding: Spacing.md, gap: 6 },
   name: { fontSize: FontSize.base, fontWeight: FontWeight.bold, fontFamily: UIFont },
   meta: { fontSize: FontSize.sm, fontFamily: UIFontLight },

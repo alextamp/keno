@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
@@ -26,6 +26,7 @@ import { kfgRepository } from '@/features/kfg/data/repositories/kfg.repository.i
 import { KfgMission } from '@/features/kfg/domain/entities/kfg.entity';
 import { useKfgStore } from '@/features/kfg/presentation/store/kfg.store';
 import { formatPoints } from '@/features/kfg/format';
+import { universityLabel } from '@/core/constants/universities';
 
 export default function KfgMissionScreen() {
   return (
@@ -117,6 +118,18 @@ function MissionInner() {
     },
   ]);
 
+  // Same rule as kfgJoin on the server: unknown age/university doesn't block.
+  const ineligible: 'age-restricted' | 'uni-restricted' | null =
+    user.age != null && ((mission.minAge != null && user.age < mission.minAge) || (mission.maxAge != null && user.age > mission.maxAge))
+      ? 'age-restricted'
+      : user.universityName && (mission.allowedUniversities?.length ?? 0) > 0 && !mission.allowedUniversities!.includes(user.universityName)
+        ? 'uni-restricted'
+        : null;
+  const genderLine = mission.genderFilter === 'male' ? t.eventGenderMaleOnly : mission.genderFilter === 'female' ? t.eventGenderFemaleOnly : null;
+  const ageLine = mission.minAge != null || mission.maxAge != null ? `${t.eventFilterAge} ${mission.minAge ?? 18}–${mission.maxAge ?? '∞'}` : null;
+  const uniLine = mission.allowedUniversities?.map((u) => universityLabel(u, language)).join(', ') ?? null;
+  const filterLine = [genderLine, ageLine, uniLine].filter(Boolean).join(' · ');
+
   const status = participation?.status;
   const canVerify = joined && !over && (status === 'joined' || status === 'checkedIn');
 
@@ -135,6 +148,8 @@ function MissionInner() {
     action = <Button label={t.kfgOverBtn} disabled onPress={() => {}} />;
   } else if (spotsLeft <= 0) {
     action = <Button label={t.kfgFullBtn} disabled onPress={() => {}} />;
+  } else if (ineligible && !joined) {
+    action = <Button label={t.kfgNotEligibleBtn} disabled onPress={() => {}} />;
   } else if (!user.isOrganization) {
     action = <Button label={t.kfgJoinBtn} onPress={join} loading={busy} />;
   }
@@ -143,7 +158,9 @@ function MissionInner() {
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}>
         <View style={[styles.hero, { backgroundColor: colors.accentSoft, paddingTop: insets.top }]}>
-          <Icon name={CAUSE_ICONS[mission.cause]} size={56} color={colors.primary} strokeWidth={1.4} />
+          {mission.imageUri
+            ? <Image source={{ uri: mission.imageUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            : <Icon name={CAUSE_ICONS[mission.cause]} size={56} color={colors.primary} strokeWidth={1.4} />}
           <AnimatedPressable
             onPress={() => router.back()}
             accessibilityRole="button"
@@ -161,6 +178,9 @@ function MissionInner() {
           {isMine && mission.status === 'pending' && (
             <Text style={[styles.status, { color: colors.accentInk }]}>{t.kfgAwaitingApproval}</Text>
           )}
+          {ineligible && !joined && !isMine && (
+            <Text style={[styles.status, { color: colors.error }]}>{t.kfgError(ineligible)}</Text>
+          )}
           {joined && status && t.kfgStatusLine(status) !== '' && (
             <Text style={[styles.status, { color: colors.accentInk }]}>{t.kfgStatusLine(status)}</Text>
           )}
@@ -170,6 +190,13 @@ function MissionInner() {
             <InfoRow icon="shield" title={mission.creatorName} subtitle={t.kfgOrganizerRow} />
             <InfoRow icon="pin" title={mission.areaLabel} subtitle={placeLine || undefined} />
             <InfoRow icon="qr" title={t.kfgVerifyLabel(mission.kind, studentRun)} subtitle={t.kfgVerifyHow(mission.kind, studentRun)} />
+            {(filterLine || mission.soloFriendly) && (
+              <InfoRow
+                icon="users"
+                title={filterLine || t.createSoloFriendlyLabel}
+                subtitle={filterLine && mission.soloFriendly ? t.createSoloFriendlyLabel : t.kfgFiltersTitle}
+              />
+            )}
           </View>
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -214,7 +241,7 @@ function MissionInner() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center', gap: Spacing.md, padding: Spacing.gutter },
-  hero: { height: 200, alignItems: 'center', justifyContent: 'center' },
+  hero: { height: 200, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   backBtn: {
     position: 'absolute', left: Spacing.gutter, width: 34, height: 34, borderRadius: 17, borderWidth: 1,
     alignItems: 'center', justifyContent: 'center',

@@ -1,4 +1,5 @@
 import { KfgCreatorType, KfgMissionKind, KfgSlot } from '@/core/constants/kfg';
+import { GenderFilter } from '@/features/events/domain/entities/event.entity';
 
 export type KfgCause = 'food' | 'animals' | 'environment' | 'recycling' | 'people' | 'other';
 export type KfgMissionStatus = 'pending' | 'published' | 'rejected' | 'cancelled';
@@ -23,6 +24,15 @@ export interface KfgMission {
   latitude?: number;
   longitude?: number;
   capacity: number;
+  /** Download URL of a cover photo in Storage's events/ folder (same as regular events). */
+  imageUri?: string;
+  /** Who may join — same filters as regular events. Age/university are enforced
+   *  by kfgJoin; gender is a label only (there's no gender field on profiles). */
+  minAge?: number;
+  maxAge?: number;
+  allowedUniversities?: string[];
+  genderFilter?: GenderFilter;
+  soloFriendly?: boolean;
   points: number;
   status: KfgMissionStatus;
   participantCount: number;

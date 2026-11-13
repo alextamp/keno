@@ -461,6 +461,9 @@ export type Translations = {
   kfgFieldInfoHint: string;
   kfgPublishBtn: string;
   kfgSubmitForReviewBtn: string;
+  kfgFiltersTitle: string;
+  kfgAgesAll: string;
+  kfgNotEligibleBtn: string;
   kfgMyMissions: string;
   kfgMissionState: (status: string, over: boolean) => string;
   kfgAwaitingApproval: string;
@@ -1693,6 +1696,10 @@ const en: Translations = {
   } as Record<string, string>)[status] ?? '',
   kfgError: (code) => ({
     full: 'The spots just filled up.',
+    'age-restricted': 'This mission is for a different age range.',
+    'uni-restricted': 'This mission is only for students of specific universities.',
+    ages: 'The age range isn’t valid.',
+    imageUri: 'The photo didn’t upload — try again.',
     'too-many-open': 'You already have 5 open missions.',
     'not-verified': 'Your account isn’t verified yet.',
     'organizations-cannot-join': 'Organization accounts can’t sign up for missions.',
@@ -1725,6 +1732,9 @@ const en: Translations = {
   kfgFieldInfoHint: 'e.g. wear closed shoes, meet at the side entrance',
   kfgPublishBtn: 'Publish',
   kfgSubmitForReviewBtn: 'Send for approval',
+  kfgFiltersTitle: 'Who can join',
+  kfgAgesAll: 'All ages',
+  kfgNotEligibleBtn: 'Not eligible',
   kfgMyMissions: 'My missions',
   kfgMissionState: (status, over) => (status === 'published' && over ? 'Finished' : ({
     pending: 'Awaiting approval', published: 'Live', rejected: 'Not approved', cancelled: 'Cancelled',
@@ -2945,6 +2955,10 @@ const el: Translations = {
   } as Record<string, string>)[status] ?? '',
   kfgError: (code) => ({
     full: 'Οι θέσεις μόλις γέμισαν.',
+    'age-restricted': 'Η αποστολή είναι για άλλο εύρος ηλικίας.',
+    'uni-restricted': 'Η αποστολή είναι μόνο για φοιτητές συγκεκριμένων πανεπιστημίων.',
+    ages: 'Το εύρος ηλικίας δεν είναι σωστό.',
+    imageUri: 'Η φωτογραφία δεν ανέβηκε — δοκίμασε ξανά.',
     'too-many-open': 'Έχεις ήδη 5 ανοιχτές αποστολές.',
     'not-verified': 'Ο λογαριασμός σου δεν έχει επαληθευτεί ακόμα.',
     'organizations-cannot-join': 'Οι λογαριασμοί οργανισμών δεν δηλώνουν συμμετοχή.',
@@ -2977,6 +2991,9 @@ const el: Translations = {
   kfgFieldInfoHint: 'π.χ. φόρεσε κλειστά παπούτσια, συνάντηση στην πλαϊνή είσοδο',
   kfgPublishBtn: 'Δημοσίευση',
   kfgSubmitForReviewBtn: 'Αποστολή για έγκριση',
+  kfgFiltersTitle: 'Ποιοι μπορούν να έρθουν',
+  kfgAgesAll: 'Όλες οι ηλικίες',
+  kfgNotEligibleBtn: 'Δεν πληροίς τα κριτήρια',
   kfgMyMissions: 'Οι αποστολές μου',
   kfgMissionState: (status, over) => (status === 'published' && over ? 'Ολοκληρώθηκε' : ({
     pending: 'Σε αναμονή έγκρισης', published: 'Δημοσιευμένη', rejected: 'Δεν εγκρίθηκε', cancelled: 'Ακυρώθηκε',

@@ -1,6 +1,7 @@
 import {
   athensMonthId, athensWeekId, isInScanWindow, isQrValid, KFG_LIMITS, kfgLevel, levelUnlocks, missionPoints,
-  nextStreak, parseQrCode, photoPairProblems, qrSignature, requiredConfirmations, resolveGroup,
+  missionEligibility, nextStreak, parseQrCode, photoPairProblems, qrSignature, requiredConfirmations, resolveGroup,
+  sanitizeMissionFilters,
 } from '../kfgLogic';
 
 describe('levels and unlocks', () => {
@@ -118,5 +119,28 @@ describe('photo pairs', () => {
     expect(photoPairProblems(before, after, mission).sort()).toEqual(['distance', 'faces', 'order']);
     const late = { ...before, takenAtMs: Date.parse('2026-11-14T18:00:00Z') };
     expect(photoPairProblems(before, late, mission)).toContain('window');
+  });
+});
+
+describe('mission filters', () => {
+  it('normalizes input', () => {
+    expect(sanitizeMissionFilters({})).toEqual({ minAge: null, maxAge: null, allowedUniversities: [], genderFilter: 'any', soloFriendly: false });
+    expect(sanitizeMissionFilters({
+      minAge: 18, maxAge: 24.5, allowedUniversities: ['Any', 'ΟΠΑ', 'ΟΠΑ', 3, ''], genderFilter: 'female', soloFriendly: true,
+    })).toEqual({ minAge: 18, maxAge: null, allowedUniversities: ['ΟΠΑ'], genderFilter: 'female', soloFriendly: true });
+    expect(sanitizeMissionFilters({ genderFilter: 'other', minAge: 10 })).toMatchObject({ genderFilter: 'any', minAge: null });
+  });
+
+  it('rejects an impossible age range', () => {
+    expect(sanitizeMissionFilters({ minAge: 25, maxAge: 20 })).toBeNull();
+  });
+
+  it('checks age and university, letting unknown values through', () => {
+    const m = { minAge: 18, maxAge: 22, allowedUniversities: ['ΟΠΑ'] };
+    expect(missionEligibility(m, { age: 20, universityName: 'ΟΠΑ' })).toBeNull();
+    expect(missionEligibility(m, { age: 25, universityName: 'ΟΠΑ' })).toBe('age-restricted');
+    expect(missionEligibility(m, { age: 20, universityName: 'ΕΜΠ' })).toBe('uni-restricted');
+    expect(missionEligibility(m, {})).toBeNull();
+    expect(missionEligibility({}, { age: 40, universityName: 'ΕΜΠ' })).toBeNull();
   });
 });

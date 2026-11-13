@@ -1,3 +1,4 @@
+import { GenderFilter } from '@/features/events/domain/entities/event.entity';
 import { Failure } from '@/core/errors/failures';
 import { Either } from '@/core/utils/either';
 import { KfgMissionKind, KfgSlot } from '@/core/constants/kfg';
@@ -22,6 +23,12 @@ export interface CreateKfgMissionParams {
   capacity: number;
   /** Organization QR missions only; the server clamps it to 200–300. */
   points?: number;
+  imageUri?: string;
+  minAge?: number;
+  maxAge?: number;
+  allowedUniversities?: string[];
+  genderFilter?: GenderFilter;
+  soloFriendly?: boolean;
 }
 
 export type KfgScanResult =

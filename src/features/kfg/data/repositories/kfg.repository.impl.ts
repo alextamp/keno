@@ -127,6 +127,8 @@ export const kfgRepository: KfgRepository = {
       startsAt: p.startsAt.toISOString(), endsAt: p.endsAt.toISOString(), minDurationMin: p.minDurationMin ?? 0,
       areaLabel: p.areaLabel, address: p.address ?? null, lat: p.latitude ?? null, lng: p.longitude ?? null,
       capacity: p.capacity, points: p.points,
+      imageUri: p.imageUri ?? null, minAge: p.minAge ?? null, maxAge: p.maxAge ?? null,
+      allowedUniversities: p.allowedUniversities ?? [], genderFilter: p.genderFilter ?? 'any', soloFriendly: p.soloFriendly === true,
     }));
   },
 
