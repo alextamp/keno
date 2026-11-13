@@ -461,6 +461,9 @@ export type Translations = {
   kfgFieldInfoHint: string;
   kfgPublishBtn: string;
   kfgSubmitForReviewBtn: string;
+  kfgMyMissions: string;
+  kfgMissionState: (status: string, over: boolean) => string;
+  kfgAwaitingApproval: string;
   kfgCreatedPending: string;
   kfgInvalidTimes: (maxHours: number) => string;
   kfgVerifyTitle: string;
@@ -1722,6 +1725,11 @@ const en: Translations = {
   kfgFieldInfoHint: 'e.g. wear closed shoes, meet at the side entrance',
   kfgPublishBtn: 'Publish',
   kfgSubmitForReviewBtn: 'Send for approval',
+  kfgMyMissions: 'My missions',
+  kfgMissionState: (status, over) => (status === 'published' && over ? 'Finished' : ({
+    pending: 'Awaiting approval', published: 'Live', rejected: 'Not approved', cancelled: 'Cancelled',
+  } as Record<string, string>)[status] ?? ''),
+  kfgAwaitingApproval: 'Waiting for the Keno team to approve it — nobody else can see it yet.',
   kfgCreatedPending: 'Sent for approval — it goes live once the Keno team approves it.',
   kfgInvalidTimes: (max) => `The end has to be after the start, at most ${max} hours later.`,
   kfgVerifyTitle: 'Verify',
@@ -1791,9 +1799,9 @@ const en: Translations = {
   kfgNoRankYet: 'Complete a QR or group mission to get on the board.',
   kfgFriendsEmpty: 'None of the people you follow have points this month.',
   kfgRankUpdated: 'Updates every half hour',
-  settingsAdminKfg: 'Keno for Good review',
+  settingsAdminKfg: 'Keno for Good: photo review',
   adminVerificationsApproveOrg: 'Approve as organization',
-  kfgAdminPendingMissions: 'Student missions to approve',
+  kfgAdminPendingMissions: 'Volunteer missions (Keno for Good)',
   kfgAdminPhotoQueue: 'Photos to check',
   kfgAdminApprove: 'Approve',
   kfgAdminReject: 'Reject',
@@ -2969,6 +2977,11 @@ const el: Translations = {
   kfgFieldInfoHint: 'π.χ. φόρεσε κλειστά παπούτσια, συνάντηση στην πλαϊνή είσοδο',
   kfgPublishBtn: 'Δημοσίευση',
   kfgSubmitForReviewBtn: 'Αποστολή για έγκριση',
+  kfgMyMissions: 'Οι αποστολές μου',
+  kfgMissionState: (status, over) => (status === 'published' && over ? 'Ολοκληρώθηκε' : ({
+    pending: 'Σε αναμονή έγκρισης', published: 'Δημοσιευμένη', rejected: 'Δεν εγκρίθηκε', cancelled: 'Ακυρώθηκε',
+  } as Record<string, string>)[status] ?? ''),
+  kfgAwaitingApproval: 'Περιμένει έγκριση από την ομάδα του Keno — δεν τη βλέπει ακόμα κανείς άλλος.',
   kfgCreatedPending: 'Στάλθηκε για έγκριση — θα εμφανιστεί μόλις την εγκρίνει η ομάδα του Keno.',
   kfgInvalidTimes: (max) => `Το τέλος πρέπει να είναι μετά την αρχή, έως ${max} ώρες αργότερα.`,
   kfgVerifyTitle: 'Επιβεβαίωση',
@@ -3038,9 +3051,9 @@ const el: Translations = {
   kfgNoRankYet: 'Κάνε μια αποστολή με QR ή ομαδική για να μπεις στην κατάταξη.',
   kfgFriendsEmpty: 'Όσοι ακολουθείς δεν έχουν πόντους αυτόν τον μήνα.',
   kfgRankUpdated: 'Ενημερώνεται κάθε μισή ώρα',
-  settingsAdminKfg: 'Keno for Good: έλεγχος',
+  settingsAdminKfg: 'Keno for Good: έλεγχος φωτογραφιών',
   adminVerificationsApproveOrg: 'Έγκριση ως οργανισμός',
-  kfgAdminPendingMissions: 'Αποστολές φοιτητών προς έγκριση',
+  kfgAdminPendingMissions: 'Αποστολές εθελοντισμού (Keno for Good)',
   kfgAdminPhotoQueue: 'Φωτογραφίες προς έλεγχο',
   kfgAdminApprove: 'Έγκριση',
   kfgAdminReject: 'Απόρριψη',

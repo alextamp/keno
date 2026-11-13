@@ -11,6 +11,7 @@ interface KfgState {
   profile: KfgProfile | null;
   ownedCosmetics: string[];
   missions: KfgMission[];
+  myMissions: KfgMission[];
   participations: KfgParticipation[];
   loaded: boolean;
   start: (uid: string) => void;
@@ -26,6 +27,7 @@ export const useKfgStore = create<KfgState>((set, get) => ({
   profile: null,
   ownedCosmetics: [],
   missions: [],
+  myMissions: [],
   participations: [],
   loaded: false,
 
@@ -41,6 +43,7 @@ export const useKfgStore = create<KfgState>((set, get) => ({
       kfgRepository.subscribeProfile(uid, (profile) => set({ profile })),
       kfgRepository.subscribeOwnedCosmetics(uid, (ownedCosmetics) => set({ ownedCosmetics })),
       kfgRepository.subscribePublishedMissions((missions) => { set({ missions }); ready(); }),
+      kfgRepository.subscribeMyMissions(uid, (myMissions) => set({ myMissions })),
       kfgRepository.subscribeMyParticipations(uid, (participations) => { set({ participations }); ready(); }),
     ];
   },
@@ -50,7 +53,7 @@ export const useKfgStore = create<KfgState>((set, get) => ({
     if (users > 0) return;
     unsubs.forEach((u) => u());
     unsubs = [];
-    set({ uid: null, profile: null, ownedCosmetics: [], missions: [], participations: [], loaded: false });
+    set({ uid: null, profile: null, ownedCosmetics: [], missions: [], myMissions: [], participations: [], loaded: false });
   },
 
   participationFor: (missionId) => get().participations.find((p) => p.missionId === missionId && p.status !== 'cancelled'),

@@ -121,7 +121,9 @@ function MissionInner() {
   const canVerify = joined && !over && (status === 'joined' || status === 'checkedIn');
 
   let action: React.ReactNode;
-  if (isMine) {
+  if (isMine && mission.status !== 'published') {
+    action = <Button label={t.kfgMissionState(mission.status, over)} disabled onPress={() => {}} />;
+  } else if (isMine) {
     action = mission.kind === 'partnerQr'
       ? <Button label={t.kfgScanBtn} onPress={() => router.push(`/(app)/kfg/scan?missionId=${mission.id}` as any)} disabled={over} />
       : null;
@@ -156,6 +158,9 @@ function MissionInner() {
         <View style={styles.content}>
           <Text style={[styles.eyebrow, { color: colors.accentInk }]}>{t.kfgEyebrow(mission.kind, studentRun).toUpperCase()}</Text>
           <Text style={[styles.title, { color: colors.textPrimary }]}>{mission.title}</Text>
+          {isMine && mission.status === 'pending' && (
+            <Text style={[styles.status, { color: colors.accentInk }]}>{t.kfgAwaitingApproval}</Text>
+          )}
           {joined && status && t.kfgStatusLine(status) !== '' && (
             <Text style={[styles.status, { color: colors.accentInk }]}>{t.kfgStatusLine(status)}</Text>
           )}

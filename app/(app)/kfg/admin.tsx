@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { format } from 'date-fns';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -9,14 +8,15 @@ import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { AccentScopeProvider, useTheme } from '@/core/theme';
 import { BorderRadius, FontSize, FontWeight, Spacing, UIFont, UIFontLight } from '@/core/constants/theme';
-import { getDateLocale, useLanguageStore, useTranslation } from '@/core/i18n';
+import { useTranslation } from '@/core/i18n';
 import { isLeft } from '@/core/utils/either';
 import { logAdminAction } from '@/core/utils/adminAuditLog';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { kfgRepository } from '@/features/kfg/data/repositories/kfg.repository.impl';
-import { KfgMission, KfgParticipation } from '@/features/kfg/domain/entities/kfg.entity';
+import { KfgParticipation } from '@/features/kfg/domain/entities/kfg.entity';
 
-// Admin-only: approve student-created missions and decide queued photo pairs.
+// Admin-only: decide queued photo pairs. Student missions are approved in
+// admin-events.tsx, next to the regular pending events.
 // The callables re-check admin rights server-side; this screen is only
 // reachable from the admin section of Settings.
 
@@ -34,27 +34,13 @@ function AdminInner() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const t = useTranslation();
-  const { language } = useLanguageStore();
   const adminUid = useAuthStore((s) => s.user?.id);
-  const [missions, setMissions] = useState<KfgMission[] | null>(null);
   const [queue, setQueue] = useState<QueueItem[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([kfgRepository.getPendingMissions(), kfgRepository.getPhotoReviewQueue()]).then(([m, q]) => {
-      setMissions(isLeft(m) ? [] : m.right);
-      setQueue(isLeft(q) ? [] : q.right);
-    });
+    kfgRepository.getPhotoReviewQueue().then((q) => setQueue(isLeft(q) ? [] : q.right));
   }, []);
-
-  const decideMission = async (m: KfgMission, approve: boolean) => {
-    setBusy(m.id);
-    const r = await kfgRepository.reviewMission(m.id, approve);
-    setBusy(null);
-    if (isLeft(r)) { Alert.alert(m.title, t.kfgError(r.left.message)); return; }
-    if (adminUid) logAdminAction(adminUid, 'kfgMissionReview', { missionId: m.id, approve: String(approve) });
-    setMissions((list) => list?.filter((x) => x.id !== m.id) ?? null);
-  };
 
   const decidePhoto = async (item: QueueItem, approve: boolean) => {
     const id = item.participation.id;
@@ -66,8 +52,6 @@ function AdminInner() {
     setQueue((list) => list?.filter((x) => x.participation.id !== id) ?? null);
   };
 
-  const locale = getDateLocale(language);
-
   return (
     <ScrollView
       style={{ backgroundColor: colors.background }}
@@ -75,25 +59,7 @@ function AdminInner() {
     >
       <ScreenHeader title={t.settingsAdminKfg} />
 
-      <SectionLabel label={t.kfgAdminPendingMissions} />
-      {missions === null ? <Skeleton height={80} /> : missions.length === 0 ? (
-        <Text style={[styles.meta, { color: colors.textHint }]}>{t.kfgAdminEmpty}</Text>
-      ) : missions.map((m) => (
-        <Card key={m.id} padded style={styles.card}>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>{m.title}</Text>
-          <Text style={[styles.meta, { color: colors.textHint }]}>
-            {`${m.creatorName} · ${format(m.startsAt, 'EEE d MMM HH:mm', { locale })} · ${m.areaLabel} · ${m.capacity}`}
-          </Text>
-          <Text style={[styles.body, { color: colors.textPrimary }]}>{m.description}</Text>
-          {!!m.infoText && <Text style={[styles.meta, { color: colors.textHint }]}>{m.infoText}</Text>}
-          <View style={styles.actions}>
-            <Button label={t.kfgAdminReject} variant="outline" size="sm" onPress={() => decideMission(m, false)} disabled={busy === m.id} style={styles.flex} />
-            <Button label={t.kfgAdminApprove} size="sm" onPress={() => decideMission(m, true)} disabled={busy === m.id} style={styles.flex} />
-          </View>
-        </Card>
-      ))}
-
-      <SectionLabel label={t.kfgAdminPhotoQueue} style={styles.section} />
+      <SectionLabel label={t.kfgAdminPhotoQueue} />
       {queue === null ? <Skeleton height={160} /> : queue.length === 0 ? (
         <Text style={[styles.meta, { color: colors.textHint }]}>{t.kfgAdminEmpty}</Text>
       ) : queue.map((item) => (

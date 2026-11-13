@@ -1,5 +1,5 @@
 import {
-  collection, doc, documentId, getCountFromServer, getDoc, getDocs, onSnapshot, orderBy, query, setDoc, Timestamp, updateDoc, where,
+  collection, doc, documentId, getCountFromServer, getDoc, getDocs, limit, onSnapshot, orderBy, query, setDoc, Timestamp, updateDoc, where,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
@@ -36,6 +36,11 @@ export const kfgRepository: KfgRepository = {
     // Upcoming and still-running missions; the 12h lookback covers the longest allowed mission.
     const since = Timestamp.fromMillis(Date.now() - 12 * 3_600_000);
     const q = query(collection(db, MISSIONS), where('status', '==', 'published'), where('startsAt', '>=', since), orderBy('startsAt', 'asc'));
+    return onSnapshot(q, (snap) => onChange(snap.docs.map(missionFromFirestore)), () => onChange([]));
+  },
+
+  subscribeMyMissions(uid, onChange) {
+    const q = query(collection(db, MISSIONS), where('creatorId', '==', uid), orderBy('startsAt', 'desc'), limit(20));
     return onSnapshot(q, (snap) => onChange(snap.docs.map(missionFromFirestore)), () => onChange([]));
   },
 
@@ -94,13 +99,6 @@ export const kfgRepository: KfgRepository = {
       const ahead = await getCountFromServer(query(collection(db, PROFILES),
         where('monthId', '==', getKfgMonthId(new Date())), where('monthPoints', '>', monthPoints)));
       return ahead.data().count + 1;
-    });
-  },
-
-  getMyMissions(uid) {
-    return attempt(async () => {
-      const snap = await getDocs(query(collection(db, MISSIONS), where('creatorId', '==', uid), orderBy('startsAt', 'desc')));
-      return snap.docs.map(missionFromFirestore);
     });
   },
 

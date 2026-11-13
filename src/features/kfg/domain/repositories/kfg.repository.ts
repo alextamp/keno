@@ -30,6 +30,8 @@ export type KfgScanResult =
 
 export interface KfgRepository {
   subscribePublishedMissions(onChange: (missions: KfgMission[]) => void): () => void;
+  /** Missions this user created, any status (pending/rejected included), newest first. */
+  subscribeMyMissions(uid: string, onChange: (missions: KfgMission[]) => void): () => void;
   subscribeMission(id: string, onChange: (mission: KfgMission | null) => void): () => void;
   subscribeMyParticipations(uid: string, onChange: (items: KfgParticipation[]) => void): () => void;
   subscribeMissionParticipations(missionId: string, creatorId: string, onChange: (items: KfgParticipation[]) => void): () => void;
@@ -40,7 +42,6 @@ export interface KfgRepository {
   getProfiles(uids: string[]): Promise<Either<Failure, KfgProfile[]>>;
   /** 1-based rank this month, or null with no points yet. */
   getMyRank(monthPoints: number): Promise<Either<Failure, number | null>>;
-  getMyMissions(uid: string): Promise<Either<Failure, KfgMission[]>>;
   getPendingMissions(): Promise<Either<Failure, KfgMission[]>>;
   /** Admin: photo pairs waiting for a human decision, with readable photo URLs. */
   getPhotoReviewQueue(): Promise<Either<Failure, { participation: KfgParticipation; before?: string; after?: string }[]>>;

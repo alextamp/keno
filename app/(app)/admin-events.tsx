@@ -5,7 +5,7 @@ import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, View }
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { collection, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { useTheme } from '@/core/theme';
+import { AccentScopeProvider, useTheme } from '@/core/theme';
 import { UIFont, UIFontLight, TitleFont, FontSize, FontWeight, Spacing, BorderRadius } from '@/core/constants/theme';
 import { useTranslation, useLanguageStore } from '@/core/i18n';
 import { Icon } from '@/components/ui/Icon';
@@ -13,6 +13,11 @@ import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { logAdminAction } from '@/core/utils/adminAuditLog';
 import { KENO_EVENTS_UID } from '@/core/constants/eventsAccount';
 import { formatMessageTime } from '@/core/utils/time';
+import { SectionLabel } from '@/components/ui/SectionLabel';
+import { FEATURES } from '@/core/constants/features';
+import { isLeft } from '@/core/utils/either';
+import { kfgRepository } from '@/features/kfg/data/repositories/kfg.repository.impl';
+import { KfgMission } from '@/features/kfg/domain/entities/kfg.entity';
 
 interface PendingEvent {
   id: string;
@@ -207,7 +212,88 @@ export default function AdminEventsScreen() {
           })}
         </View>
       )}
+
+      {FEATURES.kenoForGood && (
+        <AccentScopeProvider value="kfg">
+          <KfgPendingMissions />
+        </AccentScopeProvider>
+      )}
     </ScrollView>
+  );
+}
+
+// Student-created Keno for Good missions waiting for approval. Approving goes
+// through the kfgReviewMission callable, which re-checks admin rights server-side.
+function KfgPendingMissions() {
+  const { colors } = useTheme();
+  const t = useTranslation();
+  const { language } = useLanguageStore();
+  const adminUid = useAuthStore((s) => s.user?.id);
+  const [missions, setMissions] = useState<KfgMission[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    kfgRepository.getPendingMissions().then((r) => {
+      if (isLeft(r)) { setError(r.left.message); setMissions([]); return; }
+      setMissions(r.right);
+    });
+  }, []);
+
+  const decide = async (m: KfgMission, approve: boolean) => {
+    setBusyId(m.id);
+    const r = await kfgRepository.reviewMission(m.id, approve);
+    setBusyId(null);
+    if (isLeft(r)) { Alert.alert(m.title, t.kfgError(r.left.message)); return; }
+    if (adminUid) logAdminAction(adminUid, 'kfgMissionReview', { missionId: m.id, approve: String(approve) });
+    setMissions((list) => list?.filter((x) => x.id !== m.id) ?? null);
+  };
+
+  const bs = colors.border;
+  return (
+    <View style={styles.list}>
+      <SectionLabel label={t.kfgAdminPendingMissions} />
+      {missions === null ? (
+        <ActivityIndicator color={colors.primary} />
+      ) : error ? (
+        <Text style={[styles.meta, { color: colors.error }]}>{error}</Text>
+      ) : missions.length === 0 ? (
+        <Text style={[styles.meta, { color: colors.textHint }]}>{t.kfgAdminEmpty}</Text>
+      ) : missions.map((m) => {
+        const isBusy = busyId === m.id;
+        return (
+          <View key={m.id} style={[styles.card, { backgroundColor: colors.surface, borderColor: bs }]}>
+            <View style={[styles.reviewTag, { backgroundColor: colors.accentSoft, borderColor: colors.primary, marginTop: 0 }]}>
+              <Icon name="heart" size={13} color={colors.accentInk} />
+              <Text style={[styles.reviewTagText, { color: colors.accentInk }]}>Keno for Good · {m.creatorName}</Text>
+            </View>
+            <Text style={[styles.name, { color: colors.textPrimary }]}>{m.title}</Text>
+            <Text style={[styles.meta, { color: colors.textSecondary }]}>
+              {formatMessageTime(m.startsAt, language)} · {m.areaLabel} · {m.capacity}
+            </Text>
+            {!!m.address && <Text style={[styles.meta, { color: colors.textHint }]}>{m.address}</Text>}
+            <Text style={[styles.meta, { color: colors.textHint }]} numberOfLines={4}>{m.description}</Text>
+            {!!m.infoText && <Text style={[styles.meta, { color: colors.textHint }]} numberOfLines={3}>{m.infoText}</Text>}
+            <View style={styles.actions}>
+              <AnimatedPressable
+                onPress={() => decide(m, false)}
+                disabled={isBusy}
+                style={[styles.actionBtn, { borderColor: colors.border }]}
+              >
+                <Text style={[styles.actionText, { color: colors.textSecondary }]}>{t.adminEventsReject}</Text>
+              </AnimatedPressable>
+              <AnimatedPressable
+                onPress={() => decide(m, true)}
+                disabled={isBusy}
+                style={[styles.actionBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+              >
+                <Text style={[styles.actionText, { color: '#fff' }]}>{t.adminEventsApprove}</Text>
+              </AnimatedPressable>
+            </View>
+          </View>
+        );
+      })}
+    </View>
   );
 }
 
