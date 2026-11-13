@@ -63,6 +63,15 @@ export const kfgRepository: KfgRepository = {
       () => onChange(profileFromFirestore(uid, undefined)));
   },
 
+  async getPublicProfile(uid) {
+    try {
+      const snap = await getDoc(doc(db, PROFILES, uid));
+      return snap.exists() ? profileFromFirestore(uid, snap.data()) : null;
+    } catch {
+      return null;
+    }
+  },
+
   subscribeOwnedCosmetics(uid, onChange) {
     return onSnapshot(collection(db, PROFILES, uid, 'cosmetics'), (snap) => onChange(snap.docs.map((d) => d.id)), () => onChange([]));
   },

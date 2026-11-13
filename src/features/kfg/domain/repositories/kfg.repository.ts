@@ -38,6 +38,8 @@ export type KfgScanResult =
 export interface KfgRepository {
   subscribePublishedMissions(onChange: (missions: KfgMission[]) => void): () => void;
   /** Missions this user created, any status (pending/rejected included), newest first. */
+  /** Someone's public KfG profile, or null if they've never opened Keno for Good. */
+  getPublicProfile(uid: string): Promise<KfgProfile | null>;
   subscribeMyMissions(uid: string, onChange: (missions: KfgMission[]) => void): () => void;
   subscribeMission(id: string, onChange: (mission: KfgMission | null) => void): () => void;
   subscribeMyParticipations(uid: string, onChange: (items: KfgParticipation[]) => void): () => void;

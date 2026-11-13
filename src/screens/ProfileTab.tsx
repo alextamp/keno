@@ -29,6 +29,8 @@ import { getChallengeDefs } from '@/core/constants/challenges';
 import { ChallengeRow } from '@/components/ui/ChallengeRow';
 import { computeWrapped, WRAPPED_MIN_CHECKINS } from '@/features/wrapped/wrapped';
 import { semesterLabel } from '@/components/wrapped/WrappedSlides';
+import { KfgEntryCard } from '@/components/kfg/KfgEntryCard';
+import { FEATURES } from '@/core/constants/features';
 
 const AVATAR_COLORS = ['#B8482A','#7C3AED','#059669','#2563EB','#DB2777','#D97706','#DC2626','#0891B2'];
 
@@ -307,6 +309,9 @@ export default function ProfileScreen() {
           </Card>
         </AnimatedPressable>
       )}
+
+      {/* ── Keno for Good: same account, so your character/points live on your profile too ── */}
+      {!editing && FEATURES.kenoForGood && <KfgEntryCard />}
 
       {/* ── Keno Wrapped — computed from the same attended-events list this
           screen already loads (myEvents), so the card costs no extra read. ── */}

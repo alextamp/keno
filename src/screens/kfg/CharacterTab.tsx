@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import { Icon } from '@/components/ui/Icon';
@@ -17,6 +18,9 @@ import { haptics } from '@/core/utils/haptics';
 import { kfgRepository } from '@/features/kfg/data/repositories/kfg.repository.impl';
 import { useKfgStore } from '@/features/kfg/presentation/store/kfg.store';
 import { formatPoints, kfgLevelInfo } from '@/features/kfg/format';
+import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
+import { useTabNavigation } from '@/core/tabNavigation';
+import { universityLabel } from '@/core/constants/universities';
 
 const SLOT_ORDER = { head: 0, face: 1, neck: 2 } as const;
 const ITEMS = [...KFG_COSMETICS].sort((a, b) => SLOT_ORDER[a.slot] - SLOT_ORDER[b.slot]);
@@ -28,6 +32,15 @@ export default function CharacterTab() {
   const { language } = useLanguageStore();
   const { profile, ownedCosmetics } = useKfgStore();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const user = useAuthStore((s) => s.user);
+  const router = useRouter();
+  const { goToTab } = useTabNavigation();
+
+  // Same account as the rest of Keno — this row opens your regular profile.
+  const openProfile = () => {
+    router.navigate('/(app)' as any);
+    setTimeout(() => goToTab(4), 50);
+  };
 
   const lifetime = profile?.lifetimePoints ?? 0;
   const balance = profile?.balance ?? 0;
@@ -78,6 +91,31 @@ export default function CharacterTab() {
       contentContainerStyle={[styles.content, { paddingTop: insets.top + 6, paddingBottom: TAB_BAR_BASE_HEIGHT + insets.bottom + 24 }]}
     >
       <KfgHeader balance={balance} />
+
+      {user && (
+        <AnimatedPressable
+          onPress={openProfile}
+          accessibilityRole="button"
+          accessibilityLabel={t.kfgOpenProfileA11y}
+          style={[styles.me, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        >
+          {user.photoUri ? (
+            <Image source={{ uri: user.photoUri }} style={styles.meAvatar} />
+          ) : (
+            <View style={[styles.meAvatar, { backgroundColor: user.avatarColor ?? colors.primary }]}>
+              <Text style={styles.meInitial}>{user.name.charAt(0).toUpperCase()}</Text>
+            </View>
+          )}
+          <View style={styles.meText}>
+            <Text style={[styles.meName, { color: colors.textPrimary }]} numberOfLines={1}>{user.name}</Text>
+            {!!user.universityName && (
+              <Text style={[styles.meta, { color: colors.textHint }]} numberOfLines={1}>{universityLabel(user.universityName, language)}</Text>
+            )}
+          </View>
+          <Text style={[styles.meLink, { color: colors.accentInk }]}>{t.kfgMyProfile}</Text>
+          <Icon name="fwd" size={14} color={colors.accentInk} />
+        </AnimatedPressable>
+      )}
 
       <View style={styles.hero}>
         <View style={[styles.stage, { backgroundColor: colors.accentSoft }]}>
@@ -168,6 +206,12 @@ export default function CharacterTab() {
 const styles = StyleSheet.create({
   content: { paddingHorizontal: Spacing.gutter, gap: Spacing.md },
   hero: { alignItems: 'center', gap: 4, marginTop: Spacing.sm },
+  me: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, borderWidth: 1, borderRadius: BorderRadius.lg, padding: Spacing.md },
+  meAvatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  meInitial: { color: '#fff', fontFamily: UIFont, fontSize: FontSize.lg, fontWeight: FontWeight.bold },
+  meText: { flex: 1, gap: 2 },
+  meName: { fontFamily: UIFont, fontSize: FontSize.base, fontWeight: FontWeight.bold },
+  meLink: { fontFamily: UIFont, fontSize: FontSize.sm, fontWeight: FontWeight.bold },
   stage: { width: 200, height: 200, borderRadius: 100, alignItems: 'center', justifyContent: 'flex-end', overflow: 'hidden', marginBottom: Spacing.sm },
   levelName: { fontFamily: TitleFont, fontSize: FontSize.xxl, fontWeight: FontWeight.bold, letterSpacing: -0.4 },
   meta: { fontFamily: UIFontLight, fontSize: FontSize.md },

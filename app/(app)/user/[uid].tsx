@@ -27,6 +27,8 @@ import { getLevel, isBetaTesterUser, getReliabilityBadge, isVerifiedUser, isRegu
 import { REVIEW_EMOJI } from '@/features/reviews/domain/entities/review.entity';
 import { LevelsModal } from '@/components/ui/LevelsModal';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
+import { KfgProfileCard } from '@/components/kfg/KfgProfileCard';
+import { FEATURES } from '@/core/constants/features';
 
 interface PublicProfile {
   uid: string;
@@ -444,6 +446,8 @@ export default function UserProfileScreen() {
           </View>
         ))}
       </View>
+
+      {FEATURES.kenoForGood && <KfgProfileCard uid={uid} />}
 
       {/* Upcoming events */}
       {upcomingEvents.length > 0 ? (

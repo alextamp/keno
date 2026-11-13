@@ -464,6 +464,8 @@ export type Translations = {
   kfgFiltersTitle: string;
   kfgAgesAll: string;
   kfgNotEligibleBtn: string;
+  kfgMyProfile: string;
+  kfgOpenProfileA11y: string;
   kfgMyMissions: string;
   kfgMissionState: (status: string, over: boolean) => string;
   kfgAwaitingApproval: string;
@@ -1735,6 +1737,8 @@ const en: Translations = {
   kfgFiltersTitle: 'Who can join',
   kfgAgesAll: 'All ages',
   kfgNotEligibleBtn: 'Not eligible',
+  kfgMyProfile: 'My profile',
+  kfgOpenProfileA11y: 'Open your Keno profile',
   kfgMyMissions: 'My missions',
   kfgMissionState: (status, over) => (status === 'published' && over ? 'Finished' : ({
     pending: 'Awaiting approval', published: 'Live', rejected: 'Not approved', cancelled: 'Cancelled',
@@ -2994,6 +2998,8 @@ const el: Translations = {
   kfgFiltersTitle: 'Ποιοι μπορούν να έρθουν',
   kfgAgesAll: 'Όλες οι ηλικίες',
   kfgNotEligibleBtn: 'Δεν πληροίς τα κριτήρια',
+  kfgMyProfile: 'Το προφίλ μου',
+  kfgOpenProfileA11y: 'Άνοιγμα του προφίλ σου στο Keno',
   kfgMyMissions: 'Οι αποστολές μου',
   kfgMissionState: (status, over) => (status === 'published' && over ? 'Ολοκληρώθηκε' : ({
     pending: 'Σε αναμονή έγκρισης', published: 'Δημοσιευμένη', rejected: 'Δεν εγκρίθηκε', cancelled: 'Ακυρώθηκε',
