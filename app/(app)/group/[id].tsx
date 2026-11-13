@@ -112,7 +112,7 @@ export default function GroupDetailScreen() {
     }
   }, [activeTab]);
   const [requesterProfiles, setRequesterProfiles] = useState<Record<string, UserProfile>>({});
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const requestToJoinGroup = useGroupsStore((s) => s.requestToJoinGroup);
   const decideGroupJoinRequest = useGroupsStore((s) => s.decideGroupJoinRequest);
 

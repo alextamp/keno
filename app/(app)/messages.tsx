@@ -6,7 +6,8 @@ import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { DuotoneScene } from '@/components/ui/DuotoneScene';
 import { Tag } from '@/components/ui/Tag';
 import { Alert, FlatList, Image, StyleSheet, Text, View } from 'react-native';
-import { Swipeable } from 'react-native-gesture-handler';
+// The legacy Swipeable was removed in gesture-handler 3; same props.
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { arrayUnion, collection, getDoc, doc, onSnapshot, orderBy, query, updateDoc, where, Timestamp } from 'firebase/firestore';

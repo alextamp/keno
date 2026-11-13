@@ -59,10 +59,10 @@ export default function SignUpScreen() {
   const [idPhoto, setIdPhoto] = useState<string | undefined>();
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
-  const emailRef = useRef<TextInput>(null);
-  const passwordRef = useRef<TextInput>(null);
-  const deptRef = useRef<TextInput>(null);
-  const ageRef = useRef<TextInput>(null);
+  const emailRef = useRef<React.ComponentRef<typeof TextInput>>(null);
+  const passwordRef = useRef<React.ComponentRef<typeof TextInput>>(null);
+  const deptRef = useRef<React.ComponentRef<typeof TextInput>>(null);
+  const ageRef = useRef<React.ComponentRef<typeof TextInput>>(null);
 
   const pickIdPhoto = async () => {
     const uri = await pickImage();

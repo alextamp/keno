@@ -38,7 +38,7 @@ export default function SignInScreen() {
   const t = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const passwordRef = useRef<TextInput>(null);
+  const passwordRef = useRef<React.ComponentRef<typeof TextInput>>(null);
 
   const handleSignIn = async () => {
     clearError();

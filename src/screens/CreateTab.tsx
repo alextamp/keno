@@ -97,7 +97,7 @@ export default function CreateEventScreen() {
   ];
 
   const [step, setStep] = useState<1 | 2>(1);
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const setCreateFlowStep = useCreateFlowStore((s) => s.setStep);
   useEffect(() => { setCreateFlowStep(step); }, [step]);
 

@@ -30,7 +30,7 @@ interface Props {
 // account.tsx's un-recognised-email banner) — otherwise, if the person was
 // scrolled down near the button, the change is invisible and looks like the
 // tap did nothing.
-export const SignupStepShell = forwardRef<ScrollView, Props>(function SignupStepShell({
+export const SignupStepShell = forwardRef<React.ComponentRef<typeof ScrollView>, Props>(function SignupStepShell({
   title, subtitle, children, ctaLabel, onCta, ctaDisabled, ctaLoading, secondaryLabel, onSecondary,
 }, ref) {
   const { colors } = useTheme();

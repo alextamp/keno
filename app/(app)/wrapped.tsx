@@ -44,7 +44,7 @@ export default function WrappedScreen() {
   const [loadFailed, setLoadFailed] = useState(false);
   const [index, setIndex] = useState(0);
   const [busy, setBusy] = useState(false);
-  const slideRefs = useRef<Record<number, View | null>>({});
+  const slideRefs = useRef<Record<number, React.ComponentRef<typeof View> | null>>({});
 
   useEffect(() => {
     if (!user) return;
