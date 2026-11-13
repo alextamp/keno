@@ -502,6 +502,7 @@ export type Translations = {
   kfgShareSoon: string;
   kfgBackToMissions: string;
   kfgWardrobe: string;
+  kfgCharacters: string;
   kfgOwned: string;
   kfgLockedLevel: (level: number) => string;
   kfgLockedTop: (top: number) => string;
@@ -1768,6 +1769,7 @@ const en: Translations = {
   kfgShareSoon: 'Sharing to your story is coming soon.',
   kfgBackToMissions: 'Back to actions',
   kfgWardrobe: 'Wardrobe',
+  kfgCharacters: 'Character',
   kfgOwned: 'Yours',
   kfgLockedLevel: (level) => `Level ${level}`,
   kfgLockedTop: (top) => `Top ${top}`,
@@ -3014,6 +3016,7 @@ const el: Translations = {
   kfgShareSoon: 'Η κοινοποίηση στο story έρχεται σύντομα.',
   kfgBackToMissions: 'Πίσω στις δράσεις',
   kfgWardrobe: 'Ντουλάπα',
+  kfgCharacters: 'Χαρακτήρας',
   kfgOwned: 'Δικό σου',
   kfgLockedLevel: (level) => `Επίπεδο ${level}`,
   kfgLockedTop: (top) => `Top ${top}`,

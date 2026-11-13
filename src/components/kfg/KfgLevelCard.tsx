@@ -21,7 +21,7 @@ export function KfgLevelCard({ profile }: { profile: KfgProfile | null }) {
   return (
     <Card padded style={styles.card}>
       <View style={[styles.avatar, { backgroundColor: colors.accentSoft }]}>
-        <KfgCharacter size={60} equipped={profile?.equipped} />
+        <KfgCharacter size={60} equipped={profile?.equipped} character={profile?.character} />
       </View>
       <View style={styles.body}>
         <Text style={[styles.level, { color: colors.textPrimary }]}>{level.label}</Text>

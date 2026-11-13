@@ -125,6 +125,27 @@ export function nextStreak(
   return { streakWeeks, lastWeekId: weekId };
 }
 
+// ── Characters ──────────────────────────────────────────────────────────────
+// Which character the user plays as. All free and switchable any time; they
+// share one silhouette so every cosmetic fits every character. Mirrored in
+// firestore.rules (kfgProfiles: `character in [...]`).
+
+export interface KfgCharacterDef {
+  id: string;
+  name: { el: string; en: string };
+}
+
+export const KFG_CHARACTERS: KfgCharacterDef[] = [
+  { id: 'classic', name: { el: 'Κλασικός', en: 'Classic' } },
+  { id: 'pup', name: { el: 'Σκυλάκι', en: 'Pup' } },
+  { id: 'kitty', name: { el: 'Γατούλα', en: 'Kitty' } },
+  { id: 'bear', name: { el: 'Αρκουδάκι', en: 'Bear cub' } },
+  { id: 'fox', name: { el: 'Αλεπουδίτσα', en: 'Fox' } },
+  { id: 'bunny', name: { el: 'Κουνελάκι', en: 'Bunny' } },
+];
+
+export const DEFAULT_KFG_CHARACTER = 'classic';
+
 // ── Cosmetics ───────────────────────────────────────────────────────────────
 // Layered on the character SVG. Everything is either bought with KfG points
 // (lowers the balance, never the level or the leaderboard) or unlocked by an

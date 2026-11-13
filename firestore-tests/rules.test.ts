@@ -368,4 +368,15 @@ describe('Keno for Good', () => {
     await assertFails(getDoc(doc(asUser(USER_A), 'kfgTrust', USER_A)));
     await assertFails(getDoc(doc(asUser(USER_B), 'kfgTrust', USER_A)));
   });
+
+  test('anyone can pick a character, but not slip points in with it', async () => {
+    const db = asUser(USER_A);
+    const empty = { head: null, face: null, neck: null };
+    await assertFails(setDoc(doc(db, 'kfgProfiles', USER_A), { character: 'dragon', equipped: empty }));
+    await assertFails(setDoc(doc(db, 'kfgProfiles', USER_A), { character: 'fox', equipped: empty, lifetimePoints: 5000 }));
+    await assertFails(setDoc(doc(asUser(USER_B), 'kfgProfiles', USER_A), { character: 'fox', equipped: empty }));
+    await assertSucceeds(setDoc(doc(db, 'kfgProfiles', USER_A), { character: 'fox', equipped: empty }));
+    await assertSucceeds(updateDoc(doc(db, 'kfgProfiles', USER_A), { character: 'bear' }));
+    await assertFails(updateDoc(doc(db, 'kfgProfiles', USER_A), { character: 'dragon' }));
+  });
 });

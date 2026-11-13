@@ -1,5 +1,5 @@
 import {
-  collection, doc, documentId, getCountFromServer, getDoc, getDocs, onSnapshot, orderBy, query, Timestamp, updateDoc, where,
+  collection, doc, documentId, getCountFromServer, getDoc, getDocs, onSnapshot, orderBy, query, setDoc, Timestamp, updateDoc, where,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
@@ -181,5 +181,17 @@ export const kfgRepository: KfgRepository = {
 
   equip(uid, equipped) {
     return attempt(() => updateDoc(doc(db, PROFILES, uid), { equipped }));
+  },
+
+  // merge: someone with no points yet has no profile; the rules let them
+  // create one holding only `character` and empty `equipped`.
+  setCharacter(uid, character) {
+    return attempt(async () => {
+      const ref = doc(db, PROFILES, uid);
+      const exists = (await getDoc(ref)).exists();
+      await (exists
+        ? updateDoc(ref, { character })
+        : setDoc(ref, { character, equipped: { head: null, face: null, neck: null } }));
+    });
   },
 };

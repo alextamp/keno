@@ -1,5 +1,5 @@
 import { DocumentData, DocumentSnapshot, Timestamp } from 'firebase/firestore';
-import { getKfgMonthId } from '@/core/constants/kfg';
+import { DEFAULT_KFG_CHARACTER, getKfgMonthId, KFG_CHARACTERS } from '@/core/constants/kfg';
 import {
   EMPTY_KFG_PROFILE, KfgLeaderboard, KfgMission, KfgParticipation, KfgProfile,
 } from '../../domain/entities/kfg.entity';
@@ -70,6 +70,7 @@ export function profileFromFirestore(uid: string, d: DocumentData | undefined, n
     monthPoints: currentMonth ? (d.monthPoints ?? 0) : 0,
     streakWeeks: d.streakWeeks ?? 0,
     university: opt(d.university),
+    character: KFG_CHARACTERS.some((c) => c.id === d.character) ? d.character : DEFAULT_KFG_CHARACTER,
     equipped: { head: null, face: null, neck: null, ...(d.equipped ?? {}) },
     rankAtWeekStart: opt(d.rankAtWeekStart),
     rankWeekId: opt(d.rankWeekId),

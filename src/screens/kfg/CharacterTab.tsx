@@ -10,7 +10,7 @@ import { KfgHeader } from '@/components/kfg/KfgHeader';
 import { useTheme } from '@/core/theme';
 import { BorderRadius, FontSize, FontWeight, Spacing, TitleFont, UIFont, UIFontLight } from '@/core/constants/theme';
 import { TAB_BAR_BASE_HEIGHT } from '@/core/constants/layout';
-import { KFG_COSMETICS, KfgCosmetic } from '@/core/constants/kfg';
+import { KFG_CHARACTERS, KFG_COSMETICS, KfgCosmetic } from '@/core/constants/kfg';
 import { useLanguageStore, useTranslation } from '@/core/i18n';
 import { isLeft } from '@/core/utils/either';
 import { haptics } from '@/core/utils/haptics';
@@ -33,6 +33,17 @@ export default function CharacterTab() {
   const balance = profile?.balance ?? 0;
   const level = kfgLevelInfo(lifetime, language);
   const equipped = profile?.equipped ?? { head: null, face: null, neck: null };
+  const character = profile?.character ?? 'classic';
+  const { uid } = useKfgStore();
+
+  const pickCharacter = async (id: string) => {
+    if (!uid || id === character) return;
+    setBusyId(id);
+    const r = await kfgRepository.setCharacter(uid, id);
+    setBusyId(null);
+    if (isLeft(r)) Alert.alert(t.kfgCharacters, t.kfgError(r.left.message));
+    else haptics.light();
+  };
 
   const toggleWear = async (item: KfgCosmetic) => {
     if (!profile) return;
@@ -70,7 +81,7 @@ export default function CharacterTab() {
 
       <View style={styles.hero}>
         <View style={[styles.stage, { backgroundColor: colors.accentSoft }]}>
-          <KfgCharacter size={180} equipped={equipped} />
+          <KfgCharacter size={180} equipped={equipped} character={character} />
         </View>
         <Text style={[styles.levelName, { color: colors.textPrimary }]}>{level.label}</Text>
         <Text style={[styles.meta, { color: colors.textHint }]}>
@@ -81,6 +92,27 @@ export default function CharacterTab() {
           {level.next ? t.kfgPointsToLevel(formatPoints(level.pointsToNext, language), level.next.level) : t.kfgMaxLevel}
         </Text>
       </View>
+
+      <SectionLabel label={t.kfgCharacters} style={styles.section} />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.characters}>
+        {KFG_CHARACTERS.map((c) => {
+          const on = c.id === character;
+          return (
+            <AnimatedPressable
+              key={c.id}
+              onPress={() => pickCharacter(c.id)}
+              disabled={busyId === c.id}
+              accessibilityRole="button"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={c.name[language]}
+              style={[styles.charItem, { borderColor: on ? colors.primary : colors.border, backgroundColor: on ? colors.accentSoft : colors.surface }]}
+            >
+              <KfgCharacter size={56} character={c.id} equipped={equipped} />
+              <Text style={[styles.charName, { color: on ? colors.accentInk : colors.textHint }]} numberOfLines={1}>{c.name[language]}</Text>
+            </AnimatedPressable>
+          );
+        })}
+      </ScrollView>
 
       <View style={styles.wardrobeHead}>
         <SectionLabel label={t.kfgWardrobe} />
@@ -116,7 +148,7 @@ export default function CharacterTab() {
               ]}
             >
               <View style={styles.itemArt}>
-                <KfgCharacter size={64} equipped={{ [item.slot]: item.id }} />
+                <KfgCharacter size={64} equipped={{ [item.slot]: item.id }} character={character} />
                 {locked && (
                   <View style={[styles.lockBadge, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                     <Icon name="lock" size={11} color={colors.textHint} />
@@ -140,6 +172,10 @@ const styles = StyleSheet.create({
   levelName: { fontFamily: TitleFont, fontSize: FontSize.xxl, fontWeight: FontWeight.bold, letterSpacing: -0.4 },
   meta: { fontFamily: UIFontLight, fontSize: FontSize.md },
   track: { alignSelf: 'stretch', marginVertical: 6 },
+  section: { marginTop: Spacing.sm },
+  characters: { gap: Spacing.sm, paddingRight: Spacing.gutter },
+  charItem: { width: 84, alignItems: 'center', gap: 2, borderWidth: 1, borderRadius: BorderRadius.lg, paddingVertical: Spacing.sm },
+  charName: { fontFamily: UIFont, fontSize: FontSize.sm, fontWeight: FontWeight.bold },
   wardrobeHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: Spacing.sm },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   item: {

@@ -52,7 +52,7 @@ function EntryCardInner() {
       style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
     >
       <View style={[styles.thumb, { backgroundColor: colors.accentSoft }]}>
-        <KfgCharacter size={50} equipped={profile?.equipped} />
+        <KfgCharacter size={50} equipped={profile?.equipped} character={profile?.character} />
       </View>
       <View style={styles.text}>
         <View style={styles.labelRow}>

@@ -60,4 +60,5 @@ export interface KfgRepository {
   reviewPhoto(participationId: string, approve: boolean): Promise<Either<Failure, void>>;
   purchase(itemId: string): Promise<Either<Failure, void>>;
   equip(uid: string, equipped: Record<KfgSlot, string | null>): Promise<Either<Failure, void>>;
+  setCharacter(uid: string, character: string): Promise<Either<Failure, void>>;
 }

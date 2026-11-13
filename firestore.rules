@@ -517,8 +517,15 @@ service cloud.firestore {
     // matching slot.
     match /kfgProfiles/{userId} {
       allow read: if signedIn();
-      allow create, delete: if false;
-      allow update: if isOwner(userId) && onlyChangedFields(['equipped']) &&
+      // Someone with no points yet may create their profile, but only to pick
+      // a character — every points field stays server-written.
+      allow create: if isOwner(userId) &&
+        request.resource.data.keys().hasOnly(['character', 'equipped']) &&
+        kfgValidCharacter(request.resource.data.character) &&
+        request.resource.data.equipped == { 'head': null, 'face': null, 'neck': null };
+      allow delete: if false;
+      allow update: if isOwner(userId) && onlyChangedFields(['equipped', 'character']) &&
+        kfgValidCharacter(request.resource.data.get('character', 'classic')) &&
         request.resource.data.equipped.keys().hasOnly(['head', 'face', 'neck']) &&
         kfgOwnsForSlot(userId, request.resource.data.equipped.get('head', null), 'head') &&
         kfgOwnsForSlot(userId, request.resource.data.equipped.get('face', null), 'face') &&
@@ -528,6 +535,11 @@ service cloud.firestore {
         allow read: if signedIn();
         allow write: if false;
       }
+    }
+
+    // Keep in sync with KFG_CHARACTERS (src/core/constants/kfg.ts).
+    function kfgValidCharacter(id) {
+      return id in ['classic', 'pup', 'kitty', 'bear', 'fox', 'bunny'];
     }
 
     function kfgOwnsForSlot(userId, itemId, slot) {

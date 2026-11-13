@@ -108,7 +108,7 @@ function CompleteInner() {
             <SectionLabel label={t.kfgUnlocked} />
             <Card padded style={styles.unlockCard}>
               <View style={[styles.unlockThumb, { backgroundColor: colors.accentSoft }]}>
-                <KfgCharacter size={72} equipped={{ ...profile.equipped, [item.slot]: item.id }} />
+                <KfgCharacter size={72} equipped={{ ...profile.equipped, [item.slot]: item.id }} character={profile.character} />
               </View>
               <Text style={[styles.unlockName, { color: colors.textPrimary }]}>{item.name[language]}</Text>
               {ownedCosmetics.includes(item.id) && (

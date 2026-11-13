@@ -68,6 +68,8 @@ export interface KfgProfile {
   monthPoints: number;
   streakWeeks: number;
   university?: string;
+  /** One of KFG_CHARACTERS. */
+  character: string;
   equipped: Record<KfgSlot, string | null>;
   rankAtWeekStart?: number;
   rankWeekId?: string;
@@ -91,6 +93,6 @@ export interface KfgLeaderboard {
 }
 
 export const EMPTY_KFG_PROFILE: Omit<KfgProfile, 'uid'> = {
-  lifetimePoints: 0, balance: 0, monthPoints: 0, streakWeeks: 0,
+  lifetimePoints: 0, balance: 0, monthPoints: 0, streakWeeks: 0, character: 'classic',
   equipped: { head: null, face: null, neck: null },
 };
