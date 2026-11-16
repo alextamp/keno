@@ -14,7 +14,10 @@ import {
   addDoc, arrayRemove, arrayUnion, collection, deleteField, doc, getDocs, limit, onSnapshot, orderBy, query, Timestamp, updateDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { useTheme } from '@/core/theme';
+import { AccentScopeProvider, useTheme } from '@/core/theme';
+import { useKfgStore } from '@/features/kfg/presentation/store/kfg.store';
+import { KfgMissionRow } from '@/components/kfg/KfgMissionRow';
+import { Card } from '@/components/ui/Card';
 import { UIFont, TitleFont, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@/core/constants/theme';
 import { useGroupsStore } from '@/features/groups/presentation/store/groups.store';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
@@ -58,7 +61,20 @@ interface GroupMessage {
   isDeleted?: boolean;
 }
 
+// Keno for Good communities are regular groups with scope 'kfg': same
+// screen, green accent, and volunteer missions where events would be.
+// The accent can only be known once the group has loaded, so the inner
+// screen reports it up.
 export default function GroupDetailScreen() {
+  const [kfg, setKfg] = useState(false);
+  return (
+    <AccentScopeProvider value={kfg ? 'kfg' : 'default'}>
+      <GroupDetailInner onScope={setKfg} />
+    </AccentScopeProvider>
+  );
+}
+
+function GroupDetailInner({ onScope }: { onScope: (kfg: boolean) => void }) {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { colors } = useTheme();
@@ -115,6 +131,18 @@ export default function GroupDetailScreen() {
   const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const requestToJoinGroup = useGroupsStore((s) => s.requestToJoinGroup);
   const decideGroupJoinRequest = useGroupsStore((s) => s.decideGroupJoinRequest);
+
+  const isKfgCommunity = group?.scope === 'kfg';
+  useEffect(() => { onScope(isKfgCommunity); }, [isKfgCommunity]);
+  const kfgMissions = useKfgStore((s) => s.missions);
+  const kfgParticipations = useKfgStore((s) => s.participations);
+  const kfgStart = useKfgStore((s) => s.start);
+  const kfgStop = useKfgStore((s) => s.stop);
+  useEffect(() => {
+    if (!isKfgCommunity || !user) return;
+    kfgStart(user.id);
+    return kfgStop;
+  }, [isKfgCommunity, user?.id]);
 
   useEffect(() => {
     if (!id) return;
@@ -317,6 +345,8 @@ export default function GroupDetailScreen() {
   const groupEvents = events.filter((e) => group.eventIds.includes(e.id));
   const upcomingEvents = groupEvents.filter((e) => !isEventPast(e));
   const pastEvents = groupEvents.filter((e) => isEventPast(e));
+  const communityMissions = isKfgCommunity ? kfgMissions.filter((m) => m.groupId === group.id) : [];
+  const joinedMissionIds = new Set(kfgParticipations.filter((p) => p.status !== 'cancelled').map((p) => p.missionId));
 
   const handleToggleVerifiedOrganiser = async () => {
     const next = !group.isVerifiedOrganiser;
@@ -676,8 +706,8 @@ export default function GroupDetailScreen() {
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.stat}>
-              <Text style={[styles.statNum, { color: colors.textPrimary }]}>{group.eventIds.length}</Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t.groupStatEvents}</Text>
+              <Text style={[styles.statNum, { color: colors.textPrimary }]}>{isKfgCommunity ? group.missionIds.length : group.eventIds.length}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{isKfgCommunity ? t.kfgTabMissions : t.groupStatEvents}</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.stat}>
@@ -856,45 +886,75 @@ export default function GroupDetailScreen() {
             </View>
           )}
 
-          {/* Upcoming events */}
-          {upcomingEvents.length > 0 && (
-            <View style={styles.eventsSection}>
-              <Text style={[styles.eventsSectionTitle, { color: colors.textPrimary }]}>
-                {t.userUpcoming}
-              </Text>
-              {upcomingEvents.map((e) => (
-                <EventCard
-                  key={e.id}
-                  event={e}
-                  onPress={() => router.push(`/(app)/event/${e.id}`)}
-                />
-              ))}
-            </View>
-          )}
+          {isKfgCommunity ? (
+            communityMissions.length > 0 ? (
+              <View style={styles.eventsSection}>
+                <Text style={[styles.eventsSectionTitle, { color: colors.textPrimary }]}>
+                  {t.userUpcoming}
+                </Text>
+                <Card style={{ paddingHorizontal: Spacing.base }}>
+                  {communityMissions.map((m, i) => (
+                    <KfgMissionRow
+                      key={m.id}
+                      mission={m}
+                      joined={joinedMissionIds.has(m.id)}
+                      first={i === 0}
+                      onPress={() => router.push(`/(app)/kfg/mission/${m.id}` as any)}
+                    />
+                  ))}
+                </Card>
+              </View>
+            ) : (
+              <View style={styles.noEvents}>
+                <Icon name="heart" size={30} color={colors.textDecor} />
+                <Text style={[styles.noEventsText, { color: colors.textSecondary }]}>
+                  {t.kfgCommunityNoMissions}
+                </Text>
+              </View>
+            )
+          ) : (
+            <>
+            {/* Upcoming events */}
+            {upcomingEvents.length > 0 && (
+              <View style={styles.eventsSection}>
+                <Text style={[styles.eventsSectionTitle, { color: colors.textPrimary }]}>
+                  {t.userUpcoming}
+                </Text>
+                {upcomingEvents.map((e) => (
+                  <EventCard
+                    key={e.id}
+                    event={e}
+                    onPress={() => router.push(`/(app)/event/${e.id}`)}
+                  />
+                ))}
+              </View>
+            )}
 
-          {pastEvents.length > 0 && (
-            <View style={styles.eventsSection}>
-              <Text style={[styles.eventsSectionTitle, { color: colors.textSecondary }]}>
-                {t.groupPastEvents}
-              </Text>
-              {pastEvents.map((e) => (
-                <EventCard
-                  key={e.id}
-                  event={e}
-                  onPress={() => router.push(`/(app)/event/${e.id}`)}
-                  faded
-                />
-              ))}
-            </View>
-          )}
+            {pastEvents.length > 0 && (
+              <View style={styles.eventsSection}>
+                <Text style={[styles.eventsSectionTitle, { color: colors.textSecondary }]}>
+                  {t.groupPastEvents}
+                </Text>
+                {pastEvents.map((e) => (
+                  <EventCard
+                    key={e.id}
+                    event={e}
+                    onPress={() => router.push(`/(app)/event/${e.id}`)}
+                    faded
+                  />
+                ))}
+              </View>
+            )}
 
-          {groupEvents.length === 0 && (
-            <View style={styles.noEvents}>
-              <Icon name="cal" size={30} color={colors.textDecor} />
-              <Text style={[styles.noEventsText, { color: colors.textSecondary }]}>
-                {t.groupNoEvents}
-              </Text>
-            </View>
+            {groupEvents.length === 0 && (
+              <View style={styles.noEvents}>
+                <Icon name="cal" size={30} color={colors.textDecor} />
+                <Text style={[styles.noEventsText, { color: colors.textSecondary }]}>
+                  {t.groupNoEvents}
+                </Text>
+              </View>
+            )}
+            </>
           )}
         </ScrollView>
       )}

@@ -71,6 +71,26 @@ function optStr(v: unknown, field: string, max: number): string | null {
   return str(v, field, 1, max);
 }
 
+// ── Communities (groups docs with scope 'kfg') ──────────────────────────────
+
+/** The KfG community a mission is posted to: must exist, be a KfG community, and include the creator. */
+async function communityFor(groupId: unknown, uid: string): Promise<{ id: string; name: string } | null> {
+  if (groupId == null || groupId === '') return null;
+  if (typeof groupId !== 'string' || groupId.length > 128) throw new HttpsError('invalid-argument', 'group');
+  const g = (await db.doc(`groups/${groupId}`).get()).data();
+  if (!g || g.scope !== 'kfg') throw new HttpsError('not-found', 'group');
+  if (!(g.memberIds ?? []).includes(uid)) throw new HttpsError('permission-denied', 'not-a-member');
+  return { id: groupId, name: String(g.name ?? '').slice(0, 80) };
+}
+
+/** Keeps the community's mission count in step; best effort — the group may have been deleted. */
+async function syncCommunityMission(groupId: unknown, missionId: string, add: boolean): Promise<void> {
+  if (typeof groupId !== 'string' || !groupId) return;
+  await db.doc(`groups/${groupId}`)
+    .update({ missionIds: add ? FieldValue.arrayUnion(missionId) : FieldValue.arrayRemove(missionId) })
+    .catch(() => {});
+}
+
 // A cover photo must be one the app uploaded to our own bucket's events/
 // folder (same place as regular event covers) — never an arbitrary URL.
 function coverImage(v: unknown): string | null {
@@ -211,6 +231,7 @@ export const kfgCreateMission = onCall(async (request) => {
   const filters = sanitizeMissionFilters(d);
   if (!filters) throw new HttpsError('invalid-argument', 'ages');
   const imageUri = coverImage(d.imageUri);
+  const community = await communityFor(d.groupId, uid);
 
   const monthId = athensMonthId(new Date());
 
@@ -232,6 +253,8 @@ export const kfgCreateMission = onCall(async (request) => {
     lng,
     capacity,
     imageUri,
+    groupId: community?.id ?? null,
+    groupName: community?.name ?? null,
     ...filters,
     points: missionPoints(kind, creatorType, d.points),
     status: creatorType === 'organization' ? 'published' : 'pending',
@@ -242,6 +265,7 @@ export const kfgCreateMission = onCall(async (request) => {
     createdMonthId: monthId,
     createdAt: FieldValue.serverTimestamp(),
   });
+  if (creatorType === 'organization') await syncCommunityMission(community?.id, ref.id, true);
   return { missionId: ref.id, status: creatorType === 'organization' ? 'published' : 'pending' };
 });
 
@@ -250,16 +274,19 @@ export const kfgReviewMission = onCall(async (request) => {
   if (uid !== KENO_EVENTS_UID && !(await isAdminUid(uid))) throw new HttpsError('permission-denied', 'admin-only');
   const { missionId, approve, reason } = request.data ?? {};
   const ref = db.doc(`${MISSIONS}/${String(missionId)}`);
+  let groupId: unknown = null;
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists) throw new HttpsError('not-found', 'mission');
     if (snap.data()!.status !== 'pending') throw new HttpsError('failed-precondition', 'not-pending');
+    groupId = snap.data()!.groupId;
     tx.update(ref, {
       status: approve === true ? 'published' : 'rejected',
       rejectionReason: approve === true ? null : (typeof reason === 'string' ? reason.slice(0, 300) : null),
       reviewedBy: uid, reviewedAt: FieldValue.serverTimestamp(),
     });
   });
+  if (approve === true) await syncCommunityMission(groupId, String(missionId), true);
   return { ok: true };
 });
 
@@ -275,6 +302,7 @@ export const kfgCancelMission = onCall(async (request) => {
   if (m.endsAt.toMillis() < Date.now()) throw new HttpsError('failed-precondition', 'already-over');
 
   await ref.update({ status: 'cancelled', cancelledAt: FieldValue.serverTimestamp() });
+  await syncCommunityMission(m.groupId, missionId, false);
   const open = await db.collection(PARTICIPATIONS).where('missionId', '==', missionId).get();
   const batch = db.batch();
   open.docs.filter((p) => OPEN_STATUSES.includes(p.data().status))

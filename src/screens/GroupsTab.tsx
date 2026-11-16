@@ -11,7 +11,8 @@ import { useTheme } from '@/core/theme';
 import { UIFontLight, TitleFont, FontSize, FontWeight, Spacing, BorderRadius } from '@/core/constants/theme';
 import { useGroupsStore } from '@/features/groups/presentation/store/groups.store';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
-import { GroupEntity } from '@/features/groups/domain/entities/group.entity';
+import { GroupEntity, GroupScope } from '@/features/groups/domain/entities/group.entity';
+import { TAB_BAR_BASE_HEIGHT } from '@/core/constants/layout';
 import { useTranslation } from '@/core/i18n';
 import { sounds } from '@/core/utils/sounds';
 import { usePreferencesStore } from '@/core/store/preferences.store';
@@ -61,7 +62,7 @@ function GroupHeroCard({ group, onPress, action }: { group: GroupEntity; onPress
               <Icon name="users" size={13} color={colors.textHint} />
               <Text style={[styles.metaText, { color: colors.textHint }]}>{t.groupsMembers(group.memberIds.length)}</Text>
             </View>
-            <Tag label={t.groupsEvents(group.eventIds.length)} variant="neutral" />
+            <Tag label={group.scope === 'kfg' ? t.kfgMissionsCount(group.missionIds.length) : t.groupsEvents(group.eventIds.length)} variant="neutral" />
           </View>
           {action && <View style={styles.heroAction}>{action}</View>}
         </View>
@@ -81,7 +82,7 @@ function GroupRow({
       <View style={styles.rowBody}>
         <Text style={[styles.rowName, { color: colors.textPrimary }]} numberOfLines={1}>{group.name}</Text>
         <Text style={[styles.rowMeta, { color: colors.textHint }]} numberOfLines={1}>
-          {t.groupsMembers(group.memberIds.length)} · {t.groupsEvents(group.eventIds.length)}
+          {t.groupsMembers(group.memberIds.length)} · {group.scope === 'kfg' ? t.kfgMissionsCount(group.missionIds.length) : t.groupsEvents(group.eventIds.length)}
         </Text>
       </View>
       {action ?? <Icon name="fwd" size={16} color={colors.textDecor} />}
@@ -89,14 +90,17 @@ function GroupRow({
   );
 }
 
-export default function GroupsScreen() {
+/** scope 'kfg' = the Keno for Good "Κοινότητες" tab: same screen, only KfG
+ *  communities, no people-search tab, and room for the KfG hub's tab bar. */
+export default function GroupsScreen({ scope = 'keno' }: { scope?: GroupScope } = {}) {
+  const kfg = scope === 'kfg';
   const router = useRouter();
   const { goToTab } = useTabNavigation();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
-  const publicGroups = useGroupsStore((s) => s.publicGroups);
-  const myGroups = useGroupsStore((s) => s.myGroups);
+  const publicGroups = useGroupsStore((s) => (kfg ? s.kfgPublicGroups : s.publicGroups));
+  const myGroups = useGroupsStore((s) => (kfg ? s.kfgMyGroups : s.myGroups));
   const isLoading = useGroupsStore((s) => s.isLoading);
   const loadPublicGroups = useGroupsStore((s) => s.loadPublicGroups);
   const loadMyGroups = useGroupsStore((s) => s.loadMyGroups);
@@ -192,22 +196,24 @@ export default function GroupsScreen() {
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <View style={[styles.head, { paddingTop: insets.top + 14 }]}>
         <ScreenHeader
-          title={t.groupsTitle}
+          title={kfg ? t.kfgTabCommunities : t.groupsTitle}
           right={tab === 0 && user ? (
             <AnimatedPressable
-              onPress={() => router.push('/(app)/group/create' as any)}
+              onPress={() => router.push((kfg ? '/(app)/group/create?scope=kfg' : '/(app)/group/create') as any)}
               style={[styles.createBtn, { backgroundColor: colors.primary }]}
             >
               <Icon name="plus" size={18} color="#fff" />
             </AnimatedPressable>
           ) : undefined}
         />
-        <SegmentedTabs
-          tabs={[t.groupsTitle, t.searchPeopleLabel]}
-          activeIndex={tab}
-          onChange={setTab}
-          style={styles.tabs}
-        />
+        {!kfg && (
+          <SegmentedTabs
+            tabs={[t.groupsTitle, t.searchPeopleLabel]}
+            activeIndex={tab}
+            onChange={setTab}
+            style={styles.tabs}
+          />
+        )}
         {tab === 0 && (
           <View style={[styles.searchBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Icon name="search" size={16} color={colors.textHint} />
@@ -243,11 +249,11 @@ export default function GroupsScreen() {
       ) : nothingAtAll ? (
         <View style={styles.empty}>
           <Icon name="globe" size={40} color={colors.textDecor} />
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{t.groupsEmptyDiscover}</Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{kfg ? t.kfgCommunitiesEmpty : t.groupsEmptyDiscover}</Text>
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 24 }]}
+          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 24 + (kfg ? TAB_BAR_BASE_HEIGHT : 0) }]}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
         >

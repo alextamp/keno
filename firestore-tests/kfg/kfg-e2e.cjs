@@ -48,6 +48,27 @@ const qr = async (pid) => {
   ok(status === 'published', 'org mission is published immediately');
   ok((await db.doc(`kfgMissions/${missionId}`).get()).data().points === 300, 'points clamped to 300');
 
+  console.log('Communities');
+  await db.doc('groups/c1').set({ name: 'Εθελοντές Αθήνας', scope: 'kfg', memberIds: ['org1'], missionIds: [] });
+  await db.doc('groups/k1').set({ name: 'Μπάλα', memberIds: ['org1'] });
+  const inC = await org.call('kfgCreateMission', {
+    title: 'Αποστολή κοινότητας', description: 'Μια αποστολή στην κοινότητα.', kind: 'partnerQr', cause: 'people',
+    startsAt: start.toISOString(), endsAt: end.toISOString(), capacity: 5, areaLabel: 'Αθήνα', groupId: 'c1',
+  });
+  const cm = (await db.doc(`kfgMissions/${inC.missionId}`).get()).data();
+  ok(cm.groupId === 'c1' && cm.groupName === 'Εθελοντές Αθήνας', 'mission stores its community');
+  ok((await db.doc('groups/c1').get()).data().missionIds.includes(inC.missionId), 'published mission added to the community');
+  await fails(s1.call('kfgCreateMission', {
+    title: 'Ξένη κοινότητα', description: 'Δεν είμαι μέλος εδώ.', startsAt: start.toISOString(), endsAt: end.toISOString(),
+    capacity: 5, areaLabel: 'Αθήνα', groupId: 'c1',
+  }), 'not-a-member', 'only members post to a community');
+  await fails(org.call('kfgCreateMission', {
+    title: 'Κανονική ομάδα', description: 'Όχι κοινότητα του KfG.', kind: 'partnerQr', startsAt: start.toISOString(), endsAt: end.toISOString(),
+    capacity: 5, areaLabel: 'Αθήνα', groupId: 'k1',
+  }), 'group', 'regular Keno groups cannot hold missions');
+  await org.call('kfgCancelMission', { missionId: inC.missionId });
+  ok(!(await db.doc('groups/c1').get()).data().missionIds.includes(inC.missionId), 'cancelled mission leaves the community');
+
   await fails(org.call('kfgJoin', { missionId }), 'organizations-cannot-join', 'organization cannot join');
   const { participationId } = await s1.call('kfgJoin', { missionId });
   await s1.call('kfgJoin', { missionId });

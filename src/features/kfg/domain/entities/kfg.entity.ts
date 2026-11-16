@@ -33,6 +33,9 @@ export interface KfgMission {
   allowedUniversities?: string[];
   genderFilter?: GenderFilter;
   soloFriendly?: boolean;
+  /** KfG community (groups doc with scope 'kfg') it was posted to; name denormalized by the server. */
+  groupId?: string;
+  groupName?: string;
   points: number;
   status: KfgMissionStatus;
   participantCount: number;

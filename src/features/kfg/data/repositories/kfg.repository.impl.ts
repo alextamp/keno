@@ -136,6 +136,7 @@ export const kfgRepository: KfgRepository = {
       capacity: p.capacity, points: p.points,
       imageUri: p.imageUri ?? null, minAge: p.minAge ?? null, maxAge: p.maxAge ?? null,
       allowedUniversities: p.allowedUniversities ?? [], genderFilter: p.genderFilter ?? 'any', soloFriendly: p.soloFriendly === true,
+      groupId: p.groupId ?? null,
     }));
   },
 

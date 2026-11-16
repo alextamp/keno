@@ -1,3 +1,8 @@
+/** 'kfg' = a Keno for Good community: same group mechanics (members, chat,
+ *  private + join requests, invites), listed only inside Keno for Good and
+ *  holding volunteer missions instead of events. Missing on old docs = 'keno'. */
+export type GroupScope = 'keno' | 'kfg';
+
 export interface GroupEntity {
   id: string;
   name: string;
@@ -10,6 +15,9 @@ export interface GroupEntity {
   creatorId: string;
   memberIds: string[];
   eventIds: string[];
+  scope: GroupScope;
+  /** KfG communities: published missions posted to it (written by the server). */
+  missionIds: string[];
   /** Same shape/semantics as EventEntity.allowedUniversities — undefined or
    *  empty means no restriction ("Any"), matching how event creation's
    *  university picker omits the field entirely for "Any" rather than

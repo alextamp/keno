@@ -190,6 +190,11 @@ function MissionInner() {
             <InfoRow icon="shield" title={mission.creatorName} subtitle={t.kfgOrganizerRow} />
             <InfoRow icon="pin" title={mission.areaLabel} subtitle={placeLine || undefined} />
             <InfoRow icon="qr" title={t.kfgVerifyLabel(mission.kind, studentRun)} subtitle={t.kfgVerifyHow(mission.kind, studentRun)} />
+            {mission.groupId && mission.groupName && (
+              <AnimatedPressable onPress={() => router.push(`/(app)/group/${mission.groupId}` as any)} accessibilityRole="button">
+                <InfoRow icon="users" title={mission.groupName} subtitle={t.kfgCommunityRow} />
+              </AnimatedPressable>
+            )}
             {(filterLine || mission.soloFriendly) && (
               <InfoRow
                 icon="users"

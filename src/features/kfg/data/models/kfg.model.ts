@@ -33,6 +33,8 @@ export function missionFromFirestore(snap: DocumentSnapshot<DocumentData>): KfgM
     allowedUniversities: Array.isArray(d.allowedUniversities) && d.allowedUniversities.length ? d.allowedUniversities : undefined,
     genderFilter: d.genderFilter === 'male' || d.genderFilter === 'female' ? d.genderFilter : undefined,
     soloFriendly: d.soloFriendly === true,
+    groupId: opt(d.groupId),
+    groupName: opt(d.groupName),
     points: d.points ?? 0,
     status: d.status,
     participantCount: d.participantCount ?? 0,

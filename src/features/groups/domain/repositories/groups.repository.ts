@@ -1,6 +1,6 @@
 import { Either } from '@/core/utils/either';
 import { Failure } from '@/core/errors/failures';
-import { GroupEntity } from '../entities/group.entity';
+import { GroupEntity, GroupScope } from '../entities/group.entity';
 
 export interface CreateGroupParams {
   name: string;
@@ -11,6 +11,8 @@ export interface CreateGroupParams {
   creatorId: string;
   allowedUniversities?: string[];
   isPrivate: boolean;
+  /** Defaults to 'keno'. */
+  scope?: GroupScope;
 }
 
 export interface UpdateGroupParams {

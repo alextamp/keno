@@ -4,9 +4,17 @@ import { GroupEntity } from '../../domain/entities/group.entity';
 import { groupsRepository } from '../../data/repositories/groups.repository.impl';
 import { CreateGroupParams, UpdateGroupParams } from '../../domain/repositories/groups.repository';
 
+// Keno for Good communities live in the same `groups` collection (scope
+// 'kfg') but are kept in their own lists here, so every existing consumer of
+// publicGroups/myGroups (Groups screen, event creation's group picker) only
+// ever sees regular Keno groups.
+const isKfg = (g: GroupEntity) => g.scope === 'kfg';
+
 interface GroupsState {
   publicGroups: GroupEntity[];
   myGroups: GroupEntity[];
+  kfgPublicGroups: GroupEntity[];
+  kfgMyGroups: GroupEntity[];
   isLoading: boolean;
   error: string | null;
   loadPublicGroups: () => Promise<void>;
@@ -25,6 +33,8 @@ interface GroupsState {
 export const useGroupsStore = create<GroupsState>((set, get) => ({
   publicGroups: [],
   myGroups: [],
+  kfgPublicGroups: [],
+  kfgMyGroups: [],
   isLoading: false,
   error: null,
 
@@ -33,7 +43,11 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     const result = await groupsRepository.getPublicGroups();
     fold(result,
       (err) => set({ isLoading: false, error: err.message }),
-      (groups) => set({ isLoading: false, publicGroups: groups }),
+      (groups) => set({
+        isLoading: false,
+        publicGroups: groups.filter((g) => !isKfg(g)),
+        kfgPublicGroups: groups.filter(isKfg),
+      }),
     );
   },
 
@@ -41,7 +55,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     const result = await groupsRepository.getUserGroups(uid);
     fold(result,
       () => {},
-      (groups) => set({ myGroups: groups }),
+      (groups) => set({ myGroups: groups.filter((g) => !isKfg(g)), kfgMyGroups: groups.filter(isKfg) }),
     );
   },
 
@@ -51,11 +65,9 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     return fold(result,
       (err) => { set({ isLoading: false, error: err.message }); return null; },
       (group) => {
-        set((s) => ({
-          isLoading: false,
-          publicGroups: [group, ...s.publicGroups],
-          myGroups: [group, ...s.myGroups],
-        }));
+        set((s) => (isKfg(group)
+          ? { isLoading: false, kfgPublicGroups: [group, ...s.kfgPublicGroups], kfgMyGroups: [group, ...s.kfgMyGroups] }
+          : { isLoading: false, publicGroups: [group, ...s.publicGroups], myGroups: [group, ...s.myGroups] }));
         return group;
       },
     );
@@ -66,20 +78,17 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     return fold(result,
       () => false,
       () => {
+        const addMe = (g: GroupEntity) => (g.id === groupId ? { ...g, memberIds: [...g.memberIds, userId] } : g);
+        const intoMine = (mine: GroupEntity[], pub: GroupEntity[]) => {
+          if (mine.some((g) => g.id === groupId)) return mine.map(addMe);
+          const grp = pub.find((g) => g.id === groupId);
+          return grp ? [...mine, addMe(grp)] : mine;
+        };
         set((s) => ({
-          publicGroups: s.publicGroups.map((g) =>
-            g.id === groupId ? { ...g, memberIds: [...g.memberIds, userId] } : g,
-          ),
-          myGroups: (() => {
-            const alreadyMine = s.myGroups.find((g) => g.id === groupId);
-            if (alreadyMine) {
-              return s.myGroups.map((g) =>
-                g.id === groupId ? { ...g, memberIds: [...g.memberIds, userId] } : g,
-              );
-            }
-            const grp = s.publicGroups.find((g) => g.id === groupId);
-            return grp ? [...s.myGroups, { ...grp, memberIds: [...grp.memberIds, userId] }] : s.myGroups;
-          })(),
+          publicGroups: s.publicGroups.map(addMe),
+          myGroups: intoMine(s.myGroups, s.publicGroups),
+          kfgPublicGroups: s.kfgPublicGroups.map(addMe),
+          kfgMyGroups: intoMine(s.kfgMyGroups, s.kfgPublicGroups),
         }));
         return true;
       },
@@ -91,11 +100,12 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     return fold(result,
       () => false,
       () => {
+        const dropMe = (g: GroupEntity) => (g.id === groupId ? { ...g, memberIds: g.memberIds.filter((id) => id !== userId) } : g);
         set((s) => ({
-          publicGroups: s.publicGroups.map((g) =>
-            g.id === groupId ? { ...g, memberIds: g.memberIds.filter((id) => id !== userId) } : g,
-          ),
+          publicGroups: s.publicGroups.map(dropMe),
           myGroups: s.myGroups.filter((g) => g.id !== groupId),
+          kfgPublicGroups: s.kfgPublicGroups.map(dropMe),
+          kfgMyGroups: s.kfgMyGroups.filter((g) => g.id !== groupId),
         }));
         return true;
       },
@@ -118,6 +128,8 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
         set((s) => ({
           publicGroups: s.publicGroups.map((g) => (g.id === groupId ? { ...g, ...params } : g)),
           myGroups: s.myGroups.map((g) => (g.id === groupId ? { ...g, ...params } : g)),
+          kfgPublicGroups: s.kfgPublicGroups.map((g) => (g.id === groupId ? { ...g, ...params } : g)),
+          kfgMyGroups: s.kfgMyGroups.map((g) => (g.id === groupId ? { ...g, ...params } : g)),
         }));
         return true;
       },
@@ -132,6 +144,8 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
         set((s) => ({
           publicGroups: s.publicGroups.filter((g) => g.id !== groupId),
           myGroups: s.myGroups.filter((g) => g.id !== groupId),
+          kfgPublicGroups: s.kfgPublicGroups.filter((g) => g.id !== groupId),
+          kfgMyGroups: s.kfgMyGroups.filter((g) => g.id !== groupId),
         }));
         return true;
       },

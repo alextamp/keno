@@ -29,6 +29,8 @@ export interface CreateKfgMissionParams {
   allowedUniversities?: string[];
   genderFilter?: GenderFilter;
   soloFriendly?: boolean;
+  /** A KfG community the creator belongs to (checked by the server). */
+  groupId?: string;
 }
 
 export type KfgScanResult =

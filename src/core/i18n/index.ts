@@ -400,6 +400,14 @@ export type Translations = {
   wrappedWeeksFreeze: string;
   wrappedCheckins: string;
   kfgTabMissions: string;
+  kfgTabCommunities: string;
+  kfgCommunitiesEmpty: string;
+  kfgCommunityCreateTitle: string;
+  kfgCommunityField: string;
+  kfgCommunityNone: string;
+  kfgCommunityNoMissions: string;
+  kfgCommunityRow: string;
+  kfgMissionsCount: (n: number) => string;
   kfgTabCharacter: string;
   kfgTabLeaderboard: string;
   kfgBackA11y: string;
@@ -1645,6 +1653,14 @@ const en: Translations = {
   wrappedWeeksFreeze: 'freezes still banked',
   wrappedCheckins: 'check-ins',
   kfgTabMissions: 'Actions',
+  kfgTabCommunities: 'Communities',
+  kfgCommunitiesEmpty: 'No volunteer communities yet — start the first one!',
+  kfgCommunityCreateTitle: 'New community',
+  kfgCommunityField: 'Community (optional)',
+  kfgCommunityNone: 'None',
+  kfgCommunityNoMissions: 'No upcoming missions in this community yet.',
+  kfgCommunityRow: 'Community',
+  kfgMissionsCount: (n) => (n === 1 ? '1 mission' : `${n} missions`),
   kfgTabCharacter: 'Character',
   kfgTabLeaderboard: 'Ranking',
   kfgBackA11y: 'Back to Keno',
@@ -1700,6 +1716,8 @@ const en: Translations = {
   } as Record<string, string>)[status] ?? '',
   kfgError: (code) => ({
     full: 'The spots just filled up.',
+    group: 'That community no longer exists.',
+    'not-a-member': 'You can only post to communities you’re a member of.',
     'age-restricted': 'This mission is for a different age range.',
     'uni-restricted': 'This mission is only for students of specific universities.',
     ages: 'The age range isn’t valid.',
@@ -2907,6 +2925,14 @@ const el: Translations = {
   wrappedWeeksFreeze: 'freeze που κράτησες',
   wrappedCheckins: 'check-ins',
   kfgTabMissions: 'Δράσεις',
+  kfgTabCommunities: 'Κοινότητες',
+  kfgCommunitiesEmpty: 'Καμία κοινότητα εθελοντών ακόμα — ξεκίνα την πρώτη!',
+  kfgCommunityCreateTitle: 'Νέα κοινότητα',
+  kfgCommunityField: 'Κοινότητα (προαιρετικά)',
+  kfgCommunityNone: 'Καμία',
+  kfgCommunityNoMissions: 'Δεν υπάρχουν ακόμα επερχόμενες αποστολές σε αυτή την κοινότητα.',
+  kfgCommunityRow: 'Κοινότητα',
+  kfgMissionsCount: (n) => (n === 1 ? '1 αποστολή' : `${n} αποστολές`),
   kfgTabCharacter: 'Χαρακτήρας',
   kfgTabLeaderboard: 'Κατάταξη',
   kfgBackA11y: 'Πίσω στο Keno',
@@ -2962,6 +2988,8 @@ const el: Translations = {
   } as Record<string, string>)[status] ?? '',
   kfgError: (code) => ({
     full: 'Οι θέσεις μόλις γέμισαν.',
+    group: 'Η κοινότητα δεν υπάρχει πια.',
+    'not-a-member': 'Μπορείς να δημοσιεύσεις μόνο σε κοινότητες όπου είσαι μέλος.',
     'age-restricted': 'Η αποστολή είναι για άλλο εύρος ηλικίας.',
     'uni-restricted': 'Η αποστολή είναι μόνο για φοιτητές συγκεκριμένων πανεπιστημίων.',
     ages: 'Το εύρος ηλικίας δεν είναι σωστό.',

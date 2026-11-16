@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +20,7 @@ import { isLeft } from '@/core/utils/either';
 import { analytics } from '@/core/utils/analytics';
 import { containsBlockedContent } from '@/core/utils/contentModeration';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
+import { useGroupsStore } from '@/features/groups/presentation/store/groups.store';
 import { kfgRepository } from '@/features/kfg/data/repositories/kfg.repository.impl';
 import { KfgCause } from '@/features/kfg/domain/entities/kfg.entity';
 import { GenderFilter } from '@/features/events/domain/entities/event.entity';
@@ -108,6 +109,10 @@ function CreateInner() {
   const [maxAge, setMaxAge] = useState(26);
   const [universities, setUniversities] = useState<string[]>([]);
   const [soloFriendly, setSoloFriendly] = useState(false);
+  const [groupId, setGroupId] = useState<string | null>(null);
+  const communities = useGroupsStore((s) => s.kfgMyGroups);
+  const loadMyGroups = useGroupsStore((s) => s.loadMyGroups);
+  useEffect(() => { if (user) loadMyGroups(user.id); }, [user?.id]);
   const [picker, setPicker] = useState<'date' | 'start' | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -195,6 +200,7 @@ function CreateInner() {
       allowedUniversities: universities,
       genderFilter,
       soloFriendly,
+      groupId: groupId ?? undefined,
     });
     setSaving(false);
     if (isLeft(r)) {
@@ -339,6 +345,18 @@ function CreateInner() {
             <SectionLabel label={t.kfgFieldPoints} />
             <View style={styles.chips}>
               {POINT_OPTIONS.map((p) => <Chip key={p} label={`+${p}`} on={points === p} onPress={() => setPoints(p)} />)}
+            </View>
+          </>
+        )}
+
+        {communities.length > 0 && (
+          <>
+            <SectionLabel label={t.kfgCommunityField} />
+            <View style={styles.chips}>
+              <Chip label={t.kfgCommunityNone} on={groupId === null} onPress={() => setGroupId(null)} />
+              {communities.map((g) => (
+                <Chip key={g.id} label={`${g.emoji} ${g.name}`} on={groupId === g.id} onPress={() => setGroupId(g.id)} />
+              ))}
             </View>
           </>
         )}

@@ -5,9 +5,9 @@ import {
   ScrollView, StyleSheet, Switch, Text, TextInput, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Icon } from '@/components/ui/Icon';
-import { useTheme } from '@/core/theme';
+import { AccentScopeProvider, useTheme } from '@/core/theme';
 import { UIFont, TitleFont, FontSize, FontWeight, Spacing, BorderRadius } from '@/core/constants/theme';
 import { useGroupsStore } from '@/features/groups/presentation/store/groups.store';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
@@ -20,7 +20,19 @@ import { useTranslation, useLanguageStore } from '@/core/i18n';
 
 const UNIVERSITIES = ['Any', ...GREEK_UNIVERSITIES];
 
+// ?scope=kfg (from the Keno for Good "Κοινότητες" tab) creates a KfG
+// community: same form, green accent, listed only inside Keno for Good.
 export default function CreateGroupScreen() {
+  const { scope } = useLocalSearchParams<{ scope?: string }>();
+  const kfg = scope === 'kfg';
+  return (
+    <AccentScopeProvider value={kfg ? 'kfg' : 'default'}>
+      <CreateGroupInner kfg={kfg} />
+    </AccentScopeProvider>
+  );
+}
+
+function CreateGroupInner({ kfg }: { kfg: boolean }) {
   const router = useRouter();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -33,8 +45,8 @@ export default function CreateGroupScreen() {
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [emoji, setEmoji] = useState('🎓');
-  const [coverColor, setCoverColor] = useState(GROUP_COVER_COLORS[0]);
+  const [emoji, setEmoji] = useState(kfg ? '🤝' : '🎓');
+  const [coverColor, setCoverColor] = useState(kfg ? '#3F7A55' : GROUP_COVER_COLORS[0]);
   const [coverPhoto, setCoverPhoto] = useState<string | undefined>(undefined);
   // Same "Any" + multi-select pattern as event creation's university filter.
   const [selectedUniversities, setSelectedUniversities] = useState<string[]>(
@@ -87,6 +99,7 @@ export default function CreateGroupScreen() {
       creatorId: user.id,
       allowedUniversities: selectedUniversities.includes('Any') ? undefined : selectedUniversities,
       isPrivate,
+      scope: kfg ? 'kfg' : 'keno',
     });
     if (group) router.replace(`/(app)/group/${group.id}` as any);
   };
@@ -101,7 +114,7 @@ export default function CreateGroupScreen() {
         <AnimatedPressable onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Icon name="back" size={15} color={colors.textSecondary} />
         </AnimatedPressable>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{t.groupNewTitle}</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{kfg ? t.kfgCommunityCreateTitle : t.groupNewTitle}</Text>
         <View style={{ width: 32 }} />
       </View>
 

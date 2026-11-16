@@ -25,6 +25,8 @@ function groupFromFirestore(snap: DocumentSnapshot): GroupEntity {
     creatorId: d.creatorId,
     memberIds: d.memberIds ?? [],
     eventIds: d.eventIds ?? [],
+    scope: d.scope === 'kfg' ? 'kfg' : 'keno',
+    missionIds: d.missionIds ?? [],
     // Falls back to the old single-university field for groups created
     // before this became a multi-select restriction, so existing data isn't
     // silently dropped.
@@ -49,6 +51,7 @@ export const groupsRepository: GroupsRepository = {
         creatorId: params.creatorId,
         memberIds: [params.creatorId],
         eventIds: [],
+        ...(params.scope === 'kfg' ? { scope: 'kfg', missionIds: [] } : {}),
         invitedUserIds: [],
         allowedUniversities: params.allowedUniversities ?? null,
         isPrivate: params.isPrivate,
