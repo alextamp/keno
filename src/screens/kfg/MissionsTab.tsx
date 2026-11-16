@@ -27,12 +27,12 @@ export default function MissionsTab() {
   const t = useTranslation();
   const router = useRouter();
   const { profile, missions, myMissions, participations, loaded } = useKfgStore();
+  // Taken once per mount (render must stay pure).
+  const [now] = useState(Date.now);
   const mine = useMemo(
     () => myMissions.filter((m) => m.status === 'pending' || m.endsAt.getTime() > now - 7 * 86_400_000),
     [myMissions, now],
   );
-  // Taken once per mount (render must stay pure).
-  const [now] = useState(Date.now);
   // Same search + chips idea as the feed: typing or picking a cause searches
   // every upcoming mission, not just this week's.
   const [search, setSearch] = useState('');
