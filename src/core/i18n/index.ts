@@ -468,6 +468,12 @@ export type Translations = {
   kfgRollCallOut: string;
   kfgStandInBtn: string;
   kfgStandInConfirm: string;
+  kfgQuestsWeekly: string;
+  kfgChallenges: string;
+  kfgClaimBtn: (points: string) => string;
+  kfgClaimed: string;
+  kfgFlagshipOn: string;
+  kfgFlagshipOff: string;
   kfgTabCharacter: string;
   kfgTabLeaderboard: string;
   kfgBackA11y: string;
@@ -1795,6 +1801,12 @@ const en: Translations = {
   kfgRollCallOut: 'Check out',
   kfgStandInBtn: 'The organizer isn’t here — take over',
   kfgStandInConfirm: 'You become a co-host and can scan everyone else in. (Someone else has to scan you.)',
+  kfgQuestsWeekly: 'This week',
+  kfgChallenges: 'Challenges',
+  kfgClaimBtn: (p) => `Claim +${p}`,
+  kfgClaimed: '✓ Claimed',
+  kfgFlagshipOn: 'Pin as flagship',
+  kfgFlagshipOff: 'Unpin flagship',
   kfgTabCharacter: 'Character',
   kfgTabLeaderboard: 'Ranking',
   kfgBackA11y: 'Back to Keno',
@@ -1850,6 +1862,8 @@ const en: Translations = {
   } as Record<string, string>)[status] ?? '',
   kfgError: (code) => ({
     full: 'The spots just filled up.',
+    'not-done': 'Not done yet.',
+    claimed: 'Already claimed.',
     'own-code': 'You can’t scan yourself in — ask another organizer.',
     'host-here': 'The organizer is already checking people in.',
     'too-early': 'You can take over 15 minutes after the start.',
@@ -3149,6 +3163,12 @@ const el: Translations = {
   kfgRollCallOut: 'Check-out',
   kfgStandInBtn: 'Δεν ήρθε ο διοργανωτής — ανάλαβε εσύ',
   kfgStandInConfirm: 'Γίνεσαι συνδιοργανωτής και σκανάρεις τους υπόλοιπους. (Εσένα πρέπει να σε σκανάρει κάποιος άλλος.)',
+  kfgQuestsWeekly: 'Αυτή την εβδομάδα',
+  kfgChallenges: 'Challenges',
+  kfgClaimBtn: (p) => `Πάρε +${p}`,
+  kfgClaimed: '✓ Το πήρες',
+  kfgFlagshipOn: 'Καρφίτσωμα ως flagship',
+  kfgFlagshipOff: 'Ξεκαρφίτσωμα flagship',
   kfgTabCharacter: 'Χαρακτήρας',
   kfgTabLeaderboard: 'Κατάταξη',
   kfgBackA11y: 'Πίσω στο Keno',
@@ -3204,6 +3224,8 @@ const el: Translations = {
   } as Record<string, string>)[status] ?? '',
   kfgError: (code) => ({
     full: 'Οι θέσεις μόλις γέμισαν.',
+    'not-done': 'Δεν έχει ολοκληρωθεί ακόμα.',
+    claimed: 'Το έχεις ήδη πάρει.',
     'own-code': 'Δεν μπορείς να σκανάρεις τον εαυτό σου — ζήτα από άλλον διοργανωτή.',
     'host-here': 'Ο διοργανωτής ήδη κάνει check-in.',
     'too-early': 'Μπορείς να αναλάβεις 15 λεπτά μετά την έναρξη.',

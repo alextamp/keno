@@ -90,6 +90,11 @@ export interface KfgRepository {
   invite(missionId: string, uid: string): Promise<Either<Failure, void>>;
   /** "Did you come alone?" — first-solo ticket + solo-buddy nudge. */
   setSolo(missionId: string, solo: boolean): Promise<Either<Failure, void>>;
+  claimQuest(questId: string): Promise<Either<Failure, { points: number }>>;
+  /** Claim doc ids (questClaimId) the user already took. */
+  subscribeClaims(uid: string, onChange: (ids: string[]) => void): () => void;
+  /** Admin: pin/unpin the flagship banner. */
+  setFlagship(missionId: string, on: boolean): Promise<Either<Failure, void>>;
   leave(missionId: string): Promise<Either<Failure, void>>;
   scan(code: string): Promise<Either<Failure, KfgScanResult>>;
   checkOutAll(missionId: string): Promise<Either<Failure, { completed: number; tooEarly: number }>>;

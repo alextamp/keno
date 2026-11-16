@@ -191,6 +191,18 @@ export const kfgRepository: KfgRepository = {
     return attempt(() => call<void>('kfgInvite', { missionId, uid }));
   },
 
+  claimQuest(questId) {
+    return attempt(() => call<{ points: number }>('kfgClaimQuest', { questId }));
+  },
+
+  subscribeClaims(uid, onChange) {
+    return onSnapshot(collection(db, PROFILES, uid, 'claims'), (snap) => onChange(snap.docs.map((d) => d.id)), () => onChange([]));
+  },
+
+  setFlagship(missionId, on) {
+    return attempt(() => call<void>('kfgSetFlagship', { missionId, on }));
+  },
+
   setSolo(missionId, solo) {
     return attempt(() => call<void>('kfgSetSolo', { missionId, solo }));
   },

@@ -8,6 +8,7 @@ import { ProgressTrack } from '@/components/ui/ProgressTrack';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { KfgCharacter } from '@/components/kfg/KfgCharacter';
 import { KfgHeader } from '@/components/kfg/KfgHeader';
+import { KfgQuests } from '@/components/kfg/KfgQuests';
 import { useTheme } from '@/core/theme';
 import { BorderRadius, FontSize, FontWeight, Spacing, TitleFont, UIFont, UIFontLight } from '@/core/constants/theme';
 import { TAB_BAR_BASE_HEIGHT } from '@/core/constants/layout';
@@ -197,6 +198,8 @@ export default function CharacterTab() {
           <Icon name="fwd" size={15} color={colors.textDecor} />
         </Card>
       </AnimatedPressable>
+
+      <KfgQuests />
 
       <SectionLabel label={t.kfgCharacters} style={styles.section} />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.characters}>

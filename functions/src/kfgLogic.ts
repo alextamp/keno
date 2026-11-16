@@ -299,3 +299,46 @@ export function missionEligibility(
   if (uni && unis.length > 0 && !unis.includes(uni)) return 'uni-restricted';
   return null;
 }
+
+// ── Quests & challenges (the events' weekly quests + lifetime challenges) ──
+
+export interface KfgQuestDef {
+  id: string;
+  /** Weekly ones reset every Athens week; challenges are once ever. */
+  weekly: boolean;
+  target: number;
+  points: number;
+  measure: 'completed' | 'newCause' | 'causes' | 'organizations';
+}
+
+export const KFG_QUESTS: KfgQuestDef[] = [
+  { id: 'week_one', weekly: true, target: 1, points: 40, measure: 'completed' },
+  { id: 'week_two', weekly: true, target: 2, points: 80, measure: 'completed' },
+  { id: 'week_new_cause', weekly: true, target: 1, points: 50, measure: 'newCause' },
+  { id: 'missions_5', weekly: false, target: 5, points: 100, measure: 'completed' },
+  { id: 'missions_10', weekly: false, target: 10, points: 200, measure: 'completed' },
+  { id: 'causes_3', weekly: false, target: 3, points: 100, measure: 'causes' },
+  { id: 'orgs_3', weekly: false, target: 3, points: 100, measure: 'organizations' },
+];
+
+/** One completed mission, as far as quests care. */
+export interface KfgDoneForQuest { weekId: string; cause: string; creatorId: string; creatorType: KfgCreatorType }
+
+/** Progress toward a quest from the user's completed missions (capped at the target). */
+export function questProgress(q: KfgQuestDef, done: KfgDoneForQuest[], weekId: string): number {
+  const inScope = q.weekly ? done.filter((d) => d.weekId === weekId) : done;
+  let n = 0;
+  if (q.measure === 'completed') n = inScope.length;
+  if (q.measure === 'causes') n = new Set(done.map((d) => d.cause)).size;
+  if (q.measure === 'organizations') n = new Set(done.filter((d) => d.creatorType === 'organization').map((d) => d.creatorId)).size;
+  if (q.measure === 'newCause') {
+    const before = new Set(done.filter((d) => d.weekId < weekId).map((d) => d.cause));
+    n = new Set(inScope.map((d) => d.cause).filter((c) => !before.has(c))).size;
+  }
+  return Math.min(n, q.target);
+}
+
+/** The claim doc id: weekly quests can be claimed once per week, challenges once ever. */
+export function questClaimId(q: KfgQuestDef, weekId: string): string {
+  return q.weekly ? `${q.id}_${weekId}` : q.id;
+}

@@ -1,7 +1,7 @@
 import {
   athensMonthId, athensWeekId, isInScanWindow, isQrValid, KFG_LIMITS, kfgLevel, levelUnlocks, missionPoints,
   missionEligibility, nextStreak, parseQrCode, photoPairProblems, qrSignature, requiredConfirmations, resolveGroup,
-  sanitizeMissionFilters,
+  sanitizeMissionFilters, KFG_QUESTS, questProgress, questClaimId,
 } from '../kfgLogic';
 
 describe('levels and unlocks', () => {
@@ -144,5 +144,33 @@ describe('mission filters', () => {
     expect(missionEligibility(m, { age: 20, universityName: 'ΕΜΠ' })).toBe('uni-restricted');
     expect(missionEligibility(m, {})).toBeNull();
     expect(missionEligibility({}, { age: 40, universityName: 'ΕΜΠ' })).toBeNull();
+  });
+});
+
+describe('quests', () => {
+  const q = (id: string) => KFG_QUESTS.find((x) => x.id === id)!;
+  const done = [
+    { weekId: '2026-W45', cause: 'food', creatorId: 'o1', creatorType: 'organization' as const },
+    { weekId: '2026-W46', cause: 'food', creatorId: 'o2', creatorType: 'organization' as const },
+    { weekId: '2026-W47', cause: 'animals', creatorId: 'o1', creatorType: 'organization' as const },
+    { weekId: '2026-W47', cause: 'people', creatorId: 's1', creatorType: 'student' as const },
+  ];
+  it('counts weekly progress in the current week only', () => {
+    expect(questProgress(q('week_one'), done, '2026-W47')).toBe(1);
+    expect(questProgress(q('week_two'), done, '2026-W47')).toBe(2);
+    expect(questProgress(q('week_two'), done, '2026-W46')).toBe(1);
+  });
+  it('a new cause is one you had not done before this week', () => {
+    expect(questProgress(q('week_new_cause'), done, '2026-W47')).toBe(1);
+    expect(questProgress(q('week_new_cause'), done, '2026-W46')).toBe(0);
+  });
+  it('lifetime challenges', () => {
+    expect(questProgress(q('missions_5'), done, '2026-W47')).toBe(4);
+    expect(questProgress(q('causes_3'), done, '2026-W47')).toBe(3);
+    expect(questProgress(q('orgs_3'), done, '2026-W47')).toBe(2);
+  });
+  it('claim ids: weekly per week, challenges once', () => {
+    expect(questClaimId(q('week_one'), '2026-W47')).toBe('week_one_2026-W47');
+    expect(questClaimId(q('missions_5'), '2026-W47')).toBe('missions_5');
   });
 });

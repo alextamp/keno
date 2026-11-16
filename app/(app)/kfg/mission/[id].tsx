@@ -383,6 +383,19 @@ function MissionInner() {
             </View>
           )}
 
+          {user.isAdmin && mission.status === 'published' && !over && (
+            <Button
+              label={mission.isFlagship ? t.kfgFlagshipOff : t.kfgFlagshipOn}
+              variant="outline"
+              size="sm"
+              onPress={async () => {
+                const r = await kfgRepository.setFlagship(mission.id, !mission.isFlagship);
+                if (isLeft(r)) Alert.alert(mission.title, t.kfgError(r.left.message));
+                else haptics.success();
+              }}
+            />
+          )}
+
           {/* Stand-in host (like events): the creator hasn't scanned anyone
               15 minutes in, so a participant can take over. */}
           {joined && !runs && mission.kind === 'partnerQr' && !mission.standInHostId && mission.presentIds.length === 0

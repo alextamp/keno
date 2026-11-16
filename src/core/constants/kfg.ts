@@ -199,3 +199,24 @@ export const KFG_COSMETICS: KfgCosmetic[] = [
 export function getCosmetic(id: string): KfgCosmetic | undefined {
   return KFG_COSMETICS.find((c) => c.id === id);
 }
+
+// Weekly quests + lifetime challenges — mirrors KFG_QUESTS in
+// functions/src/kfgLogic.ts (the server re-checks progress on claim).
+export interface KfgQuestDef {
+  id: string;
+  weekly: boolean;
+  target: number;
+  points: number;
+  measure: 'completed' | 'newCause' | 'causes' | 'organizations';
+  name: { el: string; en: string };
+}
+
+export const KFG_QUESTS: KfgQuestDef[] = [
+  { id: 'week_one', weekly: true, target: 1, points: 40, measure: 'completed', name: { el: 'Ολοκλήρωσε 1 αποστολή', en: 'Complete 1 mission' } },
+  { id: 'week_two', weekly: true, target: 2, points: 80, measure: 'completed', name: { el: 'Ολοκλήρωσε 2 αποστολές', en: 'Complete 2 missions' } },
+  { id: 'week_new_cause', weekly: true, target: 1, points: 50, measure: 'newCause', name: { el: 'Δοκίμασε έναν νέο σκοπό', en: 'Try a new cause' } },
+  { id: 'missions_5', weekly: false, target: 5, points: 100, measure: 'completed', name: { el: '5 αποστολές συνολικά', en: '5 missions in total' } },
+  { id: 'missions_10', weekly: false, target: 10, points: 200, measure: 'completed', name: { el: '10 αποστολές συνολικά', en: '10 missions in total' } },
+  { id: 'causes_3', weekly: false, target: 3, points: 100, measure: 'causes', name: { el: '3 διαφορετικοί σκοποί', en: '3 different causes' } },
+  { id: 'orgs_3', weekly: false, target: 3, points: 100, measure: 'organizations', name: { el: 'Βοήθησε 3 οργανισμούς', en: 'Help 3 organizations' } },
+];

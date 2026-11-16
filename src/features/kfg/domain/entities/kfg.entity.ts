@@ -64,6 +64,8 @@ export interface KfgMission {
   standInHostId?: string;
   /** invitee uid -> who invited them (plus-one). */
   invites: Record<string, string>;
+  /** Admin-pinned banner on the Actions tab. */
+  isFlagship: boolean;
   /** Private "how was it?" totals — the creator's organiser stats only. */
   feedbackGoodCount: number;
   feedbackBadCount: number;
@@ -102,6 +104,8 @@ export interface KfgParticipation {
   feedback?: 'good' | 'bad';
   /** Answer to "did you come alone?" (kfgSetSolo). */
   arrivedSolo?: boolean;
+  /** ISO week it was paid in (server, Athens time) — weekly quests. */
+  completedWeekId?: string;
 }
 
 export interface KfgProfile {

@@ -11,7 +11,7 @@ import { db, checkRateLimit } from './shared';
 import {
   athensDayId, athensMonthId, athensWeekId, clampTrust, countsForLeaderboard, isInScanWindow, isQrValid,
   KFG_COSMETICS, KFG_LIMITS, KFG_POINTS, KfgCreatorType, KfgMissionKind, kfgLevel, levelUnlocks, missionEligibility,
-  missionPoints, nextStreak, sanitizeMissionFilters, parseQrCode, PhotoShot, photoPairProblems, resolveGroup,
+  missionPoints, nextStreak, sanitizeMissionFilters, KFG_QUESTS, questProgress, questClaimId, parseQrCode, PhotoShot, photoPairProblems, resolveGroup,
 } from './kfgLogic';
 
 // ── Keno for Good ───────────────────────────────────────────────────────────
@@ -181,7 +181,9 @@ export async function awardPoints(uid: string, delta: number, meta: AwardMeta): 
       update.monthId = monthId;
       update.monthPoints = Math.max(0, (sameMonth ? (p.monthPoints ?? 0) : 0) + delta);
     }
-    if (delta > 0 && meta.reason !== 'reversal') {
+    // Only actually volunteering keeps the weekly streak going — not quest
+    // rewards or plus-one bonuses.
+    if (delta > 0 && (meta.reason === 'mission' || meta.reason === 'host')) {
       Object.assign(update, nextStreak({ streakWeeks: p.streakWeeks ?? 0, lastWeekId: p.lastWeekId ?? null }, now));
     }
 
@@ -540,6 +542,45 @@ export const kfgSetSolo = onCall(async (request) => {
     await notify(others, 'kfg_buddy', missionId, m.title, { uid, name: me?.name, avatarColor: me?.avatarColor, photoUri: me?.photoUri });
   }
   return { ok: true, buddies: others.length };
+});
+
+/**
+ * Claim a weekly quest / lifetime challenge (the events' quests). Progress is
+ * recomputed here from completed participations — the client's number is
+ * only for display. Once per week (weekly) or once ever (challenge).
+ */
+export const kfgClaimQuest = onCall(async (request) => {
+  const uid = requireUid(request);
+  const quest = KFG_QUESTS.find((q) => q.id === request.data?.questId);
+  if (!quest) throw new HttpsError('invalid-argument', 'quest');
+  const weekId = athensWeekId(new Date());
+
+  const parts = (await db.collection(PARTICIPATIONS).where('uid', '==', uid).where('status', '==', 'completed').get()).docs;
+  const missionSnaps = parts.length ? await db.getAll(...parts.map((p) => db.doc(`${MISSIONS}/${p.data().missionId}`))) : [];
+  const byId = new Map(missionSnaps.filter((m) => m.exists).map((m) => [m.id, m.data()!]));
+  const done = parts.map((p) => {
+    const m = byId.get(p.data().missionId);
+    return m ? { weekId: String(p.data().completedWeekId ?? ''), cause: m.cause, creatorId: m.creatorId, creatorType: m.creatorType } : null;
+  }).filter((d): d is NonNullable<typeof d> => !!d);
+  if (questProgress(quest, done, weekId) < quest.target) throw new HttpsError('failed-precondition', 'not-done');
+
+  const claimRef = db.doc(`${PROFILES}/${uid}/claims/${questClaimId(quest, weekId)}`);
+  await db.runTransaction(async (tx) => {
+    if ((await tx.get(claimRef)).exists) throw new HttpsError('already-exists', 'claimed');
+    tx.set(claimRef, { questId: quest.id, weekId: quest.weekly ? weekId : null, points: quest.points, at: FieldValue.serverTimestamp() });
+  });
+  await awardPoints(uid, quest.points, { reason: 'quest', countsForLeaderboard: false, missionId: '' });
+  return { ok: true, points: quest.points };
+});
+
+/** Admin pins a mission as the flagship banner on the Actions tab (like events' flagship). */
+export const kfgSetFlagship = onCall(async (request) => {
+  const uid = requireUid(request);
+  if (!(await isAdminUid(uid))) throw new HttpsError('permission-denied', 'admin-only');
+  const ref = db.doc(`${MISSIONS}/${String(request.data?.missionId ?? '')}`);
+  if (!(await ref.get()).exists) throw new HttpsError('not-found', 'mission');
+  await ref.update({ isFlagship: request.data?.on === true });
+  return { ok: true };
 });
 
 // ── Joining ─────────────────────────────────────────────────────────────────

@@ -649,6 +649,12 @@ service cloud.firestore {
         allow read: if signedIn();
         allow write: if false;
       }
+
+      // Claimed quests/challenges (kfgClaimQuest) — yours to read, server-written.
+      match /claims/{claimId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
     }
 
     // Keep in sync with KFG_CHARACTERS (src/core/constants/kfg.ts): the free

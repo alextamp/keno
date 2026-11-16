@@ -201,6 +201,17 @@ const qr = async (pid) => {
   const plus = (await db.collection('kfgLedger').where('missionId', '==', po.missionId).where('reason', '==', 'plusOne').get()).docs.map((x) => x.data().uid).sort();
   ok(JSON.stringify(plus) === JSON.stringify(['s1', 's3']), 'plus-one pays both once the invitee completes');
 
+  console.log('Quests & flagship');
+  const claimed = await s1.call('kfgClaimQuest', { questId: 'week_one' });
+  ok(claimed.points === 40, 'weekly quest claimed from real completions');
+  await fails(s1.call('kfgClaimQuest', { questId: 'week_one' }), 'claimed', 'a weekly quest pays once a week');
+  await fails(s1.call('kfgClaimQuest', { questId: 'missions_10' }), 'not-done', 'cannot claim what you have not done');
+  const questLedger = (await db.collection('kfgLedger').where('uid', '==', 's1').where('reason', '==', 'quest').get()).docs.map((x) => x.data());
+  ok(questLedger.length === 1 && questLedger[0].countsForLeaderboard === false, 'quest points never count for the leaderboard');
+  await fails(s1.call('kfgSetFlagship', { missionId: po.missionId, on: true }), 'admin-only', 'only admins pin a flagship');
+  await adminC.call('kfgSetFlagship', { missionId: po.missionId, on: true });
+  ok((await db.doc(`kfgMissions/${po.missionId}`).get()).data().isFlagship === true, 'admin pins the flagship');
+
   console.log('Account deletion');
   // s2 is a co-host on the private mission, and present + kudos'd elsewhere.
   const privId = (await db.collection('kfgMissions').where('title', '==', 'Ιδιωτική').get()).docs[0].id;

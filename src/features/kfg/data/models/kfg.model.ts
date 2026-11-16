@@ -51,6 +51,7 @@ export function missionFromFirestore(snap: DocumentSnapshot<DocumentData>): KfgM
     coHostIds: d.coHostIds ?? [],
     standInHostId: opt(d.standInHostId),
     invites: d.invites ?? {},
+    isFlagship: d.isFlagship === true,
     feedbackGoodCount: d.feedbackGoodCount ?? 0,
     feedbackBadCount: d.feedbackBadCount ?? 0,
     verifiedCount: d.verifiedCount ?? 0,
@@ -79,6 +80,7 @@ export function participationFromFirestore(snap: DocumentSnapshot<DocumentData>)
     reviewProblems: opt(d.reviewProblems),
     feedback: d.feedback === 'good' || d.feedback === 'bad' ? d.feedback : undefined,
     arrivedSolo: typeof d.arrivedSolo === 'boolean' ? d.arrivedSolo : undefined,
+    completedWeekId: opt(d.completedWeekId),
   };
 }
 

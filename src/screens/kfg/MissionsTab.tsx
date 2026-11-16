@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card } from '@/components/ui/Card';
@@ -49,6 +49,8 @@ export default function MissionsTab() {
       .filter((m) => !q || [m.title, m.description, m.areaLabel, m.creatorName, m.groupName ?? '']
         .some((x) => x.toLowerCase().includes(q)));
   }, [missions, participations, q, cause, now]);
+  // Admin-pinned flagship (like the events' flagship banner).
+  const flagship = useMemo(() => missions.find((m) => m.isFlagship && m.endsAt.getTime() > now), [missions, now]);
   const joinedIds = useMemo(
     () => new Set(participations.filter((p) => p.status !== 'cancelled').map((p) => p.missionId)),
     [participations],
@@ -61,6 +63,25 @@ export default function MissionsTab() {
     >
       <KfgHeader balance={profile?.balance ?? 0} />
       <Text style={[styles.title, { color: colors.textPrimary }]}>{t.kfgMissionsTitle}</Text>
+
+      {flagship && (
+        <AnimatedPressable onPress={() => router.push(`/(app)/kfg/mission/${flagship.id}` as any)} accessibilityRole="button">
+          <Card style={styles.flagship}>
+            {flagship.imageUri
+              ? <Image source={{ uri: flagship.imageUri }} style={styles.flagshipImg} />
+              : <View style={[styles.flagshipImg, styles.flagshipIcon, { backgroundColor: colors.accentSoft }]}>
+                  <Icon name={CAUSE_ICONS[flagship.cause]} size={40} color={colors.primary} />
+                </View>}
+            <View style={styles.flagshipBody}>
+              <Text style={[styles.flagshipKicker, { color: colors.accentInk }]}>📌 KENO FOR GOOD</Text>
+              <Text style={[styles.flagshipTitle, { color: colors.textPrimary }]} numberOfLines={2}>{flagship.title}</Text>
+              <Text style={[styles.emptyBody, { color: colors.textHint, textAlign: 'left' }]} numberOfLines={1}>
+                {`${flagship.creatorName} · ${flagship.areaLabel}`}
+              </Text>
+            </View>
+          </Card>
+        </AnimatedPressable>
+      )}
 
       <KfgLevelCard profile={profile} />
 
@@ -162,6 +183,12 @@ const styles = StyleSheet.create({
   emptyTitle: { fontFamily: UIFont, fontSize: FontSize.lg, fontWeight: FontWeight.bold, textAlign: 'center' },
   emptyBody: { fontFamily: UIFontLight, fontSize: FontSize.md, textAlign: 'center' },
   newWrap: { marginTop: Spacing.sm },
+  flagship: { overflow: 'hidden' },
+  flagshipImg: { width: '100%', height: 130 },
+  flagshipIcon: { alignItems: 'center', justifyContent: 'center' },
+  flagshipBody: { padding: Spacing.md, gap: 2 },
+  flagshipKicker: { fontFamily: UIFont, fontSize: FontSize.xs, fontWeight: FontWeight.bold, letterSpacing: 1.2 },
+  flagshipTitle: { fontFamily: TitleFont, fontSize: FontSize.xl, fontWeight: FontWeight.bold },
   statsRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   statsText: { flex: 1, fontFamily: UIFont, fontSize: FontSize.base, fontWeight: FontWeight.bold },
   searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: BorderRadius.full, paddingHorizontal: 14, height: 42 },

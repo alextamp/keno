@@ -6,7 +6,7 @@ const mission = (id: string, day: number, over: Partial<KfgMission> = {}): KfgMi
   cause: 'food', startsAt: new Date(2026, 9, day, 10), endsAt: new Date(2026, 9, day, 12), minDurationMin: 0,
   areaLabel: 'Αθήνα', capacity: 10, photoWall: true, ridesEnabled: false, points: 250, status: 'published',
   participantCount: 1, participantIds: ['me'], presentIds: ['me'], endedEarly: false, isPrivate: false, joinRequests: {},
-  waitlistIds: [], coHostIds: [], invites: {}, feedbackGoodCount: 0, feedbackBadCount: 0, verifiedCount: 1, finalized: true, ...over,
+  waitlistIds: [], coHostIds: [], invites: {}, isFlagship: false, feedbackGoodCount: 0, feedbackBadCount: 0, verifiedCount: 1, finalized: true, ...over,
 });
 const done = (missionId: string, over: Partial<KfgParticipation> = {}): KfgParticipation => ({
   id: `${missionId}_me`, uid: 'me', missionId, missionCreatorId: 'org', kind: 'partnerQr', creatorType: 'organization',

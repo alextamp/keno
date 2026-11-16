@@ -12,6 +12,8 @@ interface KfgState {
   ownedCosmetics: string[];
   missions: KfgMission[];
   myMissions: KfgMission[];
+  /** Quest/challenge claim ids already taken. */
+  claims: string[];
   participations: KfgParticipation[];
   loaded: boolean;
   start: (uid: string) => void;
@@ -28,6 +30,7 @@ export const useKfgStore = create<KfgState>((set, get) => ({
   ownedCosmetics: [],
   missions: [],
   myMissions: [],
+  claims: [],
   participations: [],
   loaded: false,
 
@@ -44,6 +47,7 @@ export const useKfgStore = create<KfgState>((set, get) => ({
       kfgRepository.subscribeOwnedCosmetics(uid, (ownedCosmetics) => set({ ownedCosmetics })),
       kfgRepository.subscribePublishedMissions((missions) => { set({ missions }); ready(); }),
       kfgRepository.subscribeMyMissions(uid, (myMissions) => set({ myMissions })),
+      kfgRepository.subscribeClaims(uid, (claims) => set({ claims })),
       kfgRepository.subscribeMyParticipations(uid, (participations) => { set({ participations }); ready(); }),
     ];
   },
@@ -53,7 +57,7 @@ export const useKfgStore = create<KfgState>((set, get) => ({
     if (users > 0) return;
     unsubs.forEach((u) => u());
     unsubs = [];
-    set({ uid: null, profile: null, ownedCosmetics: [], missions: [], myMissions: [], participations: [], loaded: false });
+    set({ uid: null, profile: null, ownedCosmetics: [], missions: [], myMissions: [], claims: [], participations: [], loaded: false });
   },
 
   participationFor: (missionId) => get().participations.find((p) => p.missionId === missionId && p.status !== 'cancelled'),

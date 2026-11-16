@@ -186,16 +186,30 @@ export default function TicketsScreen() {
         )}
 
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t.profilePhotosSection}</Text>
-        {photos.length + kfgPhotos.length === 0 ? (
+        {photos.length === 0 ? (
           <Text style={[styles.empty, { color: colors.textHint }]}>{t.profilePhotosEmpty}</Text>
         ) : (
           <View style={styles.photoGrid}>
-            {[...photos, ...kfgPhotos].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).map((p) => (
+            {photos.map((p) => (
               <AnimatedPressable key={p.id} onPress={() => setSavePhotoUri(p.uri)} style={styles.photoItem}>
                 <Image source={{ uri: p.uri }} style={styles.photoImg} resizeMode="cover" />
               </AnimatedPressable>
             ))}
           </View>
+        )}
+
+        {/* Keno for Good photos — same as above, kept as their own section. */}
+        {kfgPhotos.length > 0 && (
+          <>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{`${t.profilePhotosSection} · Keno for Good`}</Text>
+            <View style={styles.photoGrid}>
+              {[...kfgPhotos].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).map((p) => (
+                <AnimatedPressable key={p.id} onPress={() => setSavePhotoUri(p.uri)} style={styles.photoItem}>
+                  <Image source={{ uri: p.uri }} style={styles.photoImg} resizeMode="cover" />
+                </AnimatedPressable>
+              ))}
+            </View>
+          </>
         )}
       </ScrollView>
 
