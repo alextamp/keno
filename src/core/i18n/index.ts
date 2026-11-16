@@ -435,6 +435,10 @@ export type Translations = {
   kfgEndNowBtn: string;
   kfgEndNowConfirmTitle: string;
   kfgEndNowConfirmBody: string;
+  kfgMapChip: string;
+  kfgSearchPlaceholder: string;
+  kfgAllCauses: string;
+  kfgNoResults: string;
   kfgTabCharacter: string;
   kfgTabLeaderboard: string;
   kfgBackA11y: string;
@@ -1727,6 +1731,10 @@ const en: Translations = {
   kfgEndNowBtn: 'End the mission now',
   kfgEndNowConfirmTitle: 'End the mission?',
   kfgEndNowConfirmBody: 'It ends now for everyone. Remember to check people out (or use “Check-out all”) so they get their points.',
+  kfgMapChip: 'Volunteering',
+  kfgSearchPlaceholder: 'Search missions, organizations, areas…',
+  kfgAllCauses: 'All',
+  kfgNoResults: 'No missions match.',
   kfgTabCharacter: 'Character',
   kfgTabLeaderboard: 'Ranking',
   kfgBackA11y: 'Back to Keno',
@@ -3038,6 +3046,10 @@ const el: Translations = {
   kfgEndNowBtn: 'Τερμάτισε την αποστολή τώρα',
   kfgEndNowConfirmTitle: 'Τέλος αποστολής;',
   kfgEndNowConfirmBody: 'Τελειώνει τώρα για όλους. Θυμήσου να κάνεις check-out (ή «Check-out όλων») για να πάρουν τους πόντους τους.',
+  kfgMapChip: 'Εθελοντισμός',
+  kfgSearchPlaceholder: 'Αναζήτηση αποστολών, οργανισμών, περιοχών…',
+  kfgAllCauses: 'Όλα',
+  kfgNoResults: 'Καμία αποστολή δεν ταιριάζει.',
   kfgTabCharacter: 'Χαρακτήρας',
   kfgTabLeaderboard: 'Κατάταξη',
   kfgBackA11y: 'Πίσω στο Keno',

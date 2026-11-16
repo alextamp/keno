@@ -22,6 +22,13 @@ import { Card } from '@/components/ui/Card';
 import { FilterSheet, FeedRadius, FeedWhen } from '@/components/ui/FilterSheet';
 import { haversineKm, matchesWhenBucket } from '@/core/utils/geo';
 import { haptics } from '@/core/utils/haptics';
+import { FEATURES } from '@/core/constants/features';
+import { useKfgStore } from '@/features/kfg/presentation/store/kfg.store';
+
+// Keno for Good missions share the map: green heart pins, identifier
+// prefixed so the tap handler knows to open the mission instead of an event.
+const KFG_PIN_PREFIX = 'kfg:';
+const KFG_GREEN = '#3F7A55';
 
 // Athens city centre default
 const ATHENS = { latitude: 37.9838, longitude: 23.7275, latitudeDelta: 0.06, longitudeDelta: 0.06 };
@@ -147,6 +154,16 @@ export default function MapScreen() {
   ).current;
 
   const [selected, setSelected] = useState<EventCategory | null>(null);
+  // "Εθελοντισμός" chip: show only Keno for Good missions.
+  const [kfgOnly, setKfgOnly] = useState(false);
+  const kfgMissions = useKfgStore((s) => s.missions);
+  const kfgStart = useKfgStore((s) => s.start);
+  const kfgStop = useKfgStore((s) => s.stop);
+  useEffect(() => {
+    if (!FEATURES.kenoForGood || !user) return;
+    kfgStart(user.id);
+    return kfgStop;
+  }, [user?.id]);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
@@ -214,8 +231,18 @@ export default function MapScreen() {
   };
 
   const now = new Date();
+  const missionPins = !FEATURES.kenoForGood || selected ? [] : kfgMissions.filter((m) => {
+    if (m.latitude == null || m.longitude == null || m.endsAt.getTime() <= now.getTime()) return false;
+    if (selectedCity && getEventCity(m.latitude, m.longitude) !== selectedCity) return false;
+    if (radiusKm != null && userLocation
+      && haversineKm(userLocation.latitude, userLocation.longitude, m.latitude, m.longitude) > radiusKm) return false;
+    if (when && !matchesWhenBucket(m.startsAt, when, now)) return false;
+    return true;
+  });
+
   const eventsWithCoords = spreadCoincident(
     events.filter((e) => {
+      if (kfgOnly) return false;
       if (isEventPast(e)) return false;
       if (selected && e.category !== selected) return false;
       if (e.latitude == null || e.longitude == null) return false;
@@ -261,7 +288,8 @@ export default function MapScreen() {
           const eventId = e.nativeEvent.id;
           if (!eventId) return;
           haptics.light();
-          router.push(`/(app)/event/${eventId}`);
+          if (eventId.startsWith(KFG_PIN_PREFIX)) router.push(`/(app)/kfg/mission/${eventId.slice(KFG_PIN_PREFIX.length)}` as any);
+          else router.push(`/(app)/event/${eventId}`);
         }}
       >
         {eventsWithCoords.map((e) => {
@@ -286,6 +314,18 @@ export default function MapScreen() {
             </Marker>
           );
         })}
+        {missionPins.map((m) => (
+          <Marker
+            key={KFG_PIN_PREFIX + m.id}
+            identifier={KFG_PIN_PREFIX + m.id}
+            coordinate={{ latitude: m.latitude!, longitude: m.longitude! }}
+            tracksViewChanges={Platform.OS === 'android'}
+          >
+            <View style={[styles.pin, { backgroundColor: colors.surface, borderColor: KFG_GREEN }]}>
+              <Icon name="heart" size={15} color={KFG_GREEN} filled />
+            </View>
+          </Marker>
+        ))}
       </MapView>
 
       {/* Filter chips overlay */}
@@ -293,9 +333,9 @@ export default function MapScreen() {
         <View style={styles.filterRowWithBtn}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
             {FILTERS.map((f) => {
-              const isActive = selected === f.value;
+              const isActive = !kfgOnly && selected === f.value;
               return (
-                <AnimatedPressable key={f.label} onPress={() => setSelected(f.value)}>
+                <AnimatedPressable key={f.label} onPress={() => { setKfgOnly(false); setSelected(f.value); }}>
                   <View style={[
                     styles.chip,
                     { backgroundColor: isActive ? colors.accentSoft : colors.surface, borderColor: isActive ? colors.primary : colors.border },
@@ -305,6 +345,15 @@ export default function MapScreen() {
                 </AnimatedPressable>
               );
             })}
+            {FEATURES.kenoForGood && (
+              <AnimatedPressable onPress={() => { setSelected(null); setKfgOnly((v) => !v); }}>
+                <View style={[styles.chip, { backgroundColor: kfgOnly ? '#E3EFE5' : colors.surface, borderColor: kfgOnly ? KFG_GREEN : colors.border }]}>
+                  <Text style={[styles.chipText, { color: kfgOnly ? KFG_GREEN : colors.textSecondary, fontWeight: kfgOnly ? FontWeight.semibold : FontWeight.medium }]}>
+                    💚 {t.kfgMapChip}
+                  </Text>
+                </View>
+              </AnimatedPressable>
+            )}
           </ScrollView>
           <AnimatedPressable onPress={() => { haptics.light(); setFilterSheetVisible(true); }} style={styles.mapFilterBtnWrap}>
             <View style={[styles.mapFilterBtn, { backgroundColor: hasActiveFilters ? colors.accentSoft : colors.surface, borderColor: hasActiveFilters ? colors.primary : colors.border }]}>
