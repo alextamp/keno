@@ -37,6 +37,9 @@ export interface CreateKfgMissionParams {
   isPrivate?: boolean;
   infoPhotoUri?: string;
   ridesEnabled?: boolean;
+  /** Create only: repeat weekly/biweekly, repeatCount times in total (server caps at 8 and 90 days). */
+  repeat?: 'once' | 'weekly' | 'biweekly';
+  repeatCount?: number;
 }
 
 export type KfgScanResult =

@@ -123,6 +123,8 @@ function CreateInner() {
   const [isPrivate, setIsPrivate] = useState(false);
   const [infoPhoto, setInfoPhoto] = useState<string | null>(null);
   const [ridesEnabled, setRidesEnabled] = useState(false);
+  const [repeat, setRepeat] = useState<'once' | 'weekly' | 'biweekly'>('once');
+  const [repeatCount, setRepeatCount] = useState(4);
   useEffect(() => {
     if (!editId) return;
     kfgRepository.getMissions([editId]).then(([m]) => {
@@ -249,6 +251,8 @@ function CreateInner() {
       isPrivate,
       infoPhotoUri: infoPhotoUrl,
       ridesEnabled: FEATURES.rides && ridesEnabled,
+      repeat: editId ? 'once' as const : repeat,
+      repeatCount: editId || repeat === 'once' ? 1 : repeatCount,
     };
     if (editId) {
       const u = await kfgRepository.updateMission(editId, params);
@@ -375,6 +379,32 @@ function CreateInner() {
             onChange={(d) => setDurationMin((v) => Math.min(KFG_LIMITS.maxDurationHours * 60, Math.max(30, v + d * 30)))}
           />
         </View>
+
+        {!editing && (
+          <>
+            <SectionLabel label={t.seriesRepeatLabel} />
+            <View style={styles.chips}>
+              {(['once', 'weekly', 'biweekly'] as const).map((f) => (
+                <Chip key={f} label={t.seriesFrequency(f)} on={repeat === f} onPress={() => setRepeat(f)} />
+              ))}
+            </View>
+            {repeat !== 'once' && (
+              <>
+                <View style={styles.stepRow}>
+                  <Text style={[styles.label, styles.stepLabel, { color: colors.textPrimary }]}>{t.seriesEndsAfter(repeatCount)}</Text>
+                  <Stepper value={repeatCount} label={t.seriesRepeatLabel} onChange={(d) => setRepeatCount((v) => Math.min(8, Math.max(2, v + d)))} />
+                </View>
+                <Text style={[styles.note, { color: colors.textHint }]}>
+                  {t.seriesUpcomingDates(
+                    Array.from({ length: Math.min(4, repeatCount) }, (_, i) =>
+                      format(new Date(startsAt.getTime() + i * (repeat === 'weekly' ? 7 : 14) * 86_400_000), 'EEE d MMM', { locale })).join(' · '),
+                    repeatCount,
+                  )}
+                </Text>
+              </>
+            )}
+          </>
+        )}
 
         {effectiveKind === 'partnerQr' && (
           <View style={styles.stepRow}>

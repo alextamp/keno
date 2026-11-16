@@ -44,6 +44,8 @@ function missionPayload(p: CreateKfgMissionParams) {
     isPrivate: p.isPrivate === true,
     infoPhotoUri: p.infoPhotoUri ?? null,
     ridesEnabled: p.ridesEnabled === true,
+    repeat: p.repeat ?? 'once',
+    repeatCount: p.repeatCount ?? 1,
   };
 }
 

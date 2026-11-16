@@ -18,6 +18,8 @@ export interface KfgMission {
   infoPhotoUri?: string;
   /** Participants can offer/book rides, like an event's rides. */
   ridesEnabled: boolean;
+  /** Set on every occurrence of a recurring mission (the first one's id). */
+  seriesId?: string;
   kind: KfgMissionKind;
   cause: KfgCause;
   startsAt: Date;

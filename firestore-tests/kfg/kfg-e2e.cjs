@@ -74,7 +74,18 @@ const qr = async (pid) => {
   await org.call('kfgSetCoHost', { missionId: priv.missionId, uid: 's2', on: true });
   ok((await db.doc(`kfgMissions/${priv.missionId}`).get()).data().coHostIds.includes('s2'), 'creator can make a participant co-host');
 
+  console.log('Recurring missions');
+  const rec = await org.call('kfgCreateMission', {
+    title: 'Κάθε εβδομάδα', description: 'Επαναλαμβανόμενη αποστολή.', kind: 'partnerQr', cause: 'food',
+    startsAt: start.toISOString(), endsAt: end.toISOString(), capacity: 5, areaLabel: 'Αθήνα', repeat: 'weekly', repeatCount: 3,
+  });
+  const series = (await db.collection('kfgMissions').where('seriesId', '==', rec.missionId).get()).docs.map((x) => x.data());
+  ok(rec.count === 3 && series.length === 3, 'weekly x3 creates 3 occurrences');
+  ok(series.some((x) => x.startsAt.toMillis() - start.getTime() === 14 * 86400000), 'occurrences are a week apart');
+
   console.log('Communities');
+  // The org has made several missions by now; reset its 5/hour create limit for this block.
+  await db.doc('users/org1/private/rateLimits').delete();
   await db.doc('groups/c1').set({ name: 'Εθελοντές Αθήνας', scope: 'kfg', memberIds: ['org1'], missionIds: [] });
   await db.doc('groups/k1').set({ name: 'Μπάλα', memberIds: ['org1'] });
   const inC = await org.call('kfgCreateMission', {
@@ -148,11 +159,15 @@ const qr = async (pid) => {
   await host.call('kfgCreateMission', { title: 'Δεύτερη', description: 'Δεύτερη αποστολή μου.', startsAt: start.toISOString(), endsAt: end.toISOString(), capacity: 5, areaLabel: 'Αθήνα' });
   const third = await host.call('kfgCreateMission', { title: 'Τρίτη', description: 'Τρίτη αποστολή μου.', startsAt: start.toISOString(), endsAt: end.toISOString(), capacity: 5, areaLabel: 'Αθήνα' });
   ok(third.status === 'pending', 'no monthly cap on student missions');
+  const stSeries = await host.call('kfgCreateMission', { title: 'Σειρά', description: 'Φοιτητική σειρά αποστολών.', startsAt: start.toISOString(), endsAt: end.toISOString(), capacity: 5, areaLabel: 'Αθήνα', repeat: 'biweekly', repeatCount: 2 });
   await fails(s1.call('kfgReviewMission', { missionId: st.missionId, approve: true }), 'admin-only', 'only admins approve');
   await db.doc('admins/s4').set({});
   const adminC = await signIn('s4');
   await adminC.call('kfgReviewMission', { missionId: st.missionId, approve: true });
   ok((await db.doc(`kfgMissions/${st.missionId}`).get()).data().status === 'published', 'admin approval publishes');
+  await adminC.call('kfgReviewMission', { missionId: stSeries.missionId, approve: true });
+  const stSer = (await db.collection('kfgMissions').where('seriesId', '==', stSeries.missionId).get()).docs.map((x) => x.data().status);
+  ok(stSer.length === 2 && stSer.every((x) => x === 'published'), 'approving one occurrence approves the whole series');
   const hostNotifs = (await db.collection('users/host/notifications').get()).docs.map((d) => d.data());
   ok(hostNotifs.some((n) => n.type === 'kfg_approved' && n.eventId === st.missionId), 'creator notified of approval');
   const j = await s2.call('kfgJoin', { missionId: st.missionId });

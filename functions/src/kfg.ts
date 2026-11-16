@@ -238,6 +238,9 @@ async function payParticipant(
  * themselves (no monthly cap — the 5/hour rate limit above stops spam), and those
  * wait for admin approval.
  */
+/** Most occurrences one recurring mission can have (and the 90-day window still applies). */
+const KFG_SERIES_MAX = 8;
+
 /**
  * Validates everything a creator may set or later edit (kind, points,
  * creator and community are fixed at creation). `minCapacity` stops an
@@ -299,17 +302,34 @@ export const kfgCreateMission = onCall(async (request) => {
   if (!KINDS.includes(kind)) throw new HttpsError('invalid-argument', 'kind');
   const fields = missionFields(d, kind);
   const community = await communityFor(d.groupId, uid);
+  const status = creatorType === 'organization' ? 'published' : 'pending';
 
-  const ref = await db.collection(MISSIONS).add({
+  // Recurring (like event series): every occurrence is created up front and
+  // shares a seriesId; ones that would start past the 90-day window are
+  // dropped. A student series is approved with one decision (kfgReviewMission).
+  const stepDays = d.repeat === 'weekly' ? 7 : d.repeat === 'biweekly' ? 14 : 0;
+  const wanted = stepDays ? Math.max(1, Math.min(KFG_SERIES_MAX, Math.floor(Number(d.repeatCount) || 1))) : 1;
+  const horizon = Date.now() + 90 * 86_400_000;
+  const occurrences = Array.from({ length: wanted }, (_, i) => i * stepDays * 86_400_000)
+    .filter((shift) => fields.startsAt.toMillis() + shift <= horizon);
+
+  const refs = occurrences.map(() => db.collection(MISSIONS).doc());
+  const seriesId = occurrences.length > 1 ? refs[0].id : null;
+  const batch = db.batch();
+  occurrences.forEach((shift, i) => batch.set(refs[i], {
     creatorId: uid,
     creatorType,
     creatorName: str(user.name ?? 'Keno', 'name', 1, 80),
     kind,
     ...fields,
+    startsAt: Timestamp.fromMillis(fields.startsAt.toMillis() + shift),
+    endsAt: Timestamp.fromMillis(fields.endsAt.toMillis() + shift),
+    seriesId,
+    seriesIndex: i,
     groupId: community?.id ?? null,
     groupName: community?.name ?? null,
     points: missionPoints(kind, creatorType, d.points),
-    status: creatorType === 'organization' ? 'published' : 'pending',
+    status,
     participantCount: 0,
     participantIds: [],
     presentIds: [],
@@ -320,12 +340,13 @@ export const kfgCreateMission = onCall(async (request) => {
     finalized: false,
     createdMonthId: athensMonthId(new Date()),
     createdAt: FieldValue.serverTimestamp(),
-  });
+  }));
+  await batch.commit();
   if (creatorType === 'organization') {
-    await syncCommunityMission(community?.id, ref.id, true);
-    await announceToCommunity(community?.id, ref.id, fields.title, uid);
+    for (const ref of refs) await syncCommunityMission(community?.id, ref.id, true);
+    await announceToCommunity(community?.id, refs[0].id, fields.title, uid);
   }
-  return { missionId: ref.id, status: creatorType === 'organization' ? 'published' : 'pending' };
+  return { missionId: refs[0].id, status, count: refs.length };
 });
 
 /** Full edit, like an event's: creator only, before it starts, never below the people already in. */
@@ -364,8 +385,20 @@ export const kfgReviewMission = onCall(async (request) => {
       reviewedBy: uid, reviewedAt: FieldValue.serverTimestamp(),
     });
   });
+  // A recurring mission is decided as a whole: the other still-pending
+  // occurrences of the same series follow this decision.
+  const siblings = mission.seriesId
+    ? (await db.collection(MISSIONS).where('seriesId', '==', mission.seriesId).where('status', '==', 'pending').get()).docs
+    : [];
+  if (siblings.length) {
+    const b = db.batch();
+    siblings.forEach((sib) => b.update(sib.ref, {
+      status: approve === true ? 'published' : 'rejected', reviewedBy: uid, reviewedAt: FieldValue.serverTimestamp(),
+    }));
+    await b.commit();
+  }
   if (approve === true) {
-    await syncCommunityMission(groupId, String(missionId), true);
+    for (const id of [String(missionId), ...siblings.map((x) => x.id)]) await syncCommunityMission(groupId, id, true);
     await announceToCommunity(groupId, String(missionId), mission.title, mission.creatorId);
   }
   await notify([mission.creatorId], approve === true ? 'kfg_approved' : 'kfg_rejected', String(missionId), mission.title);
