@@ -32,6 +32,7 @@ import { KfgParticipants } from '@/components/kfg/KfgParticipants';
 import { KfgLiveMode } from '@/components/kfg/KfgLiveMode';
 import { KfgRequests } from '@/components/kfg/KfgRequests';
 import { KfgInviteModal } from '@/components/kfg/KfgInviteModal';
+import { KfgRequestModal } from '@/components/kfg/KfgRequestModal';
 import { publicMissionUrl } from '@/core/constants/publicLinks';
 import { addToCalendar, isEventInCalendar, removeEventFromCalendar } from '@/core/utils/calendar';
 
@@ -62,6 +63,7 @@ function MissionInner() {
   useEffect(() => (id ? kfgRepository.subscribeMission(id, setMission) : undefined), [id]);
 
   const [showInvite, setShowInvite] = useState(false);
+  const [showRequest, setShowRequest] = useState(false);
   const [inCalendar, setInCalendar] = useState(false);
   useEffect(() => { if (id) isEventInCalendar(id).then(setInCalendar); }, [id]);
 
@@ -147,11 +149,12 @@ function MissionInner() {
     analytics.track('kfg_mission_joined', { missionId: mission.id, kind: mission.kind });
   };
 
-  const requestJoin = async () => {
+  const requestJoin = async (message: string) => {
     setBusy(true);
-    const r = await kfgRepository.requestJoin(mission.id, '');
+    const r = await kfgRepository.requestJoin(mission.id, message);
     setBusy(false);
     if (isLeft(r)) { haptics.error(); Alert.alert(mission.title, t.kfgError(r.left.message)); return; }
+    setShowRequest(false);
     haptics.success();
   };
 
@@ -223,7 +226,7 @@ function MissionInner() {
   } else if (mission.isPrivate) {
     action = requested
       ? <Button label={t.kfgRequestSent} disabled onPress={() => {}} />
-      : <Button label={t.kfgRequestBtn} onPress={requestJoin} loading={busy} />;
+      : <Button label={t.kfgRequestBtn} onPress={() => setShowRequest(true)} />;
   } else if (spotsLeft <= 0) {
     action = <Button label={t.kfgWaitlistBtn} variant="soft" onPress={join} loading={busy} />;
   } else {
@@ -376,6 +379,7 @@ function MissionInner() {
         {action}
       </View>
 
+      <KfgRequestModal visible={showRequest} busy={busy} onClose={() => setShowRequest(false)} onSend={requestJoin} />
       <KfgInviteModal visible={showInvite} onClose={() => setShowInvite(false)} mission={mission} user={user} />
     </View>
   );

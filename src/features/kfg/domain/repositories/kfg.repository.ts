@@ -35,6 +35,8 @@ export interface CreateKfgMissionParams {
   photoWall?: boolean;
   /** Join requests instead of open sign-up, like a private event. */
   isPrivate?: boolean;
+  infoPhotoUri?: string;
+  ridesEnabled?: boolean;
 }
 
 export type KfgScanResult =

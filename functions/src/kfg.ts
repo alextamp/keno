@@ -274,7 +274,10 @@ function missionFields(d: Record<string, any>, kind: KfgMissionKind, minCapacity
     lng: typeof d.lng === 'number' && Number.isFinite(d.lng) ? d.lng : null,
     capacity,
     imageUri: coverImage(d.imageUri),
+    // "Where to find us" photo, shown with infoText to people signed up (Live Mode).
+    infoPhotoUri: coverImage(d.infoPhotoUri),
     photoWall: d.photoWall !== false,
+    ridesEnabled: d.ridesEnabled === true,
     isPrivate: d.isPrivate === true,
     ...filters,
   };

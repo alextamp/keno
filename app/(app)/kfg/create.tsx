@@ -21,6 +21,7 @@ import { analytics } from '@/core/utils/analytics';
 import { containsBlockedContent } from '@/core/utils/contentModeration';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { useGroupsStore } from '@/features/groups/presentation/store/groups.store';
+import { FEATURES } from '@/core/constants/features';
 import { kfgRepository } from '@/features/kfg/data/repositories/kfg.repository.impl';
 import { KfgCause } from '@/features/kfg/domain/entities/kfg.entity';
 import { GenderFilter } from '@/features/events/domain/entities/event.entity';
@@ -120,6 +121,8 @@ function CreateInner() {
   const loadMyGroups = useGroupsStore((s) => s.loadMyGroups);
   useEffect(() => { if (user) loadMyGroups(user.id); }, [user?.id]);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [infoPhoto, setInfoPhoto] = useState<string | null>(null);
+  const [ridesEnabled, setRidesEnabled] = useState(false);
   useEffect(() => {
     if (!editId) return;
     kfgRepository.getMissions([editId]).then(([m]) => {
@@ -133,6 +136,7 @@ function CreateInner() {
       setAgeLimit(m.minAge != null || m.maxAge != null); setMinAge(m.minAge ?? 18); setMaxAge(m.maxAge ?? 26);
       setUniversities(m.allowedUniversities ?? []); setSoloFriendly(!!m.soloFriendly);
       setGroupId(m.groupId ?? null); setPhotoWall(m.photoWall); setIsPrivate(m.isPrivate);
+      setInfoPhoto(m.infoPhotoUri ?? null); setRidesEnabled(m.ridesEnabled);
       setLoadedEdit({ lat: m.latitude, lng: m.longitude, address: m.address ?? '', kind: m.kind });
     });
   }, [editId]);
@@ -151,6 +155,11 @@ function CreateInner() {
   const valid = !missing.title && !missing.description && !missing.area;
   // Errors only show after a submit attempt, not while the form is still empty.
   const [tried, setTried] = useState(false);
+
+  const pickInfoPhoto = async () => {
+    const uri = await pickPhoto({ aspect: [4, 3] });
+    if (uri) setInfoPhoto(uri);
+  };
 
   const pickCover = async () => {
     const uri = await pickPhoto({ aspect: [16, 9] });
@@ -203,6 +212,16 @@ function CreateInner() {
         return;
       }
     }
+    let infoPhotoUrl: string | undefined = infoPhoto?.startsWith('https://') ? infoPhoto : undefined;
+    if (infoPhoto && !infoPhotoUrl) {
+      try {
+        infoPhotoUrl = await uploadEventImage(infoPhoto);
+      } catch {
+        setSaving(false);
+        Alert.alert(t.kfgCreateTitle, t.kfgError('imageUri'));
+        return;
+      }
+    }
     let coords: { latitude: number; longitude: number } | null =
       loadedEdit && loadedEdit.address === address && loadedEdit.lat != null && loadedEdit.lng != null
         ? { latitude: loadedEdit.lat, longitude: loadedEdit.lng } : null;
@@ -228,6 +247,8 @@ function CreateInner() {
       groupId: groupId ?? undefined,
       photoWall,
       isPrivate,
+      infoPhotoUri: infoPhotoUrl,
+      ridesEnabled: FEATURES.rides && ridesEnabled,
     };
     if (editId) {
       const u = await kfgRepository.updateMission(editId, params);
@@ -443,6 +464,23 @@ function CreateInner() {
         <Text style={[styles.note, { color: colors.textHint }]}>{t.kfgPhotoWallHint}</Text>
 
         <Input label={t.kfgFieldInfo} hint={t.kfgFieldInfoHint} value={infoText} onChangeText={setInfoText} maxLength={500} multiline />
+        {infoPhoto ? (
+          <View style={[styles.infoPhoto, { borderColor: colors.border }]}>
+            <Image source={{ uri: infoPhoto }} style={styles.coverImg} />
+            <AnimatedPressable onPress={() => setInfoPhoto(null)} style={styles.coverRemove} hitSlop={8} accessibilityRole="button" accessibilityLabel="✕">
+              <Icon name="x" size={13} color="#fff" />
+            </AnimatedPressable>
+          </View>
+        ) : (
+          <Chip label={t.createCheckInInfoPhotoBtn} icon="camera" on={false} onPress={pickInfoPhoto} />
+        )}
+
+        {FEATURES.rides && (
+          <>
+            <Chip label={t.ridesToggleLabel} icon="users" on={ridesEnabled} onPress={() => setRidesEnabled((v) => !v)} />
+            <Text style={[styles.note, { color: colors.textHint }]}>{t.ridesToggleHint}</Text>
+          </>
+        )}
 
         <Button
           label={editing ? t.editEventSave : isOrg ? t.kfgPublishBtn : t.kfgSubmitForReviewBtn}
@@ -466,6 +504,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderRadius: BorderRadius.full, paddingHorizontal: 14,
   },
   ageRow: { gap: 8 },
+  infoPhoto: { height: 140, borderRadius: BorderRadius.md, borderWidth: 1, overflow: 'hidden' },
   cover: { height: 160, borderRadius: BorderRadius.lg, borderWidth: 1, overflow: 'hidden' },
   coverEmpty: { alignItems: 'center', justifyContent: 'center', gap: 4, borderStyle: 'dashed' },
   coverImg: { width: '100%', height: '100%' },

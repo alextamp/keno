@@ -17,6 +17,8 @@ export function missionFromFirestore(snap: DocumentSnapshot<DocumentData>): KfgM
     title: d.title ?? '',
     description: d.description ?? '',
     infoText: opt(d.infoText),
+    infoPhotoUri: opt(d.infoPhotoUri),
+    ridesEnabled: d.ridesEnabled === true,
     kind: d.kind,
     cause: d.cause ?? 'other',
     startsAt: date(d.startsAt) ?? new Date(0),

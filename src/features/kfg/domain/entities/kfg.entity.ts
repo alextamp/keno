@@ -14,6 +14,10 @@ export interface KfgMission {
   title: string;
   description: string;
   infoText?: string;
+  /** Optional photo of the meeting spot, alongside infoText. */
+  infoPhotoUri?: string;
+  /** Participants can offer/book rides, like an event's rides. */
+  ridesEnabled: boolean;
   kind: KfgMissionKind;
   cause: KfgCause;
   startsAt: Date;

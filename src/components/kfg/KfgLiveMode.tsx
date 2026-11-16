@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Linking, Platform, Share, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Linking, Platform, Share, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
@@ -97,6 +97,7 @@ export function KfgLiveMode({ mission, user, isCreator }: { mission: KfgMission;
       </View>
 
       {!!mission.infoText && <Text style={[styles.info, { color: colors.accentInk }]}>{mission.infoText}</Text>}
+      {!!mission.infoPhotoUri && <Image source={{ uri: mission.infoPhotoUri }} style={styles.infoPhoto} resizeMode="cover" />}
 
       <View style={styles.row}>
         <AnimatedPressable onPress={tellFriend} style={[styles.btn, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -132,6 +133,7 @@ const styles = StyleSheet.create({
   title: { fontFamily: UIFont, fontSize: FontSize.base, fontWeight: FontWeight.bold },
   info: { fontFamily: UIFontLight, fontSize: FontSize.md, lineHeight: 19 },
   row: { flexDirection: 'row', gap: Spacing.sm },
+  infoPhoto: { width: '100%', height: 150, borderRadius: BorderRadius.md },
   btn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderRadius: BorderRadius.md, paddingVertical: 10 },
   btnText: { fontFamily: UIFont, fontSize: FontSize.sm, fontWeight: FontWeight.bold },
   end: { borderWidth: 1, borderRadius: BorderRadius.md, paddingVertical: 10, alignItems: 'center' },
