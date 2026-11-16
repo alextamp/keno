@@ -35,6 +35,7 @@ export function missionFromFirestore(snap: DocumentSnapshot<DocumentData>): KfgM
     soloFriendly: d.soloFriendly === true,
     groupId: opt(d.groupId),
     groupName: opt(d.groupName),
+    photoWall: d.photoWall !== false,
     points: d.points ?? 0,
     status: d.status,
     participantCount: d.participantCount ?? 0,

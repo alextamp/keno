@@ -254,6 +254,7 @@ export const kfgCreateMission = onCall(async (request) => {
     capacity,
     imageUri,
     groupId: community?.id ?? null,
+    photoWall: d.photoWall !== false,
     groupName: community?.name ?? null,
     ...filters,
     points: missionPoints(kind, creatorType, d.points),

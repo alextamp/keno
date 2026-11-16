@@ -408,6 +408,28 @@ export type Translations = {
   kfgCommunityNoMissions: string;
   kfgCommunityRow: string;
   kfgMissionsCount: (n: number) => string;
+  kfgPhotoWallToggle: string;
+  kfgPhotoWallHint: string;
+  kfgPhotoWallAdd: string;
+  kfgWrappedCardLabel: string;
+  kfgWrappedCardOpen: string;
+  kfgWrappedCardLocked: (n: number) => string;
+  kfgWrappedEmptyTitle: string;
+  kfgWrappedEmptyBody: (n: number) => string;
+  kfgWrappedHeroTitle: string;
+  kfgWrappedMissions: (n: number) => string;
+  kfgWrappedThisSemester: string;
+  kfgWrappedReceiptTitle: string;
+  kfgWrappedTotal: string;
+  kfgWrappedHours: string;
+  kfgWrappedPoints: string;
+  kfgWrappedOrgs: string;
+  kfgWrappedValue: string;
+  kfgWrappedPriceless: string;
+  kfgWrappedFootnote: string;
+  kfgWrappedThanks: string;
+  kfgWrappedMore: (n: number) => string;
+  kfgTicketsLink: string;
   kfgTabCharacter: string;
   kfgTabLeaderboard: string;
   kfgBackA11y: string;
@@ -1661,6 +1683,28 @@ const en: Translations = {
   kfgCommunityNoMissions: 'No upcoming missions in this community yet.',
   kfgCommunityRow: 'Community',
   kfgMissionsCount: (n) => (n === 1 ? '1 mission' : `${n} missions`),
+  kfgPhotoWallToggle: 'Photo wall',
+  kfgPhotoWallHint: 'People who showed up can post photos for 30 days. Turn it off if the mission involves people who shouldn’t be photographed (shelters, soup kitchens…).',
+  kfgPhotoWallAdd: '+ Add',
+  kfgWrappedCardLabel: 'KENO FOR GOOD WRAPPED',
+  kfgWrappedCardOpen: 'Your semester of volunteering',
+  kfgWrappedCardLocked: (n) => `Complete ${n} more mission${n === 1 ? '' : 's'} to unlock`,
+  kfgWrappedEmptyTitle: 'Your volunteering Wrapped is almost here',
+  kfgWrappedEmptyBody: (n) => `Complete ${n} more mission${n === 1 ? '' : 's'} this semester and it unlocks.`,
+  kfgWrappedHeroTitle: 'Volunteer of\nthe semester',
+  kfgWrappedMissions: (n) => (n === 1 ? '1 mission' : `${n} missions`),
+  kfgWrappedThisSemester: 'this semester',
+  kfgWrappedReceiptTitle: 'VOLUNTEERING RECEIPT',
+  kfgWrappedTotal: 'MISSIONS',
+  kfgWrappedHours: 'Hours given',
+  kfgWrappedPoints: 'Points earned',
+  kfgWrappedOrgs: 'Organizations helped',
+  kfgWrappedValue: 'VALUE',
+  kfgWrappedPriceless: 'priceless',
+  kfgWrappedFootnote: 'some things you can’t pay for',
+  kfgWrappedThanks: 'THANK YOU',
+  kfgWrappedMore: (n) => `+ ${n} more mission${n === 1 ? '' : 's'} this semester`,
+  kfgTicketsLink: 'My tickets',
   kfgTabCharacter: 'Character',
   kfgTabLeaderboard: 'Ranking',
   kfgBackA11y: 'Back to Keno',
@@ -2933,6 +2977,28 @@ const el: Translations = {
   kfgCommunityNoMissions: 'Δεν υπάρχουν ακόμα επερχόμενες αποστολές σε αυτή την κοινότητα.',
   kfgCommunityRow: 'Κοινότητα',
   kfgMissionsCount: (n) => (n === 1 ? '1 αποστολή' : `${n} αποστολές`),
+  kfgPhotoWallToggle: 'Photo wall',
+  kfgPhotoWallHint: 'Όσοι ήρθαν ανεβάζουν φωτογραφίες για 30 μέρες. Κλείσ’ το αν η δράση αφορά ανθρώπους που δεν πρέπει να φωτογραφίζονται (καταφύγια, συσσίτια…).',
+  kfgPhotoWallAdd: '+ Προσθήκη',
+  kfgWrappedCardLabel: 'KENO FOR GOOD WRAPPED',
+  kfgWrappedCardOpen: 'Το εξάμηνό σου στον εθελοντισμό',
+  kfgWrappedCardLocked: (n) => `Ολοκλήρωσε ακόμα ${n} ${n === 1 ? 'αποστολή' : 'αποστολές'} για να ξεκλειδώσει`,
+  kfgWrappedEmptyTitle: 'Το Wrapped του εθελοντισμού σου έρχεται',
+  kfgWrappedEmptyBody: (n) => `Ολοκλήρωσε ακόμα ${n} ${n === 1 ? 'αποστολή' : 'αποστολές'} αυτό το εξάμηνο και ξεκλειδώνει.`,
+  kfgWrappedHeroTitle: 'Εθελοντής\nτου εξαμήνου',
+  kfgWrappedMissions: (n) => (n === 1 ? '1 αποστολή' : `${n} αποστολές`),
+  kfgWrappedThisSemester: 'αυτό το εξάμηνο',
+  kfgWrappedReceiptTitle: 'ΑΠΟΔΕΙΞΗ ΕΘΕΛΟΝΤΙΣΜΟΥ',
+  kfgWrappedTotal: 'ΑΠΟΣΤΟΛΕΣ',
+  kfgWrappedHours: 'Ώρες που έδωσες',
+  kfgWrappedPoints: 'Πόντοι',
+  kfgWrappedOrgs: 'Οργανισμοί που βοήθησες',
+  kfgWrappedValue: 'ΑΞΙΑ',
+  kfgWrappedPriceless: 'ανεκτίμητη',
+  kfgWrappedFootnote: 'κάποια πράγματα δεν πληρώνονται',
+  kfgWrappedThanks: 'ΕΥΧΑΡΙΣΤΟΥΜΕ',
+  kfgWrappedMore: (n) => `+ ${n} ακόμα ${n === 1 ? 'αποστολή' : 'αποστολές'} αυτό το εξάμηνο`,
+  kfgTicketsLink: 'Τα εισιτήριά μου',
   kfgTabCharacter: 'Χαρακτήρας',
   kfgTabLeaderboard: 'Κατάταξη',
   kfgBackA11y: 'Πίσω στο Keno',

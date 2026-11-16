@@ -27,6 +27,7 @@ import { KfgMission } from '@/features/kfg/domain/entities/kfg.entity';
 import { useKfgStore } from '@/features/kfg/presentation/store/kfg.store';
 import { formatPoints } from '@/features/kfg/format';
 import { universityLabel } from '@/core/constants/universities';
+import { KfgPhotoWall } from '@/components/kfg/KfgPhotoWall';
 
 export default function KfgMissionScreen() {
   return (
@@ -226,6 +227,8 @@ function MissionInner() {
               {studentRun && <Text style={[styles.meta, { color: colors.textPrimary }]}>{t.kfgStudentRule(KFG_LIMITS.studentMinVerified)}</Text>}
             </Card>
           )}
+
+          {mission.photoWall && <KfgPhotoWall missionId={mission.id} user={user} status={participation?.status} />}
 
           {joined && status === 'joined' && !started && (
             <Button label={t.kfgLeaveBtn} variant="ghost" onPress={leave} />

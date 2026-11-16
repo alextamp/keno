@@ -31,6 +31,8 @@ export interface CreateKfgMissionParams {
   soloFriendly?: boolean;
   /** A KfG community the creator belongs to (checked by the server). */
   groupId?: string;
+  /** Default true. */
+  photoWall?: boolean;
 }
 
 export type KfgScanResult =
@@ -40,6 +42,8 @@ export type KfgScanResult =
 export interface KfgRepository {
   subscribePublishedMissions(onChange: (missions: KfgMission[]) => void): () => void;
   /** Missions this user created, any status (pending/rejected included), newest first. */
+  /** Missions by id (one get each — a list query can't prove the read rule). Missing/unreadable ones are skipped. */
+  getMissions(ids: string[]): Promise<KfgMission[]>;
   /** Someone's public KfG profile, or null if they've never opened Keno for Good. */
   getPublicProfile(uid: string): Promise<KfgProfile | null>;
   subscribeMyMissions(uid: string, onChange: (missions: KfgMission[]) => void): () => void;

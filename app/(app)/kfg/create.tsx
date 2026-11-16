@@ -110,6 +110,7 @@ function CreateInner() {
   const [universities, setUniversities] = useState<string[]>([]);
   const [soloFriendly, setSoloFriendly] = useState(false);
   const [groupId, setGroupId] = useState<string | null>(null);
+  const [photoWall, setPhotoWall] = useState(true);
   const communities = useGroupsStore((s) => s.kfgMyGroups);
   const loadMyGroups = useGroupsStore((s) => s.loadMyGroups);
   useEffect(() => { if (user) loadMyGroups(user.id); }, [user?.id]);
@@ -201,6 +202,7 @@ function CreateInner() {
       genderFilter,
       soloFriendly,
       groupId: groupId ?? undefined,
+      photoWall,
     });
     setSaving(false);
     if (isLeft(r)) {
@@ -395,6 +397,9 @@ function CreateInner() {
 
         <Chip label={t.createSoloFriendlyLabel} icon="users" on={soloFriendly} onPress={() => setSoloFriendly((v) => !v)} />
         <Text style={[styles.note, { color: colors.textHint }]}>{t.createSoloFriendlyHint}</Text>
+
+        <Chip label={t.kfgPhotoWallToggle} icon="camera" on={photoWall} onPress={() => setPhotoWall((v) => !v)} />
+        <Text style={[styles.note, { color: colors.textHint }]}>{t.kfgPhotoWallHint}</Text>
 
         <Input label={t.kfgFieldInfo} hint={t.kfgFieldInfoHint} value={infoText} onChangeText={setInfoText} maxLength={500} multiline />
 

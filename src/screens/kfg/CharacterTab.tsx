@@ -21,6 +21,10 @@ import { formatPoints, kfgLevelInfo } from '@/features/kfg/format';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { useTabNavigation } from '@/core/tabNavigation';
 import { universityLabel } from '@/core/constants/universities';
+import { Card } from '@/components/ui/Card';
+import { semesterLabel } from '@/components/wrapped/WrappedSlides';
+import { getSemesterBounds, getSemesterId } from '@/core/utils/weekId';
+import { KFG_WRAPPED_MIN } from '@/features/kfg/wrapped';
 
 const SLOT_ORDER = { head: 0, face: 1, neck: 2 } as const;
 const ITEMS = [...KFG_COSMETICS].sort((a, b) => SLOT_ORDER[a.slot] - SLOT_ORDER[b.slot]);
@@ -30,11 +34,22 @@ export default function CharacterTab() {
   const insets = useSafeAreaInsets();
   const t = useTranslation();
   const { language } = useLanguageStore();
-  const { profile, ownedCosmetics } = useKfgStore();
+  const { profile, ownedCosmetics, participations } = useKfgStore();
   const [busyId, setBusyId] = useState<string | null>(null);
   const user = useAuthStore((s) => s.user);
   const router = useRouter();
   const { goToTab } = useTabNavigation();
+
+  // Wrapped lock state: completed missions this semester (the Wrapped screen
+  // recomputes exactly from the missions themselves).
+  const [now] = useState(() => new Date());
+  const { start: semStart, end: semEnd } = getSemesterBounds(now);
+  const doneThisSemester = participations.filter((p) => {
+    if (p.status !== 'completed') return false;
+    const at = p.checkOutAt ?? p.joinedAt;
+    return !!at && at >= semStart && at <= semEnd;
+  }).length;
+  const wrappedOpen = doneThisSemester >= KFG_WRAPPED_MIN;
 
   // Same account as the rest of Keno — this row opens your regular profile.
   const openProfile = () => {
@@ -131,6 +146,29 @@ export default function CharacterTab() {
         </Text>
       </View>
 
+      <AnimatedPressable onPress={() => router.push('/(app)/kfg/wrapped' as any)} accessibilityRole="button">
+        <View style={[styles.wrappedCard, { backgroundColor: colors.primary }]}>
+          <View style={styles.wrappedText}>
+            <Text style={styles.wrappedKicker}>{t.kfgWrappedCardLabel}</Text>
+            <Text style={styles.wrappedTitle}>{semesterLabel(getSemesterId(now), t)}</Text>
+            <Text style={styles.wrappedCaption}>
+              {wrappedOpen ? t.kfgWrappedCardOpen : t.kfgWrappedCardLocked(KFG_WRAPPED_MIN - doneThisSemester)}
+            </Text>
+          </View>
+          <View style={styles.wrappedIcon}>
+            <Icon name={wrappedOpen ? 'fwd' : 'lock'} size={18} color="#FAF7F2" />
+          </View>
+        </View>
+      </AnimatedPressable>
+
+      <AnimatedPressable onPress={() => router.push('/(app)/profile/tickets' as any)} accessibilityRole="button">
+        <Card padded style={styles.ticketsRow}>
+          <Icon name="ticket" size={18} color={colors.primary} />
+          <Text style={[styles.meName, styles.meText, { color: colors.textPrimary }]}>{t.kfgTicketsLink}</Text>
+          <Icon name="fwd" size={15} color={colors.textDecor} />
+        </Card>
+      </AnimatedPressable>
+
       <SectionLabel label={t.kfgCharacters} style={styles.section} />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.characters}>
         {KFG_CHARACTERS.map((c) => {
@@ -206,6 +244,13 @@ export default function CharacterTab() {
 const styles = StyleSheet.create({
   content: { paddingHorizontal: Spacing.gutter, gap: Spacing.md },
   hero: { alignItems: 'center', gap: 4, marginTop: Spacing.sm },
+  wrappedCard: { flexDirection: 'row', alignItems: 'center', borderRadius: BorderRadius.lg, padding: Spacing.base, gap: Spacing.md },
+  wrappedText: { flex: 1, gap: 2 },
+  wrappedKicker: { fontSize: 10.5, letterSpacing: 2, fontFamily: UIFont, fontWeight: FontWeight.bold, color: 'rgba(250,247,242,0.75)' },
+  wrappedTitle: { fontSize: FontSize.xl, fontFamily: TitleFont, fontWeight: FontWeight.bold, color: '#FAF7F2' },
+  wrappedCaption: { fontSize: FontSize.sm, color: 'rgba(250,247,242,0.85)' },
+  wrappedIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(250,247,242,0.18)' },
+  ticketsRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   me: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, borderWidth: 1, borderRadius: BorderRadius.lg, padding: Spacing.md },
   meAvatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   meInitial: { color: '#fff', fontFamily: UIFont, fontSize: FontSize.lg, fontWeight: FontWeight.bold },

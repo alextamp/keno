@@ -482,6 +482,22 @@ service cloud.firestore {
       allow update: if signedIn() && resource.data.creatorId == request.auth.uid &&
         onlyChangedFields(['title', 'description', 'infoText']);
       allow create, delete: if false;
+
+      // Photo wall — same as events/{id}/photos: only people who were
+      // actually there (checked in, or already verified/completed) can post,
+      // and only if the creator left the wall on (photoWall: false turns it
+      // off, e.g. a shelter that doesn't want photos). Same 30-day sweep
+      // (functions sweepOldPhotos is a collectionGroup('photos') query).
+      match /photos/{photoId} {
+        allow read: if signedIn();
+        allow create: if signedIn() &&
+          request.resource.data.uploaderUid == request.auth.uid &&
+          request.resource.data.keys().hasOnly(['uri', 'uploaderUid', 'uploaderName', 'uploaderAvatarColor', 'createdAt']) &&
+          get(/databases/$(database)/documents/kfgMissions/$(missionId)).data.get('photoWall', true) != false &&
+          get(/databases/$(database)/documents/kfgParticipations/$(missionId + '_' + request.auth.uid)).data.status
+            in ['checkedIn', 'verified', 'inReview', 'completed'];
+        allow update, delete: if false;
+      }
     }
 
     // One doc per (mission, user), id `${missionId}_${uid}`. Readable by the

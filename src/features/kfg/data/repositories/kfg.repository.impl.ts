@@ -63,6 +63,11 @@ export const kfgRepository: KfgRepository = {
       () => onChange(profileFromFirestore(uid, undefined)));
   },
 
+  async getMissions(ids) {
+    const snaps = await Promise.all([...new Set(ids)].map((id) => getDoc(doc(db, MISSIONS, id)).catch(() => null)));
+    return snaps.filter((s): s is NonNullable<typeof s> => !!s && s.exists()).map(missionFromFirestore);
+  },
+
   async getPublicProfile(uid) {
     try {
       const snap = await getDoc(doc(db, PROFILES, uid));
@@ -137,6 +142,7 @@ export const kfgRepository: KfgRepository = {
       imageUri: p.imageUri ?? null, minAge: p.minAge ?? null, maxAge: p.maxAge ?? null,
       allowedUniversities: p.allowedUniversities ?? [], genderFilter: p.genderFilter ?? 'any', soloFriendly: p.soloFriendly === true,
       groupId: p.groupId ?? null,
+      photoWall: p.photoWall !== false,
     }));
   },
 

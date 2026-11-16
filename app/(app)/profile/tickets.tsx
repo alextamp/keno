@@ -17,6 +17,12 @@ import { EventCategory, EventEntity } from '@/features/events/domain/entities/ev
 import { isLeft } from '@/core/utils/either';
 import { fetchUserProfiles, UserProfile } from '@/core/utils/userProfiles';
 import { db } from '@/lib/firebase';
+import { FEATURES } from '@/core/constants/features';
+import { KfgTicket } from '@/components/kfg/KfgTicket';
+import { useKfgStore } from '@/features/kfg/presentation/store/kfg.store';
+import { kfgRepository } from '@/features/kfg/data/repositories/kfg.repository.impl';
+import { KfgMission } from '@/features/kfg/domain/entities/kfg.entity';
+import { buildKfgTickets, completedParticipations } from '@/features/kfg/tickets';
 
 interface MyPhoto { id: string; eventId: string; uri: string; createdAt: Date; }
 
@@ -46,6 +52,39 @@ export default function TicketsScreen() {
   const [loading, setLoading] = useState(true);
   const [photos, setPhotos] = useState<MyPhoto[]>([]);
   const [savePhotoUri, setSavePhotoUri] = useState<string | null>(null);
+
+  // Keno for Good tickets: one per mission you completed (same account).
+  const kfgParticipations = useKfgStore((s) => s.participations);
+  const kfgStart = useKfgStore((s) => s.start);
+  const kfgStop = useKfgStore((s) => s.stop);
+  const [kfgMissions, setKfgMissions] = useState<KfgMission[]>([]);
+  useEffect(() => {
+    if (!user || !FEATURES.kenoForGood) return;
+    kfgStart(user.id);
+    return kfgStop;
+  }, [user?.id]);
+  const kfgDoneIds = completedParticipations(kfgParticipations).map((p) => p.missionId).sort().join(',');
+  useEffect(() => {
+    if (!kfgDoneIds) return;
+    kfgRepository.getMissions(kfgDoneIds.split(',')).then(setKfgMissions);
+  }, [kfgDoneIds]);
+  const kfgTickets = buildKfgTickets(kfgParticipations, kfgMissions);
+  const [kfgPhotos, setKfgPhotos] = useState<MyPhoto[]>([]);
+  useEffect(() => {
+    if (!user || !kfgDoneIds) return;
+    let cancelled = false;
+    Promise.all(kfgDoneIds.split(',').map(async (missionId) => {
+      const snap = await getDocs(query(collection(db, 'kfgMissions', missionId, 'photos'), where('uploaderUid', '==', user.id)))
+        .catch(() => null);
+      return (snap?.docs ?? []).map((d) => ({
+        id: d.id,
+        eventId: missionId,
+        uri: d.data().uri as string,
+        createdAt: (d.data().createdAt as Timestamp)?.toDate() ?? new Date(),
+      }));
+    })).then((r) => { if (!cancelled) setKfgPhotos(r.flat()); });
+    return () => { cancelled = true; };
+  }, [user?.id, kfgDoneIds]);
 
   useEffect(() => {
     if (!user) return;
@@ -135,12 +174,23 @@ export default function TicketsScreen() {
           );
         })}
 
+        {kfgTickets.length > 0 && (
+          <>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Keno for Good</Text>
+            {kfgTickets.map((tk) => (
+              <AnimatedPressable key={tk.mission.id} onPress={() => router.push(`/(app)/kfg/mission/${tk.mission.id}` as any)}>
+                <KfgTicket ticket={tk} onSurface />
+              </AnimatedPressable>
+            ))}
+          </>
+        )}
+
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t.profilePhotosSection}</Text>
-        {photos.length === 0 ? (
+        {photos.length + kfgPhotos.length === 0 ? (
           <Text style={[styles.empty, { color: colors.textHint }]}>{t.profilePhotosEmpty}</Text>
         ) : (
           <View style={styles.photoGrid}>
-            {photos.map((p) => (
+            {[...photos, ...kfgPhotos].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).map((p) => (
               <AnimatedPressable key={p.id} onPress={() => setSavePhotoUri(p.uri)} style={styles.photoItem}>
                 <Image source={{ uri: p.uri }} style={styles.photoImg} resizeMode="cover" />
               </AnimatedPressable>

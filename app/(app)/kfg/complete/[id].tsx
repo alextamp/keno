@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { captureRef } from 'react-native-view-shot';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
@@ -21,6 +22,9 @@ import { kfgRepository } from '@/features/kfg/data/repositories/kfg.repository.i
 import { KfgMission } from '@/features/kfg/domain/entities/kfg.entity';
 import { useKfgStore } from '@/features/kfg/presentation/store/kfg.store';
 import { formatPoints, kfgLevelInfo } from '@/features/kfg/format';
+import { buildKfgTickets, completedParticipations } from '@/features/kfg/tickets';
+import { KfgTicket } from '@/components/kfg/KfgTicket';
+import { analytics } from '@/core/utils/analytics';
 
 export default function KfgCompleteScreen() {
   return (
@@ -38,8 +42,22 @@ function CompleteInner() {
   const t = useTranslation();
   const { language } = useLanguageStore();
   const participation = useKfgStore((s) => (id ? s.participationFor(id) : undefined));
-  const { profile, ownedCosmetics } = useKfgStore();
+  const { profile, ownedCosmetics, participations } = useKfgStore();
   const [mission, setMission] = useState<KfgMission | null>(null);
+  const [doneMissions, setDoneMissions] = useState<KfgMission[]>([]);
+  const ticketRef = useRef<React.ComponentRef<typeof View>>(null);
+
+  // The ticket's serial counts every mission you've completed, so all of
+  // them are needed, not just this one.
+  const doneIds = completedParticipations(participations).map((p) => p.missionId).sort().join(',');
+  useEffect(() => {
+    if (!doneIds) return;
+    kfgRepository.getMissions(doneIds.split(',')).then(setDoneMissions);
+  }, [doneIds]);
+  const ticket = useMemo(
+    () => buildKfgTickets(participations, doneMissions).find((tk) => tk.mission.id === id),
+    [participations, doneMissions, id],
+  );
 
   useEffect(() => (id ? kfgRepository.subscribeMission(id, setMission) : undefined), [id]);
 
@@ -61,6 +79,16 @@ function CompleteInner() {
   const leveledUp = !!award && award.levelAfter > award.levelBefore;
   const unlocked = (award?.unlocked ?? []).map(getCosmetic).filter((c): c is NonNullable<typeof c> => !!c);
   const when = participation.checkOutAt ?? new Date();
+
+  const shareTicket = async () => {
+    if (!ticketRef.current) return;
+    haptics.light();
+    try {
+      const uri = await captureRef(ticketRef, { format: 'png', quality: 0.95 });
+      const result = await Share.share({ url: uri, title: mission.title, message: `💚 ${mission.title} — Keno for Good` });
+      if (result.action !== 'dismissedAction') analytics.track('kfg_ticket_shared', { missionId: mission.id });
+    } catch {}
+  };
 
   const wear = async (itemId: string, slot: 'head' | 'face' | 'neck') => {
     const r = await kfgRepository.equip(profile.uid, { ...profile.equipped, [slot]: itemId });
@@ -89,6 +117,12 @@ function CompleteInner() {
         <Text style={[styles.note, { color: colors.textHint }]}>
           {participation.status === 'inReview' ? t.kfgPhotosInReview : t.kfgPendingPayout}
         </Text>
+      )}
+
+      {ticket && (
+        <View ref={ticketRef} collapsable={false} style={[styles.ticketWrap, { backgroundColor: colors.background }]}>
+          <KfgTicket ticket={ticket} />
+        </View>
       )}
 
       <Card padded style={styles.levelCard}>
@@ -120,7 +154,7 @@ function CompleteInner() {
       })}
 
       <View style={styles.actions}>
-        <Button label={t.kfgShareStory} variant="outline" onPress={() => Alert.alert(t.kfgShareStory, t.kfgShareSoon)} fullWidth />
+        {ticket && <Button label={t.kfgShareStory} variant="outline" onPress={shareTicket} fullWidth />}
         <Button label={t.kfgBackToMissions} variant="ghost" onPress={() => router.dismissTo('/(app)/kfg' as any)} fullWidth />
       </View>
     </ScrollView>
@@ -136,6 +170,7 @@ const styles = StyleSheet.create({
   pillText: { fontFamily: UIFont, fontSize: FontSize.md, fontWeight: FontWeight.bold },
   note: { fontFamily: UIFontLight, fontSize: FontSize.md, lineHeight: 19, textAlign: 'center' },
   levelCard: { alignSelf: 'stretch', gap: Spacing.sm },
+  ticketWrap: { alignSelf: 'stretch', padding: 4 },
   levelName: { fontFamily: UIFont, fontSize: FontSize.lg, fontWeight: FontWeight.bold },
   unlockWrap: { alignSelf: 'stretch', gap: Spacing.sm },
   unlockCard: { alignItems: 'center', gap: Spacing.sm },

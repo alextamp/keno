@@ -55,6 +55,7 @@ export default function AppLayout() {
       <Stack.Screen name="kfg/verify/[id]" />
       <Stack.Screen name="kfg/complete/[id]" options={{ gestureEnabled: false }} />
       <Stack.Screen name="kfg/admin" />
+      <Stack.Screen name="kfg/wrapped" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="kfg/scan" options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="event/rides/[id]" />
       <Stack.Screen name="dm/[uid]" />

@@ -36,6 +36,8 @@ export interface KfgMission {
   /** KfG community (groups doc with scope 'kfg') it was posted to; name denormalized by the server. */
   groupId?: string;
   groupName?: string;
+  /** Photo wall on/off — off for e.g. shelters where people shouldn't be photographed. Missing = on. */
+  photoWall: boolean;
   points: number;
   status: KfgMissionStatus;
   participantCount: number;

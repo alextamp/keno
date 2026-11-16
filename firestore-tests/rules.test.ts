@@ -375,6 +375,23 @@ describe('Keno for Good', () => {
     await assertFails(getDocs(query(collection(asUser(USER_C), 'kfgParticipations'), where('reviewState', '==', 'queued'))));
   });
 
+  test('mission photo wall: only people who were there, and only if the wall is on', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'kfgMissions', 'w1'), { creatorId: USER_A, status: 'published' });
+      await setDoc(doc(db, 'kfgMissions', 'w2'), { creatorId: USER_A, status: 'published', photoWall: false });
+      await setDoc(doc(db, 'kfgParticipations', `w1_${USER_B}`), { uid: USER_B, missionId: 'w1', status: 'checkedIn' });
+      await setDoc(doc(db, 'kfgParticipations', `w1_${USER_C}`), { uid: USER_C, missionId: 'w1', status: 'joined' });
+      await setDoc(doc(db, 'kfgParticipations', `w2_${USER_B}`), { uid: USER_B, missionId: 'w2', status: 'completed' });
+    });
+    const photo = (uid: string) => ({ uri: 'https://x/y.jpg', uploaderUid: uid, uploaderName: 'B', uploaderAvatarColor: '#999', createdAt: Timestamp.now() });
+    await assertSucceeds(addDoc(collection(asUser(USER_B), 'kfgMissions', 'w1', 'photos'), photo(USER_B)));
+    await assertFails(addDoc(collection(asUser(USER_C), 'kfgMissions', 'w1', 'photos'), photo(USER_C)));
+    await assertFails(addDoc(collection(asUser(USER_B), 'kfgMissions', 'w1', 'photos'), photo(USER_C)));
+    await assertFails(addDoc(collection(asUser(USER_B), 'kfgMissions', 'w1', 'photos'), { ...photo(USER_B), extra: 1 }));
+    await assertFails(addDoc(collection(asUser(USER_B), 'kfgMissions', 'w2', 'photos'), photo(USER_B)));
+    await assertSucceeds(getDocs(collection(asUser(USER_C), 'kfgMissions', 'w1', 'photos')));
+  });
+
   test('trust scores are not readable by users', async () => {
     await seed(async (db) => { await setDoc(doc(db, 'kfgTrust', USER_A), { score: 0.5 }); });
     await assertFails(getDoc(doc(asUser(USER_A), 'kfgTrust', USER_A)));

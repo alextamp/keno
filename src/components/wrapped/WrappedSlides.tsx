@@ -15,8 +15,8 @@ import { areaLabel, WrappedStats, WrappedTraitId } from '@/features/wrapped/wrap
 export const SLIDE_W = 1080;
 export const SLIDE_H = 1920;
 
-const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
-const C = {
+export const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
+export const C = {
   terracotta: '#B8482A', ember: '#D9683F', paper: '#FAF7F2', ink: '#1F1B16',
   butter: '#F2C879', sage: '#9DB59A', plum: '#5B3A5E', blush: '#E39A7A',
 };
@@ -76,11 +76,11 @@ export function semesterLabel(semesterId: string, t: Translations): string {
   return t.wrappedSemesterLabel(season === 'spring' ? 'spring' : 'fall', Number(year));
 }
 
-function Frame({ s, children }: { s: number; children: React.ReactNode }) {
+export function Frame({ s, children }: { s: number; children: React.ReactNode }) {
   return <View style={{ width: SLIDE_W * s, height: SLIDE_H * s, overflow: 'hidden' }}>{children}</View>;
 }
 
-function Bg({ s, children }: { s: number; children: React.ReactNode }) {
+export function Bg({ s, children }: { s: number; children: React.ReactNode }) {
   return (
     <Svg width={SLIDE_W * s} height={SLIDE_H * s} viewBox={`0 0 ${SLIDE_W} ${SLIDE_H}`} style={{ position: 'absolute', left: 0, top: 0 }}>
       {children}
@@ -96,7 +96,7 @@ function Wordmark({ s, color, dot }: { s: number; color: string; dot: string }) 
   );
 }
 
-function Kicker({ s, color, children }: { s: number; color: string; children: string }) {
+export function Kicker({ s, color, children }: { s: number; color: string; children: string }) {
   return <Text style={{ fontFamily: UIFont, fontSize: 20 * s, letterSpacing: 4 * s, color }}>{children}</Text>;
 }
 
@@ -316,13 +316,13 @@ export function ConstellationSlide({ stats, s, t }: SlideProps) {
 
 // Decorative only — a fixed pattern, laid out once.
 const BAR_WIDTHS = [3, 1, 2, 1, 3, 2, 1, 1, 4, 1, 2, 3, 1, 2, 1, 3, 1, 1, 2, 4, 1, 2, 1, 3, 2, 1, 1, 3, 1, 2, 2, 1, 4, 1, 1, 2, 3, 1, 2, 1, 1, 3];
-const BARS = BAR_WIDTHS.reduce<{ x: number; w: number }[]>((acc, w, i) => {
+export const BARS = BAR_WIDTHS.reduce<{ x: number; w: number }[]>((acc, w, i) => {
   const prev = acc[acc.length - 1];
   const x = prev ? prev.x + prev.w + ((i - 1) % 3 === 0 ? 7 : 5) : 0;
   return [...acc, { x, w: w * 3 }];
 }, []);
-const BARCODE_W = BARS[BARS.length - 1].x + BARS[BARS.length - 1].w;
-const TEETH = Array.from({ length: 26 }, (_, i) => i * 30);
+export const BARCODE_W = BARS[BARS.length - 1].x + BARS[BARS.length - 1].w;
+export const TEETH = Array.from({ length: 26 }, (_, i) => i * 30);
 
 export function ReceiptSlide({ stats, s, t, userName }: SlideProps) {
   const mono = (size: number, color = C.ink, extra = {}) => ({ fontFamily: MONO, fontSize: size * s, color, ...extra });
@@ -392,7 +392,7 @@ export function ReceiptSlide({ stats, s, t, userName }: SlideProps) {
 }
 
 // Receipt is 780 wide with 64 padding each side → 652 of usable width.
-function Dashes({ s }: { s: number }) {
+export function Dashes({ s }: { s: number }) {
   return (
     <Svg width={652 * s} height={4 * s} viewBox="0 0 652 4" style={{ marginVertical: 30 * s }}>
       <Line x1="0" y1="2" x2="652" y2="2" stroke="#DCD3C2" strokeWidth="2" strokeDasharray="8 7" />
@@ -400,7 +400,7 @@ function Dashes({ s }: { s: number }) {
   );
 }
 
-function ReceiptRow({ s, label, value, mono }: { s: number; label: string; value: number; mono: (size: number, color?: string, extra?: object) => object }) {
+export function ReceiptRow({ s, label, value, mono }: { s: number; label: string; value: number | string; mono: (size: number, color?: string, extra?: object) => object }) {
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 * s }}>
       <Text style={mono(20, '#8A7F6E')}>{label}</Text>
