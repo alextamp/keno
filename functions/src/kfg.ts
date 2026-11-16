@@ -238,6 +238,48 @@ async function payParticipant(
  * themselves (no monthly cap — the 5/hour rate limit above stops spam), and those
  * wait for admin approval.
  */
+/**
+ * Validates everything a creator may set or later edit (kind, points,
+ * creator and community are fixed at creation). `minCapacity` stops an
+ * edit from dropping below the people already signed up.
+ */
+function missionFields(d: Record<string, any>, kind: KfgMissionKind, minCapacity = 1) {
+  const cause = CAUSES.includes(d.cause) ? d.cause : 'other';
+  const startsAt = new Date(d.startsAt);
+  const endsAt = new Date(d.endsAt);
+  const now = Date.now();
+  if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) throw new HttpsError('invalid-argument', 'dates');
+  if (startsAt.getTime() < now || startsAt.getTime() > now + 90 * 86_400_000) throw new HttpsError('invalid-argument', 'startsAt');
+  if (endsAt <= startsAt || endsAt.getTime() - startsAt.getTime() > KFG_LIMITS.maxDurationHours * 3_600_000) {
+    throw new HttpsError('invalid-argument', 'endsAt');
+  }
+  const durationMin = (endsAt.getTime() - startsAt.getTime()) / 60_000;
+  const minDurationMin = kind === 'partnerQr' ? Math.round(Number(d.minDurationMin ?? 0)) : 0;
+  if (!(minDurationMin >= 0 && minDurationMin <= durationMin)) throw new HttpsError('invalid-argument', 'minDurationMin');
+  const capacity = Math.round(Number(d.capacity));
+  if (!(capacity >= Math.max(1, minCapacity) && capacity <= KFG_LIMITS.maxCapacity)) throw new HttpsError('invalid-argument', 'capacity');
+  const filters = sanitizeMissionFilters(d);
+  if (!filters) throw new HttpsError('invalid-argument', 'ages');
+  return {
+    title: str(d.title, 'title', 3, 80),
+    description: str(d.description, 'description', 10, 1000),
+    infoText: optStr(d.infoText, 'infoText', 500),
+    cause,
+    startsAt: Timestamp.fromDate(startsAt),
+    endsAt: Timestamp.fromDate(endsAt),
+    minDurationMin,
+    areaLabel: str(d.areaLabel, 'areaLabel', 2, 60),
+    address: optStr(d.address, 'address', 160),
+    lat: typeof d.lat === 'number' && Number.isFinite(d.lat) ? d.lat : null,
+    lng: typeof d.lng === 'number' && Number.isFinite(d.lng) ? d.lng : null,
+    capacity,
+    imageUri: coverImage(d.imageUri),
+    photoWall: d.photoWall !== false,
+    isPrivate: d.isPrivate === true,
+    ...filters,
+  };
+}
+
 export const kfgCreateMission = onCall(async (request) => {
   const uid = requireUid(request);
   await checkRateLimit(uid, 'kfgCreateMission', 5, 60 * 60_000);
@@ -252,66 +294,52 @@ export const kfgCreateMission = onCall(async (request) => {
 
   const kind: KfgMissionKind = creatorType === 'student' ? 'partnerQr' : d.kind;
   if (!KINDS.includes(kind)) throw new HttpsError('invalid-argument', 'kind');
-  const cause = CAUSES.includes(d.cause) ? d.cause : 'other';
-
-  const startsAt = new Date(d.startsAt);
-  const endsAt = new Date(d.endsAt);
-  const now = Date.now();
-  if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) throw new HttpsError('invalid-argument', 'dates');
-  if (startsAt.getTime() < now || startsAt.getTime() > now + 90 * 86_400_000) throw new HttpsError('invalid-argument', 'startsAt');
-  if (endsAt <= startsAt || endsAt.getTime() - startsAt.getTime() > KFG_LIMITS.maxDurationHours * 3_600_000) {
-    throw new HttpsError('invalid-argument', 'endsAt');
-  }
-  const durationMin = (endsAt.getTime() - startsAt.getTime()) / 60_000;
-  const minDurationMin = kind === 'partnerQr' ? Math.round(Number(d.minDurationMin ?? 0)) : 0;
-  if (!(minDurationMin >= 0 && minDurationMin <= durationMin)) throw new HttpsError('invalid-argument', 'minDurationMin');
-  const capacity = Math.round(Number(d.capacity));
-  if (!(capacity >= 1 && capacity <= KFG_LIMITS.maxCapacity)) throw new HttpsError('invalid-argument', 'capacity');
-  const lat = typeof d.lat === 'number' && Number.isFinite(d.lat) ? d.lat : null;
-  const lng = typeof d.lng === 'number' && Number.isFinite(d.lng) ? d.lng : null;
-  const filters = sanitizeMissionFilters(d);
-  if (!filters) throw new HttpsError('invalid-argument', 'ages');
-  const imageUri = coverImage(d.imageUri);
+  const fields = missionFields(d, kind);
   const community = await communityFor(d.groupId, uid);
-
-  const monthId = athensMonthId(new Date());
 
   const ref = await db.collection(MISSIONS).add({
     creatorId: uid,
     creatorType,
     creatorName: str(user.name ?? 'Keno', 'name', 1, 80),
-    title: str(d.title, 'title', 3, 80),
-    description: str(d.description, 'description', 10, 1000),
-    infoText: optStr(d.infoText, 'infoText', 500),
     kind,
-    cause,
-    startsAt: Timestamp.fromDate(startsAt),
-    endsAt: Timestamp.fromDate(endsAt),
-    minDurationMin,
-    areaLabel: str(d.areaLabel, 'areaLabel', 2, 60),
-    address: optStr(d.address, 'address', 160),
-    lat,
-    lng,
-    capacity,
-    imageUri,
+    ...fields,
     groupId: community?.id ?? null,
-    photoWall: d.photoWall !== false,
     groupName: community?.name ?? null,
-    ...filters,
     points: missionPoints(kind, creatorType, d.points),
     status: creatorType === 'organization' ? 'published' : 'pending',
     participantCount: 0,
     participantIds: [],
+    presentIds: [],
+    waitlistIds: [],
+    coHostIds: [],
+    joinRequests: {},
     verifiedCount: 0,
     finalized: false,
-    createdMonthId: monthId,
+    createdMonthId: athensMonthId(new Date()),
     createdAt: FieldValue.serverTimestamp(),
   });
   if (creatorType === 'organization') {
     await syncCommunityMission(community?.id, ref.id, true);
-    await announceToCommunity(community?.id, ref.id, String(d.title).trim(), uid);
+    await announceToCommunity(community?.id, ref.id, fields.title, uid);
   }
   return { missionId: ref.id, status: creatorType === 'organization' ? 'published' : 'pending' };
+});
+
+/** Full edit, like an event's: creator only, before it starts, never below the people already in. */
+export const kfgUpdateMission = onCall(async (request) => {
+  const uid = requireUid(request);
+  await checkRateLimit(uid, 'kfgUpdateMission', 20, 60 * 60_000);
+  const d = request.data ?? {};
+  const ref = db.doc(`${MISSIONS}/${String(d.missionId ?? '')}`);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError('not-found', 'mission');
+  const m = snap.data()!;
+  if (m.creatorId !== uid) throw new HttpsError('permission-denied', 'not-creator');
+  if (!['pending', 'published'].includes(m.status)) throw new HttpsError('failed-precondition', 'not-active');
+  if (m.startsAt.toMillis() <= Date.now()) throw new HttpsError('failed-precondition', 'already-started');
+  const fields = missionFields(d, m.kind, m.participantCount ?? 0);
+  await ref.update({ ...fields, updatedAt: FieldValue.serverTimestamp() });
+  return { ok: true };
 });
 
 export const kfgReviewMission = onCall(async (request) => {

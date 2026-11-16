@@ -242,6 +242,15 @@ function MissionInner() {
             <KfgLiveMode mission={mission} user={user} isCreator={isMine} />
           )}
 
+          {isMine && !started && (mission.status === 'pending' || mission.status === 'published') && (
+            <Button
+              label={t.kfgEditBtn}
+              variant="outline"
+              size="sm"
+              onPress={() => router.push(`/(app)/kfg/create?edit=${mission.id}` as any)}
+            />
+          )}
+
           <View style={styles.quickRow}>
             <Button label={t.eventShareAction} variant="outline" size="sm" onPress={share} style={styles.flex} />
             <Button

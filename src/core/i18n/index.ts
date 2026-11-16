@@ -439,6 +439,10 @@ export type Translations = {
   kfgSearchPlaceholder: string;
   kfgAllCauses: string;
   kfgNoResults: string;
+  kfgEditTitle: string;
+  kfgEditBtn: string;
+  kfgPrivateToggle: string;
+  kfgPrivateHint: string;
   kfgTabCharacter: string;
   kfgTabLeaderboard: string;
   kfgBackA11y: string;
@@ -1735,6 +1739,10 @@ const en: Translations = {
   kfgSearchPlaceholder: 'Search missions, organizations, areas…',
   kfgAllCauses: 'All',
   kfgNoResults: 'No missions match.',
+  kfgEditTitle: 'Edit mission',
+  kfgEditBtn: 'Edit',
+  kfgPrivateToggle: 'Join by request',
+  kfgPrivateHint: 'People ask to join and you accept them — like a private event.',
   kfgTabCharacter: 'Character',
   kfgTabLeaderboard: 'Ranking',
   kfgBackA11y: 'Back to Keno',
@@ -3050,6 +3058,10 @@ const el: Translations = {
   kfgSearchPlaceholder: 'Αναζήτηση αποστολών, οργανισμών, περιοχών…',
   kfgAllCauses: 'Όλα',
   kfgNoResults: 'Καμία αποστολή δεν ταιριάζει.',
+  kfgEditTitle: 'Επεξεργασία αποστολής',
+  kfgEditBtn: 'Επεξεργασία',
+  kfgPrivateToggle: 'Με αίτημα συμμετοχής',
+  kfgPrivateHint: 'Όσοι θέλουν να έρθουν στέλνουν αίτημα και τους εγκρίνεις εσύ — όπως στα ιδιωτικά events.',
   kfgTabCharacter: 'Χαρακτήρας',
   kfgTabLeaderboard: 'Κατάταξη',
   kfgBackA11y: 'Πίσω στο Keno',

@@ -7,7 +7,7 @@ import { db, functions, storage } from '@/lib/firebase';
 import { Failure, ServerFailure } from '@/core/errors/failures';
 import { Either, left, right } from '@/core/utils/either';
 import { getKfgMonthId } from '@/core/constants/kfg';
-import { KfgRepository, KfgScanResult } from '../../domain/repositories/kfg.repository';
+import { CreateKfgMissionParams, KfgRepository, KfgScanResult } from '../../domain/repositories/kfg.repository';
 import {
   leaderboardFromFirestore, missionFromFirestore, participationFromFirestore, profileFromFirestore,
 } from '../models/kfg.model';
@@ -29,6 +29,20 @@ async function attempt<T>(fn: () => Promise<T>): Promise<Either<Failure, T>> {
 
 function call<T>(name: string, data: unknown): Promise<T> {
   return httpsCallable(functions, name)(data).then((r) => r.data as T);
+}
+
+function missionPayload(p: CreateKfgMissionParams) {
+  return {
+    title: p.title, description: p.description, infoText: p.infoText ?? null, kind: p.kind, cause: p.cause,
+    startsAt: p.startsAt.toISOString(), endsAt: p.endsAt.toISOString(), minDurationMin: p.minDurationMin ?? 0,
+    areaLabel: p.areaLabel, address: p.address ?? null, lat: p.latitude ?? null, lng: p.longitude ?? null,
+    capacity: p.capacity, points: p.points,
+    imageUri: p.imageUri ?? null, minAge: p.minAge ?? null, maxAge: p.maxAge ?? null,
+    allowedUniversities: p.allowedUniversities ?? [], genderFilter: p.genderFilter ?? 'any', soloFriendly: p.soloFriendly === true,
+    groupId: p.groupId ?? null,
+    photoWall: p.photoWall !== false,
+    isPrivate: p.isPrivate === true,
+  };
 }
 
 export const kfgRepository: KfgRepository = {
@@ -134,16 +148,11 @@ export const kfgRepository: KfgRepository = {
   },
 
   createMission(p) {
-    return attempt(() => call('kfgCreateMission', {
-      title: p.title, description: p.description, infoText: p.infoText ?? null, kind: p.kind, cause: p.cause,
-      startsAt: p.startsAt.toISOString(), endsAt: p.endsAt.toISOString(), minDurationMin: p.minDurationMin ?? 0,
-      areaLabel: p.areaLabel, address: p.address ?? null, lat: p.latitude ?? null, lng: p.longitude ?? null,
-      capacity: p.capacity, points: p.points,
-      imageUri: p.imageUri ?? null, minAge: p.minAge ?? null, maxAge: p.maxAge ?? null,
-      allowedUniversities: p.allowedUniversities ?? [], genderFilter: p.genderFilter ?? 'any', soloFriendly: p.soloFriendly === true,
-      groupId: p.groupId ?? null,
-      photoWall: p.photoWall !== false,
-    }));
+    return attempt(() => call('kfgCreateMission', missionPayload(p)));
+  },
+
+  updateMission(missionId, p) {
+    return attempt(() => call<void>('kfgUpdateMission', { missionId, ...missionPayload(p) }));
   },
 
   reviewMission(missionId, approve, reason) {

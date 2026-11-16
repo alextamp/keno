@@ -33,6 +33,8 @@ export interface CreateKfgMissionParams {
   groupId?: string;
   /** Default true. */
   photoWall?: boolean;
+  /** Join requests instead of open sign-up, like a private event. */
+  isPrivate?: boolean;
 }
 
 export type KfgScanResult =
@@ -63,6 +65,8 @@ export interface KfgRepository {
   getPhotoReviewQueue(): Promise<Either<Failure, { participation: KfgParticipation; before?: string; after?: string }[]>>;
 
   createMission(params: CreateKfgMissionParams): Promise<Either<Failure, { missionId: string; status: 'pending' | 'published' }>>;
+  /** Full edit (creator, before it starts). Kind, points and community stay as created. */
+  updateMission(missionId: string, params: CreateKfgMissionParams): Promise<Either<Failure, void>>;
   reviewMission(missionId: string, approve: boolean, reason?: string): Promise<Either<Failure, void>>;
   cancelMission(missionId: string): Promise<Either<Failure, void>>;
   /** Creator, while it's running: end it now (Live Mode). */

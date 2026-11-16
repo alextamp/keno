@@ -46,6 +46,14 @@ export interface KfgMission {
   presentIds: string[];
   /** The creator ended it early from Live Mode (endsAt was moved to that moment). */
   endedEarly: boolean;
+  /** Join by request (creator accepts), like a private event. */
+  isPrivate: boolean;
+  /** uid -> message, pending requests on a private mission. */
+  joinRequests: Record<string, string>;
+  /** First come, first served; promoted by the server when a spot opens. */
+  waitlistIds: string[];
+  /** Can scan QR codes and run the mission like the creator. */
+  coHostIds: string[];
   verifiedCount: number;
   finalized: boolean;
   rejectionReason?: string;

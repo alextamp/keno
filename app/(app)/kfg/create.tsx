@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
@@ -89,6 +89,11 @@ function CreateInner() {
   const { language } = useLanguageStore();
   const user = useAuthStore((s) => s.user);
   const isOrg = user?.isOrganization === true;
+  // ?edit=<missionId>: the same form, prefilled — kind, points and community
+  // stay as created (the server ignores them on an edit).
+  const { edit: editId } = useLocalSearchParams<{ edit?: string }>();
+  const editing = !!editId;
+  const [loadedEdit, setLoadedEdit] = useState<{ lat?: number; lng?: number; address: string; kind: KfgMissionKind } | null>(null);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -114,10 +119,27 @@ function CreateInner() {
   const communities = useGroupsStore((s) => s.kfgMyGroups);
   const loadMyGroups = useGroupsStore((s) => s.loadMyGroups);
   useEffect(() => { if (user) loadMyGroups(user.id); }, [user?.id]);
+  const [isPrivate, setIsPrivate] = useState(false);
+  useEffect(() => {
+    if (!editId) return;
+    kfgRepository.getMissions([editId]).then(([m]) => {
+      if (!m) return;
+      setTitle(m.title); setDescription(m.description); setInfoText(m.infoText ?? '');
+      setCause(m.cause); setKind(m.kind); setStartsAt(m.startsAt);
+      const dur = Math.round((m.endsAt.getTime() - m.startsAt.getTime()) / 60_000);
+      setDurationMin(dur); setMinStayMin(m.minDurationMin);
+      setAreaLabel(m.areaLabel); setAddress(m.address ?? ''); setCapacity(m.capacity); setPoints(m.points);
+      setImageUri(m.imageUri ?? null); setGenderFilter(m.genderFilter ?? 'any');
+      setAgeLimit(m.minAge != null || m.maxAge != null); setMinAge(m.minAge ?? 18); setMaxAge(m.maxAge ?? 26);
+      setUniversities(m.allowedUniversities ?? []); setSoloFriendly(!!m.soloFriendly);
+      setGroupId(m.groupId ?? null); setPhotoWall(m.photoWall); setIsPrivate(m.isPrivate);
+      setLoadedEdit({ lat: m.latitude, lng: m.longitude, address: m.address ?? '', kind: m.kind });
+    });
+  }, [editId]);
   const [picker, setPicker] = useState<'date' | 'start' | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const effectiveKind: KfgMissionKind = isOrg ? kind : 'partnerQr';
+  const effectiveKind: KfgMissionKind = loadedEdit ? loadedEdit.kind : isOrg ? kind : 'partnerQr';
   const endsAt = new Date(startsAt.getTime() + durationMin * 60_000);
   const minStay = Math.min(minStayMin, durationMin);
   const MIN = { title: 3, description: 10, area: 2 } as const;
@@ -171,8 +193,8 @@ function CreateInner() {
       return;
     }
     setSaving(true);
-    let coverUrl: string | undefined;
-    if (imageUri) {
+    let coverUrl: string | undefined = imageUri?.startsWith('https://') ? imageUri : undefined;
+    if (imageUri && !coverUrl) {
       try {
         coverUrl = await uploadEventImage(imageUri);
       } catch {
@@ -181,14 +203,16 @@ function CreateInner() {
         return;
       }
     }
-    let coords: { latitude: number; longitude: number } | null = null;
-    if (address.trim()) {
+    let coords: { latitude: number; longitude: number } | null =
+      loadedEdit && loadedEdit.address === address && loadedEdit.lat != null && loadedEdit.lng != null
+        ? { latitude: loadedEdit.lat, longitude: loadedEdit.lng } : null;
+    if (address.trim() && !coords) {
       // Best effort, for the distance shown on the mission page.
       coords = await Location.geocodeAsync(`${address.trim()}, ${areaLabel.trim()}`)
         .then((r) => (r[0] ? { latitude: r[0].latitude, longitude: r[0].longitude } : null))
         .catch(() => null);
     }
-    const r = await kfgRepository.createMission({
+    const params = {
       title: title.trim(), description: description.trim(), infoText: infoText.trim() || undefined,
       kind: effectiveKind, cause, startsAt, endsAt,
       minDurationMin: effectiveKind === 'partnerQr' ? minStay : 0,
@@ -203,7 +227,21 @@ function CreateInner() {
       soloFriendly,
       groupId: groupId ?? undefined,
       photoWall,
-    });
+      isPrivate,
+    };
+    if (editId) {
+      const u = await kfgRepository.updateMission(editId, params);
+      setSaving(false);
+      if (isLeft(u)) {
+        const code = u.left.message;
+        Alert.alert(t.kfgEditTitle, code === 'endsAt' ? t.kfgInvalidTimes(KFG_LIMITS.maxDurationHours) : t.kfgError(code));
+        return;
+      }
+      analytics.track('kfg_mission_edited', { missionId: editId });
+      router.back();
+      return;
+    }
+    const r = await kfgRepository.createMission(params);
     setSaving(false);
     if (isLeft(r)) {
       const code = r.left.message;
@@ -224,10 +262,10 @@ function CreateInner() {
   return (
     <KeyboardAvoidingView style={[styles.root, { backgroundColor: colors.background }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={{ paddingTop: insets.top + 12, paddingHorizontal: Spacing.gutter }}>
-        <ScreenHeader title={t.kfgCreateTitle} />
+        <ScreenHeader title={editing ? t.kfgEditTitle : t.kfgCreateTitle} />
       </View>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]} keyboardShouldPersistTaps="handled">
-        {!isOrg && (
+        {!isOrg && !editing && (
           <Text style={[styles.note, { color: colors.textHint }]}>{t.kfgCreateStudentNote}</Text>
         )}
 
@@ -278,7 +316,7 @@ function CreateInner() {
           ))}
         </View>
 
-        {isOrg && (
+        {isOrg && !editing && (
           <>
             <SectionLabel label={t.kfgFieldKind} />
             <View style={styles.chips}>
@@ -342,7 +380,7 @@ function CreateInner() {
           <Stepper value={capacity} label={t.kfgFieldCapacity} onChange={(d) => setCapacity((v) => Math.min(KFG_LIMITS.maxCapacity, Math.max(1, v + d)))} />
         </View>
 
-        {isOrg && effectiveKind === 'partnerQr' && (
+        {isOrg && !editing && effectiveKind === 'partnerQr' && (
           <>
             <SectionLabel label={t.kfgFieldPoints} />
             <View style={styles.chips}>
@@ -351,7 +389,7 @@ function CreateInner() {
           </>
         )}
 
-        {communities.length > 0 && (
+        {communities.length > 0 && !editing && (
           <>
             <SectionLabel label={t.kfgCommunityField} />
             <View style={styles.chips}>
@@ -398,13 +436,16 @@ function CreateInner() {
         <Chip label={t.createSoloFriendlyLabel} icon="users" on={soloFriendly} onPress={() => setSoloFriendly((v) => !v)} />
         <Text style={[styles.note, { color: colors.textHint }]}>{t.createSoloFriendlyHint}</Text>
 
+        <Chip label={t.kfgPrivateToggle} icon="lock" on={isPrivate} onPress={() => setIsPrivate((v) => !v)} />
+        <Text style={[styles.note, { color: colors.textHint }]}>{t.kfgPrivateHint}</Text>
+
         <Chip label={t.kfgPhotoWallToggle} icon="camera" on={photoWall} onPress={() => setPhotoWall((v) => !v)} />
         <Text style={[styles.note, { color: colors.textHint }]}>{t.kfgPhotoWallHint}</Text>
 
         <Input label={t.kfgFieldInfo} hint={t.kfgFieldInfoHint} value={infoText} onChangeText={setInfoText} maxLength={500} multiline />
 
         <Button
-          label={isOrg ? t.kfgPublishBtn : t.kfgSubmitForReviewBtn}
+          label={editing ? t.editEventSave : isOrg ? t.kfgPublishBtn : t.kfgSubmitForReviewBtn}
           onPress={submit}
           loading={saving}
           fullWidth

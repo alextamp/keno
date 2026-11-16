@@ -66,6 +66,11 @@ const qr = async (pid) => {
     title: 'Κανονική ομάδα', description: 'Όχι κοινότητα του KfG.', kind: 'partnerQr', startsAt: start.toISOString(), endsAt: end.toISOString(),
     capacity: 5, areaLabel: 'Αθήνα', groupId: 'k1',
   }), 'group', 'regular Keno groups cannot hold missions');
+  const editFields = { title: 'Νέος τίτλος', description: 'Μια αποστολή στην κοινότητα.', startsAt: start.toISOString(), endsAt: end.toISOString(), capacity: 6, areaLabel: 'Αθήνα' };
+  await org.call('kfgUpdateMission', { missionId: inC.missionId, ...editFields });
+  const edited = (await db.doc(`kfgMissions/${inC.missionId}`).get()).data();
+  ok(edited.title === 'Νέος τίτλος' && edited.capacity === 6 && edited.kind === 'partnerQr', 'creator can edit; kind stays');
+  await fails(s1.call('kfgUpdateMission', { missionId: inC.missionId, ...editFields }), 'not-creator', 'only the creator edits');
   await org.call('kfgCancelMission', { missionId: inC.missionId });
   ok(!(await db.doc('groups/c1').get()).data().missionIds.includes(inC.missionId), 'cancelled mission leaves the community');
 
