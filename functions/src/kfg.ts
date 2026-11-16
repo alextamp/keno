@@ -134,7 +134,7 @@ function coverImage(v: unknown): string | null {
 // ── Points ──────────────────────────────────────────────────────────────────
 
 interface AwardMeta {
-  reason: 'mission' | 'host' | 'reversal';
+  reason: 'mission' | 'host' | 'reversal' | 'plusOne' | 'quest';
   countsForLeaderboard: boolean;
   missionId: string;
   participationId?: string;
@@ -211,6 +211,29 @@ async function markPresent(missionId: string, uid: string): Promise<void> {
   await db.doc(`${MISSIONS}/${missionId}`).update({ presentIds: FieldValue.arrayUnion(uid) }).catch(() => {});
 }
 
+/**
+ * Plus-one (like events): if this person came because someone invited them
+ * (kfgInvite recorded it), both get KFG_POINTS.plusOne once, when the invitee
+ * actually completes — never just for signing up. Not ranked.
+ */
+async function payPlusOne(missionId: string, invitee: string): Promise<void> {
+  const ref = db.doc(`${MISSIONS}/${missionId}`);
+  let inviter: string | null = null;
+  await db.runTransaction(async (tx) => {
+    const m = (await tx.get(ref)).data();
+    const by = m?.invites?.[invitee];
+    if (!by || m?.plusOnePaid?.[invitee]) return;
+    tx.update(ref, { [`plusOnePaid.${invitee}`]: true });
+    inviter = by;
+  });
+  const by = inviter as string | null;
+  if (!by) return;
+  for (const who of [by, invitee]) {
+    await awardPoints(who, KFG_POINTS.plusOne, { reason: 'plusOne', countsForLeaderboard: false, missionId }).catch((err) =>
+      logger.error('plus-one payout failed', { missionId, who, err: String(err) }));
+  }
+}
+
 /** Pays a participant and stores the result on their participation (the completion screen reads it). */
 async function payParticipant(
   participationRef: admin.firestore.DocumentReference,
@@ -227,6 +250,7 @@ async function payParticipant(
     completedDayId: athensDayId(new Date()), completedWeekId: athensWeekId(new Date()),
   });
   await markPresent(missionId, uid);
+  await payPlusOne(missionId, uid);
   return award;
 }
 
@@ -474,6 +498,50 @@ export const kfgFeedback = onCall(async (request) => {
   return { ok: true };
 });
 
+/** Invite someone you follow (plus-one): recorded on the mission so both get points if they complete it. */
+export const kfgInvite = onCall(async (request) => {
+  const uid = requireUid(request);
+  await checkRateLimit(uid, 'kfgInvite', 60, 60 * 60_000);
+  const missionId = String(request.data?.missionId ?? '');
+  const target = String(request.data?.uid ?? '');
+  const ref = db.doc(`${MISSIONS}/${missionId}`);
+  const [mSnap, meSnap] = await Promise.all([ref.get(), db.doc(`users/${uid}`).get()]);
+  const m = mSnap.data();
+  const me = meSnap.data();
+  if (!m || m.status !== 'published') throw new HttpsError('failed-precondition', 'not-published');
+  if (!runsMission(m, uid) && !(m.participantIds ?? []).includes(uid)) throw new HttpsError('permission-denied', 'not-participant');
+  if (target === uid || target === m.creatorId || (m.participantIds ?? []).includes(target)) return { ok: true };
+  if (!m.invites?.[target]) await ref.update({ [`invites.${target}`]: uid });
+  await notify([target], 'kfg_invite', missionId, m.title, { uid, name: me?.name, avatarColor: me?.avatarColor, photoUri: me?.photoUri });
+  return { ok: true };
+});
+
+/**
+ * "Did you come alone?" after check-in (the events' solo question). Feeds the
+ * first-solo ticket, and solo-buddy matching: everyone else who came alone
+ * to the same mission gets a nudge to meet up.
+ */
+export const kfgSetSolo = onCall(async (request) => {
+  const uid = requireUid(request);
+  const missionId = String(request.data?.missionId ?? '');
+  const solo = request.data?.solo === true;
+  const participationRef = db.doc(`${PARTICIPATIONS}/${missionId}_${uid}`);
+  const [pSnap, mSnap] = await Promise.all([participationRef.get(), db.doc(`${MISSIONS}/${missionId}`).get()]);
+  const m = mSnap.data();
+  if (!pSnap.exists || !m) throw new HttpsError('not-found', 'participation');
+  if (!(m.presentIds ?? []).includes(uid)) throw new HttpsError('permission-denied', 'not-present');
+  if (typeof pSnap.data()!.arrivedSolo === 'boolean') return { ok: true };
+  await participationRef.update({ arrivedSolo: solo });
+  if (!solo) return { ok: true };
+  const others = (await db.collection(PARTICIPATIONS).where('missionId', '==', missionId).where('arrivedSolo', '==', true).get())
+    .docs.map((d) => d.data().uid as string).filter((u) => u !== uid);
+  if (others.length) {
+    const me = (await db.doc(`users/${uid}`).get()).data();
+    await notify(others, 'kfg_buddy', missionId, m.title, { uid, name: me?.name, avatarColor: me?.avatarColor, photoUri: me?.photoUri });
+  }
+  return { ok: true, buddies: others.length };
+});
+
 // ── Joining ─────────────────────────────────────────────────────────────────
 
 /** Puts uid into a mission (participation + QR secret + counts). Call inside a transaction, after all reads. */
@@ -548,7 +616,14 @@ export const kfgJoin = onCall(async (request) => {
     addParticipantTx(tx, missionRef, missionId, m, uid);
   });
   const j = joined as FirebaseFirestore.DocumentData | null;
-  if (j) await notify([j.creatorId], 'kfg_join', missionId, j.title, { uid, name: user.name, avatarColor: user.avatarColor, photoUri: user.photoUri });
+  if (j) {
+    const from = { uid, name: user.name, avatarColor: user.avatarColor, photoUri: user.photoUri };
+    await notify([j.creatorId], 'kfg_join', missionId, j.title, from);
+    // "A friend is going" — the events' nudge: the joiner's followers who
+    // aren't in already, capped at 20 so one join can't spam.
+    const inAlready = new Set<string>([j.creatorId, ...(j.participantIds ?? [])]);
+    await notify((user.followers ?? []).filter((f: string) => !inAlready.has(f)).slice(0, 20), 'kfg_friend_going', missionId, j.title, from);
+  }
   return { participationId: participationRef.id, waitlisted };
 });
 

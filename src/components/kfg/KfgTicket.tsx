@@ -18,7 +18,11 @@ export function KfgTicket({ ticket, compact, onSurface, style }: {
   return (
     <AccentScopeProvider value="kfg">
       <Ticket
-        topLabel={`KENO FOR GOOD · ${upper(t.kfgCause(ticket.mission.cause))}`}
+        topLabel={`KENO FOR GOOD · ${ticket.label === 'firstSolo' ? t.ticketFirstSoloLabel
+          : ticket.label === 'welcome' ? t.ticketWelcomeLabel
+            : ticket.label === 'squad' ? t.ticketGroupBonusLabel
+              : ticket.label === 'plusOne' ? t.ticketPlusOneLabel
+                : upper(t.kfgCause(ticket.mission.cause))}`}
         title={ticket.mission.title}
         number={ticket.serial}
         footerLeft={format(ticket.doneAt, 'EEE d MMM · HH:mm', { locale: getDateLocale(language) })}

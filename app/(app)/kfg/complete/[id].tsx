@@ -21,6 +21,7 @@ import { haptics } from '@/core/utils/haptics';
 import { kfgRepository } from '@/features/kfg/data/repositories/kfg.repository.impl';
 import { KfgMission } from '@/features/kfg/domain/entities/kfg.entity';
 import { useKfgStore } from '@/features/kfg/presentation/store/kfg.store';
+import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { formatPoints, kfgLevelInfo } from '@/features/kfg/format';
 import { buildKfgTickets, completedParticipations } from '@/features/kfg/tickets';
 import { KfgTicket } from '@/components/kfg/KfgTicket';
@@ -43,6 +44,7 @@ function CompleteInner() {
   const { language } = useLanguageStore();
   const participation = useKfgStore((s) => (id ? s.participationFor(id) : undefined));
   const { profile, ownedCosmetics, participations } = useKfgStore();
+  const user = useAuthStore((st) => st.user);
   const [mission, setMission] = useState<KfgMission | null>(null);
   const [doneMissions, setDoneMissions] = useState<KfgMission[]>([]);
   const ticketRef = useRef<React.ComponentRef<typeof View>>(null);
@@ -55,7 +57,8 @@ function CompleteInner() {
     kfgRepository.getMissions(doneIds.split(',')).then(setDoneMissions);
   }, [doneIds]);
   const ticket = useMemo(
-    () => buildKfgTickets(participations, doneMissions).find((tk) => tk.mission.id === id),
+    () => buildKfgTickets(participations, doneMissions, user ? { uid: user.id, following: user.following, followers: user.followers } : undefined)
+      .find((tk) => tk.mission.id === id),
     [participations, doneMissions, id],
   );
 

@@ -187,6 +187,14 @@ export const kfgRepository: KfgRepository = {
     return attempt(() => call<KfgScanResult>('kfgRollCall', { missionId, uid }));
   },
 
+  invite(missionId, uid) {
+    return attempt(() => call<void>('kfgInvite', { missionId, uid }));
+  },
+
+  setSolo(missionId, solo) {
+    return attempt(() => call<void>('kfgSetSolo', { missionId, solo }));
+  },
+
   claimStandIn(missionId) {
     return attempt(() => call<void>('kfgClaimStandIn', { missionId }));
   },

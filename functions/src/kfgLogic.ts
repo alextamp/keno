@@ -15,6 +15,8 @@ export const KFG_POINTS = {
   photo: 40,
   studentMission: 150,
   studentHost: 150,
+  /** Plus-one: you and the friend you invited, once they actually complete it. */
+  plusOne: 50,
 } as const;
 
 export const KFG_LIMITS = {

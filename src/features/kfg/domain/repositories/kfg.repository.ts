@@ -86,6 +86,10 @@ export interface KfgRepository {
   rollCall(missionId: string, uid: string): Promise<Either<Failure, KfgScanResult>>;
   /** Creator no-show: a participant takes over as co-host. */
   claimStandIn(missionId: string): Promise<Either<Failure, void>>;
+  /** Plus-one invite (recorded server-side so both get points if they complete it). */
+  invite(missionId: string, uid: string): Promise<Either<Failure, void>>;
+  /** "Did you come alone?" — first-solo ticket + solo-buddy nudge. */
+  setSolo(missionId: string, solo: boolean): Promise<Either<Failure, void>>;
   leave(missionId: string): Promise<Either<Failure, void>>;
   scan(code: string): Promise<Either<Failure, KfgScanResult>>;
   checkOutAll(missionId: string): Promise<Either<Failure, { completed: number; tooEarly: number }>>;

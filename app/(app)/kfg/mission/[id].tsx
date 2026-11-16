@@ -69,6 +69,7 @@ function MissionInner() {
   const [showInvite, setShowInvite] = useState(false);
   const [showRequest, setShowRequest] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState(false);
+  const [soloAnswered, setSoloAnswered] = useState(false);
   const [inCalendar, setInCalendar] = useState(false);
   useEffect(() => { if (id) isEventInCalendar(id).then(setInCalendar); }, [id]);
 
@@ -212,6 +213,13 @@ function MissionInner() {
       },
     },
   ]);
+
+  const answerSolo = async (solo: boolean) => {
+    haptics.light();
+    setSoloAnswered(true);
+    const r = await kfgRepository.setSolo(mission.id, solo);
+    if (isLeft(r)) setSoloAnswered(false);
+  };
 
   const sendFeedback = async (value: 'good' | 'bad') => {
     haptics.light();
@@ -451,6 +459,17 @@ function MissionInner() {
           {isMine && !over && mission.participantIds.length > 0 && (
             <Text style={[styles.meta, { color: colors.textHint }]}>{t.kfgCoHostHint}</Text>
           )}
+          {/* "Did you come alone?" — once, after check-in (first-solo ticket + solo-buddy nudge). */}
+          {mission.presentIds.includes(user.id) && participation && participation.arrivedSolo === undefined && !soloAnswered && (
+            <Card padded style={styles.info}>
+              <Text style={[styles.infoTitle, { color: colors.textPrimary }]}>{t.checkinArrivedSoloQuestion}</Text>
+              <View style={styles.quickRow}>
+                <Button label={t.checkinArrivedSoloYes} variant="soft" size="sm" onPress={() => answerSolo(true)} style={styles.flex} />
+                <Button label={t.checkinArrivedSoloNo} variant="outline" size="sm" onPress={() => answerSolo(false)} style={styles.flex} />
+              </View>
+            </Card>
+          )}
+
           {/* Private "how was it?" — once, for whoever was there, after it's over. */}
           {over && mission.presentIds.includes(user.id) && participation && !participation.feedback && !feedbackSent && (
             <Card padded style={styles.info}>

@@ -22,6 +22,8 @@ export const KFG_POINTS = {
   studentMission: 150,
   /** The student who hosted it — only once at least KFG_LIMITS.studentMinVerified people were verified. */
   studentHost: 150,
+  /** Plus-one: you and the friend you invited, once they actually complete it. */
+  plusOne: 50,
 } as const;
 
 export const KFG_LIMITS = {

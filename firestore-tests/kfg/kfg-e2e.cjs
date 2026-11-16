@@ -181,6 +181,26 @@ const qr = async (pid) => {
   ok((await host.call('kfgScan', { code: await qr(j.participationId) })).result === 'verified', 'student mission: verified, paid at finalize');
   ok(!(await db.doc('kfgProfiles/s2').get()).exists, 'no points before finalize');
 
+  console.log('Plus-one, solo, friend going');
+  await db.doc('users/org1/private/rateLimits').delete();
+  await db.doc('users/s1').update({ followers: ['s4'] });
+  const po = await org.call('kfgCreateMission', {
+    title: 'Plus one', description: 'Φέρε έναν φίλο μαζί σου.', kind: 'partnerQr', cause: 'people',
+    startsAt: start.toISOString(), endsAt: end.toISOString(), minDurationMin: 0, capacity: 5, areaLabel: 'Αθήνα',
+  });
+  await w3.call('kfgJoin', { missionId: po.missionId });
+  await w3.call('kfgInvite', { missionId: po.missionId, uid: 's1' });
+  ok((await db.doc(`kfgMissions/${po.missionId}`).get()).data().invites.s1 === 's3', 'invite recorded for the plus-one');
+  await s1.call('kfgJoin', { missionId: po.missionId });
+  ok((await db.collection('users/s4/notifications').where('type', '==', 'kfg_friend_going').get()).size >= 1, 'followers hear a friend is going');
+  const poPid = `${po.missionId}_s1`;
+  await org.call('kfgScan', { code: await qr(poPid) });
+  await s1.call('kfgSetSolo', { missionId: po.missionId, solo: true });
+  ok((await db.doc(`kfgParticipations/${poPid}`).get()).data().arrivedSolo === true, 'solo answer stored');
+  await org.call('kfgScan', { code: await qr(poPid) });
+  const plus = (await db.collection('kfgLedger').where('missionId', '==', po.missionId).where('reason', '==', 'plusOne').get()).docs.map((x) => x.data().uid).sort();
+  ok(JSON.stringify(plus) === JSON.stringify(['s1', 's3']), 'plus-one pays both once the invitee completes');
+
   console.log('Account deletion');
   // s2 is a co-host on the private mission, and present + kudos'd elsewhere.
   const privId = (await db.collection('kfgMissions').where('title', '==', 'Ιδιωτική').get()).docs[0].id;

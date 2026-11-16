@@ -6,7 +6,7 @@ const m = (id: string, over: Partial<KfgMission>): KfgMission => ({
   cause: 'food', startsAt: new Date('2026-10-01T10:00:00'), endsAt: new Date('2026-10-01T12:00:00'), minDurationMin: 0,
   areaLabel: 'Αθήνα', capacity: 10, photoWall: true, ridesEnabled: false, points: 250, status: 'published',
   participantCount: 0, participantIds: [], presentIds: [], endedEarly: false, isPrivate: false, joinRequests: {},
-  waitlistIds: [], coHostIds: [], feedbackGoodCount: 0, feedbackBadCount: 0, verifiedCount: 0, finalized: true, ...over,
+  waitlistIds: [], coHostIds: [], invites: {}, feedbackGoodCount: 0, feedbackBadCount: 0, verifiedCount: 0, finalized: true, ...over,
 });
 
 describe('computeKfgOrganiserStats', () => {

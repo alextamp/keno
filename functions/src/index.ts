@@ -131,7 +131,9 @@ type NotifType =
   | 'kfg_waitlist_promoted'
   | 'kfg_join_request'
   | 'kfg_join_accepted'
-  | 'kfg_invite';
+  | 'kfg_invite'
+  | 'kfg_friend_going'
+  | 'kfg_buddy';
 
 // Which Settings toggle (users.notificationPrefs.<key>) silences the push for
 // a given type. Types not listed here always push. The in-app list entry is
@@ -146,6 +148,7 @@ const PREF_FOR_TYPE: Partial<Record<NotifType, 'groupMessages' | 'suggestions' |
   ride_declined: 'rides',
   ride_cancelled: 'rides',
   kfg_new_mission: 'suggestions',
+  kfg_friend_going: 'suggestions',
 };
 
 function buildPushMessage(type: NotifType, fromName: string, eventTitle?: string, messagePreview?: string): { title: string; body: string } {
@@ -177,6 +180,10 @@ function buildPushMessage(type: NotifType, fromName: string, eventTitle?: string
       return { title: '🙋 Join request', body: eventTitle ? `${fromName} wants to join "${eventTitle}"` : `${fromName} wants to join your mission` };
     case 'kfg_join_accepted':
       return { title: '✅ Request approved', body: eventTitle ? `You've been added to "${eventTitle}"` : 'Your join request was approved!' };
+    case 'kfg_friend_going':
+      return { title: '👥 A friend is volunteering', body: eventTitle ? `${fromName} is going to "${eventTitle}"` : `${fromName} joined a mission` };
+    case 'kfg_buddy':
+      return { title: '🤝 You came solo — so did they', body: eventTitle ? `${fromName} also came alone to "${eventTitle}". Say hi!` : `${fromName} also came alone. Say hi!` };
     case 'kfg_invite':
       return { title: "📩 You're invited!", body: eventTitle ? `${fromName} invited you to "${eventTitle}"` : `${fromName} invited you to a mission` };
     case 'event_message':

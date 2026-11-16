@@ -7,7 +7,8 @@ import { useTranslation } from '@/core/i18n';
 import { haptics } from '@/core/utils/haptics';
 import { fetchUserProfiles, UserProfile } from '@/core/utils/userProfiles';
 import { UserEntity } from '@/features/auth/domain/entities/user.entity';
-import { notificationsRepository } from '@/features/notifications/notifications.repository';
+import { kfgRepository } from '@/features/kfg/data/repositories/kfg.repository.impl';
+import { isLeft } from '@/core/utils/either';
 import { KfgMission } from '@/features/kfg/domain/entities/kfg.entity';
 
 /** "Invite friends" — the people you follow, one tap each sends a kfg_invite notification (like event invites). */
@@ -30,10 +31,10 @@ export function KfgInviteModal({ visible, onClose, mission, user }: {
   const invite = async (p: UserProfile) => {
     haptics.light();
     setSent((s) => [...s, p.uid]);
-    await notificationsRepository.create({
-      toUid: p.uid, fromUid: user.id, fromName: user.name, fromAvatarColor: user.avatarColor, fromPhotoUri: user.photoUri,
-      type: 'kfg_invite', eventId: mission.id, eventTitle: mission.title,
-    }).catch(() => setSent((s) => s.filter((x) => x !== p.uid)));
+    // Through the server (kfgInvite) so the plus-one is recorded: you both
+    // get points if they actually complete the mission.
+    const r = await kfgRepository.invite(mission.id, p.uid);
+    if (isLeft(r)) setSent((s) => s.filter((x) => x !== p.uid));
   };
 
   return (

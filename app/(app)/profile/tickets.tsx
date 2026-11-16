@@ -68,7 +68,7 @@ export default function TicketsScreen() {
     if (!kfgDoneIds) return;
     kfgRepository.getMissions(kfgDoneIds.split(',')).then(setKfgMissions);
   }, [kfgDoneIds]);
-  const kfgTickets = buildKfgTickets(kfgParticipations, kfgMissions);
+  const kfgTickets = buildKfgTickets(kfgParticipations, kfgMissions, { uid: user?.id ?? '', following: user?.following, followers: user?.followers });
   const [kfgPhotos, setKfgPhotos] = useState<MyPhoto[]>([]);
   useEffect(() => {
     if (!user || !kfgDoneIds) return;

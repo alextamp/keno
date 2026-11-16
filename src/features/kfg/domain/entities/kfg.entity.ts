@@ -62,6 +62,8 @@ export interface KfgMission {
   coHostIds: string[];
   /** A participant who took over because the creator didn't show (also in coHostIds). */
   standInHostId?: string;
+  /** invitee uid -> who invited them (plus-one). */
+  invites: Record<string, string>;
   /** Private "how was it?" totals — the creator's organiser stats only. */
   feedbackGoodCount: number;
   feedbackBadCount: number;
@@ -98,6 +100,8 @@ export interface KfgParticipation {
   reviewProblems?: string[];
   /** Private "how was it?" answer (kfgFeedback), once. */
   feedback?: 'good' | 'bad';
+  /** Answer to "did you come alone?" (kfgSetSolo). */
+  arrivedSolo?: boolean;
 }
 
 export interface KfgProfile {

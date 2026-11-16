@@ -53,6 +53,8 @@ const NOTIF_ICONS: Record<NotifType, IconName> = {
   kfg_join_request: 'lock',
   kfg_join_accepted: 'check',
   kfg_invite: 'mail',
+  kfg_friend_going: 'users',
+  kfg_buddy: 'users',
 };
 
 // Screen 26: notifications grouped into ΣΗΜΕΡΑ / ΧΘΕΣ / ΠΑΛΙΟΤΕΡΑ sections.
