@@ -158,6 +158,23 @@ const qr = async (pid) => {
   ok((await host.call('kfgScan', { code: await qr(j.participationId) })).result === 'verified', 'student mission: verified, paid at finalize');
   ok(!(await db.doc('kfgProfiles/s2').get()).exists, 'no points before finalize');
 
+  console.log('Account deletion');
+  // s2 is a co-host on the private mission, and present + kudos'd elsewhere.
+  const privId = (await db.collection('kfgMissions').where('title', '==', 'Ιδιωτική').get()).docs[0].id;
+  await db.doc(`kfgMissions/${privId}`).update({ presentIds: ['s2', 's1'], waitlistIds: ['s2'], 'joinRequests.s2': 'x' });
+  await db.doc(`kfgMissions/${privId}/kudos/s1`).set({ kudos: ['s2'] });
+  await db.doc(`kfgMissions/${privId}/kudos/s2`).set({ kudos: ['s1'] });
+  await db.doc('users/s2').delete();
+  let gone = false;
+  for (let i = 0; i < 40 && !gone; i++) {
+    await new Promise((r) => setTimeout(r, 500));
+    const pm = (await db.doc(`kfgMissions/${privId}`).get()).data();
+    gone = !pm.coHostIds.includes('s2') && !pm.presentIds.includes('s2') && !pm.waitlistIds.includes('s2') && !('s2' in pm.joinRequests);
+  }
+  ok(gone, 'deleted account leaves co-host/present/waitlist/request lists');
+  ok(!(await db.doc(`kfgMissions/${privId}/kudos/s2`).get()).exists, 'their received Kudos are deleted');
+  ok(!(await db.doc(`kfgMissions/${privId}/kudos/s1`).get()).data().kudos.includes('s2'), 'Kudos they gave are removed');
+
   console.log('\nALL PASSED');
   process.exit(0);
 })().catch((e) => { console.error(e); process.exit(1); });

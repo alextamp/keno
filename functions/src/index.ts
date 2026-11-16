@@ -1,4 +1,9 @@
 import * as admin from 'firebase-admin';
+// Imported directly rather than via admin.firestore.FieldValue/Timestamp —
+// that namespace path resolved to undefined in the emulator (Node 26) and
+// broke account deletion's follows/groups step; the direct import is the
+// same object and works everywhere.
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { onDocumentCreated, onDocumentDeleted, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { onCall, onRequest, HttpsError } from 'firebase-functions/v2/https';
@@ -86,7 +91,7 @@ async function incrementWeeklyQuestServerSide(uid: string, questId: string, amou
   const update: Record<string, unknown> = { [`weeklyQuests.${questId}`]: { progress: newProgress, weekId } };
   const reward = WEEKLY_QUEST_REWARDS[questId];
   if (reward && prevProgress < reward.target && newProgress >= reward.target) {
-    update.xp = admin.firestore.FieldValue.increment(reward.xp);
+    update.xp = FieldValue.increment(reward.xp);
   }
   await ref.update(update);
 }
@@ -344,7 +349,7 @@ export const onNotificationCreated = onDocumentCreated(
           for (const receipt of receipts) {
             if (receipt.status === 'error') {
               if (receipt.details?.error === 'DeviceNotRegistered') {
-                await db.doc(`users/${userId}`).update({ pushToken: admin.firestore.FieldValue.delete() });
+                await db.doc(`users/${userId}`).update({ pushToken: FieldValue.delete() });
               } else {
                 logger.error('Push send failed', { userId, error: receipt.message, details: receipt.details });
               }
@@ -361,7 +366,7 @@ export const onNotificationCreated = onDocumentCreated(
             for (const r of Object.values(delivery)) {
               if (r.status !== 'error') continue;
               if (r.details?.error === 'DeviceNotRegistered') {
-                await db.doc(`users/${userId}`).update({ pushToken: admin.firestore.FieldValue.delete() });
+                await db.doc(`users/${userId}`).update({ pushToken: FieldValue.delete() });
               } else {
                 logger.error('Push delivery failed', { userId, error: r.message, details: r.details });
               }
@@ -431,7 +436,7 @@ export const onCheckIn = onDocumentUpdated(
           fromAvatarColor: user2?.avatarColor ?? '#C94D0A',
           fromPhotoUri: user2?.photoUri ?? null,
           eventId,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdAt: FieldValue.serverTimestamp(),
         }),
         db.collection(`users/${matchedUserId}/notifications`).add({
           type: 'buddy_match',
@@ -440,7 +445,7 @@ export const onCheckIn = onDocumentUpdated(
           fromAvatarColor: user1?.avatarColor ?? '#C94D0A',
           fromPhotoUri: user1?.photoUri ?? null,
           eventId,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdAt: FieldValue.serverTimestamp(),
         }),
       ]);
 
@@ -450,7 +455,7 @@ export const onCheckIn = onDocumentUpdated(
         {
           participantIds: [userId, matchedUserId],
           lastMessage: '👥 You got matched!',
-          lastAt: admin.firestore.FieldValue.serverTimestamp(),
+          lastAt: FieldValue.serverTimestamp(),
           isBuddyMatch: true,
         },
         { merge: true },
@@ -480,13 +485,13 @@ export const onEventFeedback = onDocumentUpdated(
 
     try {
       const eventRef = db.collection('events').doc(eventId);
-      await eventRef.update({ [field]: admin.firestore.FieldValue.increment(1) });
+      await eventRef.update({ [field]: FieldValue.increment(1) });
 
       const eventSnap = await eventRef.get();
       const creatorId = eventSnap.data()?.creatorId as string | undefined;
       if (creatorId) {
         await db.collection('users').doc(creatorId).update({
-          [`organiserFeedback.${after.feedback}`]: admin.firestore.FieldValue.increment(1),
+          [`organiserFeedback.${after.feedback}`]: FieldValue.increment(1),
         });
       }
     } catch (err) {
@@ -531,8 +536,8 @@ export const onCheckInCreated = onDocumentCreated(
       if (inviterId && inviterId !== userId) {
         await event.data!.ref.update({ isPlusOne: true });
         await Promise.all([
-          db.collection('users').doc(userId).update({ xp: admin.firestore.FieldValue.increment(REFERRAL_BONUS_XP) }),
-          db.collection('users').doc(inviterId).update({ xp: admin.firestore.FieldValue.increment(REFERRAL_BONUS_XP) }),
+          db.collection('users').doc(userId).update({ xp: FieldValue.increment(REFERRAL_BONUS_XP) }),
+          db.collection('users').doc(inviterId).update({ xp: FieldValue.increment(REFERRAL_BONUS_XP) }),
         ]);
 
         const inviteeSnap = await db.collection('users').doc(userId).get();
@@ -545,7 +550,7 @@ export const onCheckInCreated = onDocumentCreated(
           fromPhotoUri: invitee?.photoUri ?? null,
           eventId,
           eventTitle: eventData?.title ?? '',
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdAt: FieldValue.serverTimestamp(),
         });
       }
     } catch (err) {
@@ -584,7 +589,7 @@ export const onCheckInCreated = onDocumentCreated(
         const snap = await ref.get();
         if (snap.exists && !snap.data()?.isGroupBonus) {
           await ref.update({ isGroupBonus: true });
-          await db.collection('users').doc(uid).update({ xp: admin.firestore.FieldValue.increment(GROUP_BONUS_XP) });
+          await db.collection('users').doc(uid).update({ xp: FieldValue.increment(GROUP_BONUS_XP) });
         }
       }));
     } catch (err) {
@@ -648,7 +653,7 @@ async function handleMutualSwipe(root: 'events' | 'kfgMissions', eventId: string
         user1Id: fromUid,
         user2Id: toUid,
         eventId,
-        matchedAt: admin.firestore.FieldValue.serverTimestamp(),
+        matchedAt: FieldValue.serverTimestamp(),
       });
 
       // Send mutual match notifications
@@ -662,7 +667,7 @@ async function handleMutualSwipe(root: 'events' | 'kfgMissions', eventId: string
           eventId: kfg ? null : eventId,
           kfg,
           read: false,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdAt: FieldValue.serverTimestamp(),
         }),
         db.collection(`users/${toUid}/notifications`).add({
           type: 'mutual_match',
@@ -673,7 +678,7 @@ async function handleMutualSwipe(root: 'events' | 'kfgMissions', eventId: string
           eventId: kfg ? null : eventId,
           kfg,
           read: false,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdAt: FieldValue.serverTimestamp(),
         }),
       ]);
 
@@ -690,7 +695,7 @@ async function handleMutualSwipe(root: 'events' | 'kfgMissions', eventId: string
         {
           participantIds: [fromUid, toUid],
           lastMessage: '❤️ You matched!',
-          lastAt: admin.firestore.FieldValue.serverTimestamp(),
+          lastAt: FieldValue.serverTimestamp(),
           isMutualMatch: true,
         },
         { merge: true },
@@ -801,14 +806,14 @@ export const claimStandInHost = onCall(async (request) => {
     if (event.standInHostId) {
       throw new HttpsError('failed-precondition', 'already-claimed');
     }
-    const startMs = (event.dateTime as admin.firestore.Timestamp).toMillis();
+    const startMs = (event.dateTime as Timestamp).toMillis();
     if (Date.now() < startMs + HOST_GRACE_PERIOD_MS) {
       throw new HttpsError('failed-precondition', 'too-early');
     }
 
     tx.update(ref, {
       standInHostId: uid,
-      standInClaimedAt: admin.firestore.FieldValue.serverTimestamp(),
+      standInClaimedAt: FieldValue.serverTimestamp(),
     });
   });
 
@@ -908,7 +913,7 @@ export const moderateUploadedImage = onObjectFinalized(async (event) => {
         adult: safeSearch.adult,
         violence: safeSearch.violence,
         racy: safeSearch.racy,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
       });
       logger.warn('Removed an uploaded image that failed automated content moderation', { filePath });
     }
@@ -929,7 +934,7 @@ export const moderateUploadedImage = onObjectFinalized(async (event) => {
 const PHOTO_RETENTION_DAYS = 30;
 
 export const sweepOldPhotos = onSchedule('every 24 hours', async () => {
-  const cutoff = admin.firestore.Timestamp.fromMillis(Date.now() - PHOTO_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+  const cutoff = Timestamp.fromMillis(Date.now() - PHOTO_RETENTION_DAYS * 24 * 60 * 60 * 1000);
   const snap = await db.collectionGroup('photos').where('createdAt', '<', cutoff).get();
   if (snap.empty) return;
 
@@ -965,8 +970,8 @@ const CHAT_SWEEP_LOOKBACK_DAYS = 45; // bounds the query — no need to ever res
 
 export const sweepExpiredChats = onSchedule('every 24 hours', async () => {
   const now = Date.now();
-  const expiredBefore = admin.firestore.Timestamp.fromMillis(now - CHAT_EXPIRY_MS);
-  const lookback = admin.firestore.Timestamp.fromMillis(now - CHAT_SWEEP_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
+  const expiredBefore = Timestamp.fromMillis(now - CHAT_EXPIRY_MS);
+  const lookback = Timestamp.fromMillis(now - CHAT_SWEEP_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
   // Keno for Good missions have the same 24h chat, keyed on startsAt.
   const [eventSnap, missionSnap] = await Promise.all([
     db.collection('events').where('dateTime', '<=', expiredBefore).where('dateTime', '>=', lookback).get(),
@@ -986,7 +991,7 @@ export const sweepExpiredChats = onSchedule('every 24 hours', async () => {
     const batch = db.batch();
     messagesSnap.docs.forEach((d) => batch.delete(d.ref));
     typingSnap.docs.forEach((d) => batch.delete(d.ref));
-    batch.update(eventDoc.ref, { chatArchivedAt: admin.firestore.FieldValue.serverTimestamp() });
+    batch.update(eventDoc.ref, { chatArchivedAt: FieldValue.serverTimestamp() });
     await batch.commit();
     archived++;
   }));
@@ -1024,7 +1029,7 @@ export const sweepStreaks = onSchedule('every 24 hours', async () => {
     if (tokens > 0) {
       await userDoc.ref.update({
         lastAttendedDate: lastWeek,
-        streakFreezeTokens: admin.firestore.FieldValue.increment(-1),
+        streakFreezeTokens: FieldValue.increment(-1),
       });
       protectedCount++;
     } else {
@@ -1060,7 +1065,7 @@ export const sweepExpiredEventInvites = onSchedule('every 1 hours', async () => 
     if (ended === undefined) {
       const eventSnap = await db.collection('events').doc(eventId).get();
       const ed = eventSnap.data();
-      const dateTimeMs = (ed?.dateTime as admin.firestore.Timestamp | undefined)?.toMillis() ?? 0;
+      const dateTimeMs = (ed?.dateTime as Timestamp | undefined)?.toMillis() ?? 0;
       ended = !eventSnap.exists || !!ed?.endedAt || now >= dateTimeMs + EVENT_INVITE_PAST_GRACE_MS;
       endedCache.set(eventId, ended);
     }
@@ -1118,7 +1123,7 @@ export const sweepOrphanedGroupNotifications = onSchedule('every 1 hours', async
 // from growing forever with stale docs nobody's querying anymore.
 export const sweepExpiredBeacons = onSchedule('every 30 minutes', async () => {
   const expiredSnap = await db.collection('beacons')
-    .where('expiresAt', '<=', admin.firestore.Timestamp.fromMillis(Date.now()))
+    .where('expiresAt', '<=', Timestamp.fromMillis(Date.now()))
     .get();
   if (expiredSnap.empty) return;
 
@@ -1153,7 +1158,7 @@ export const generateSeriesOccurrences = onSchedule('every 6 hours', async () =>
   for (const seriesDoc of seriesSnap.docs) {
     const series = seriesDoc.data();
     const creatorId: string = series.creatorId;
-    const dates: admin.firestore.Timestamp[] = series.dates ?? [];
+    const dates: Timestamp[] = series.dates ?? [];
     let generated: number = series.generatedCount ?? 0;
 
     try {
@@ -1171,15 +1176,15 @@ export const generateSeriesOccurrences = onSchedule('every 6 hours', async () =>
             reactions: { hype: [], funny: [], interested: [] },
             seriesId: seriesDoc.id,
             seriesIndex: generated,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: FieldValue.serverTimestamp(),
           });
           batch.set(ref.collection('private').doc('checkin'), {
             secret: checkInSecret(),
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: FieldValue.serverTimestamp(),
           });
           batch.update(db.doc(`users/${creatorId}`), {
-            createdEvents: admin.firestore.FieldValue.arrayUnion(ref.id),
-            joinedEvents: admin.firestore.FieldValue.arrayUnion(ref.id),
+            createdEvents: FieldValue.arrayUnion(ref.id),
+            joinedEvents: FieldValue.arrayUnion(ref.id),
           });
           batch.update(seriesDoc.ref, { generatedCount: generated + 1 });
           await batch.commit();
@@ -1196,7 +1201,7 @@ export const generateSeriesOccurrences = onSchedule('every 6 hours', async () =>
         .sort((a, b) => (a.data().seriesIndex ?? 0) - (b.data().seriesIndex ?? 0));
       for (let i = 0; i < occurrences.length - 1; i++) {
         const past = occurrences[i].data();
-        const startMs = (past.dateTime as admin.firestore.Timestamp).toMillis();
+        const startMs = (past.dateTime as Timestamp).toMillis();
         if (past.seriesNextNotified || startMs > now - ASSUMED_EVENT_DURATION_MS) continue;
         // Only follow up recently finished ones — an old occurrence the job
         // missed shouldn't wake people up about it days later.
@@ -1219,7 +1224,7 @@ export const generateSeriesOccurrences = onSchedule('every 6 hours', async () =>
           eventId: next.id,
           eventTitle: next.data().title ?? '',
           read: false,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdAt: FieldValue.serverTimestamp(),
         })));
         await occurrences[i].ref.update({ seriesNextNotified: true });
       }
@@ -1231,8 +1236,8 @@ export const generateSeriesOccurrences = onSchedule('every 6 hours', async () =>
 
 export const markNoShows = onSchedule('every 30 minutes', async () => {
   const now = Date.now();
-  const windowStart = admin.firestore.Timestamp.fromMillis(now - NO_SHOW_SCAN_WINDOW_MS - ASSUMED_EVENT_DURATION_MS);
-  const windowEnd = admin.firestore.Timestamp.fromMillis(now - ASSUMED_EVENT_DURATION_MS);
+  const windowStart = Timestamp.fromMillis(now - NO_SHOW_SCAN_WINDOW_MS - ASSUMED_EVENT_DURATION_MS);
+  const windowEnd = Timestamp.fromMillis(now - ASSUMED_EVENT_DURATION_MS);
 
   const snap = await db.collection('events')
     .where('dateTime', '>=', windowStart)
@@ -1247,7 +1252,7 @@ export const markNoShows = onSchedule('every 30 minutes', async () => {
     const creatorId: string | undefined = event.creatorId;
     const hostArrived = !!event.hostArrivedAt;
     const standInHostId: string | undefined = event.standInHostId;
-    const dateStr = (event.dateTime as admin.firestore.Timestamp).toDate().toISOString().split('T')[0];
+    const dateStr = (event.dateTime as Timestamp).toDate().toISOString().split('T')[0];
 
     try {
       const checkInsSnap = await eventDoc.ref.collection('checkIns').get();
@@ -1262,7 +1267,7 @@ export const markNoShows = onSchedule('every 30 minutes', async () => {
         await Promise.all(nonCreatorAttendeeIds.map(async (uid) => {
           const staked = rsvpStakes[uid]?.xp ?? 0;
           if (staked <= 0) return;
-          await db.collection('users').doc(uid).update({ xp: admin.firestore.FieldValue.increment(staked) });
+          await db.collection('users').doc(uid).update({ xp: FieldValue.increment(staked) });
         }));
       } else {
         const noShowIds = nonCreatorAttendeeIds.filter((uid) => !checkedInIds.has(uid));
@@ -1308,7 +1313,7 @@ export const markNoShows = onSchedule('every 30 minutes', async () => {
 
       if (standInHostId) {
         await db.collection('users').doc(standInHostId)
-          .update({ xp: admin.firestore.FieldValue.increment(STAND_IN_HOST_BONUS_XP) })
+          .update({ xp: FieldValue.increment(STAND_IN_HOST_BONUS_XP) })
           .catch(() => {});
       }
 
@@ -1417,7 +1422,7 @@ export const eventPage = onRequest({ cors: false }, async (req, res) => {
   const hostFirstName = String(host?.name ?? '').trim().split(/\s+/)[0] || 'Keno';
   const hostUni = host?.university ? ` · ${host.university}` : '';
 
-  const when = (e.dateTime as admin.firestore.Timestamp).toDate();
+  const when = (e.dateTime as Timestamp).toDate();
   const dateStr = new Intl.DateTimeFormat('el-GR', {
     weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Athens',
   }).format(when);
@@ -1482,11 +1487,11 @@ export const missionPage = onRequest({ cors: false }, async (req, res) => {
     return;
   }
 
-  const when = (m.startsAt as admin.firestore.Timestamp).toDate();
+  const when = (m.startsAt as Timestamp).toDate();
   const dateStr = new Intl.DateTimeFormat('el-GR', {
     weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Athens',
   }).format(when);
-  const isOver = (m.endsAt as admin.firestore.Timestamp).toMillis() < Date.now();
+  const isOver = (m.endsAt as Timestamp).toMillis() < Date.now();
   const title = String(m.title ?? 'Αποστολή');
   const host = m.creatorType === 'organization'
     ? String(m.creatorName ?? 'Keno for Good')
@@ -1557,7 +1562,6 @@ function storagePathFromUrl(uri: unknown): string | null {
 
 export const onUserDeleted = onDocumentDeleted({ document: 'users/{userId}', timeoutSeconds: 540 }, async (event) => {
   const { userId: uid } = event.params;
-  const FieldValue = admin.firestore.FieldValue;
   const bucket = admin.storage().bucket();
   const now = Date.now();
 
@@ -1651,7 +1655,7 @@ export const onUserDeleted = onDocumentDeleted({ document: 'users/{userId}', tim
     const hosted = await db.collection('events').where('creatorId', '==', uid).get();
     for (const ev of hosted.docs) {
       const e = ev.data();
-      const startMs = (e.dateTime as admin.firestore.Timestamp).toMillis();
+      const startMs = (e.dateTime as Timestamp).toMillis();
       if (e.endedAt || startMs + ASSUMED_EVENT_DURATION_MS < now) continue;
       const attendees = ((e.attendeeIds ?? []) as string[]).filter((a) => a !== uid);
       await Promise.all(attendees.map((a) => Promise.all([
@@ -1670,7 +1674,7 @@ export const onUserDeleted = onDocumentDeleted({ document: 'users/{userId}', tim
   await step('upcoming joined events', async () => {
     const joined = await db.collection('events').where('attendeeIds', 'array-contains', uid).get();
     await Promise.all(joined.docs
-      .filter((d) => (d.data().dateTime as admin.firestore.Timestamp).toMillis() > now)
+      .filter((d) => (d.data().dateTime as Timestamp).toMillis() > now)
       .map((d) => d.ref.update({
         attendeeIds: FieldValue.arrayRemove(uid),
         waitlistIds: FieldValue.arrayRemove(uid),

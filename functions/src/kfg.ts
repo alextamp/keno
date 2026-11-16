@@ -1,5 +1,5 @@
 import * as admin from 'firebase-admin';
-import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { FieldPath, FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { onObjectFinalized } from 'firebase-functions/v2/storage';
@@ -1038,9 +1038,14 @@ export const kfgSweepPhotoLocations = onSchedule('every 24 hours', async () => {
 
 /** Called from onUserDeleted (index.ts). The ledger is kept for the leaderboard audit trail, without the uid. */
 export async function deleteKfgUserData(uid: string): Promise<void> {
-  const bucket = admin.storage().bucket();
-  const [files] = await bucket.getFiles({ prefix: `kfg-photos/${uid}/` });
-  await Promise.all(files.map((f) => f.delete({ ignoreNotFound: true })));
+  // Storage first, but best effort: a Storage hiccup must not skip the
+  // Firestore cleanup below (it used to abort the whole function).
+  try {
+    const [files] = await admin.storage().bucket().getFiles({ prefix: `kfg-photos/${uid}/` });
+    await Promise.all(files.map((f) => f.delete({ ignoreNotFound: true })));
+  } catch (err) {
+    logger.error('deleteKfgUserData: storage cleanup failed', { uid, err: String(err) });
+  }
 
   await db.recursiveDelete(db.doc(`${PROFILES}/${uid}`));
   await db.doc(`${TRUST}/${uid}`).delete();
@@ -1053,6 +1058,27 @@ export async function deleteKfgUserData(uid: string): Promise<void> {
     }
     await db.recursiveDelete(p.ref);
   }
+  // Their place in other people's missions: present/waitlist/co-host lists,
+  // pending requests, and Kudos given or received there.
+  const [present, waiting, cohosting, requested] = await Promise.all([
+    db.collection(MISSIONS).where('presentIds', 'array-contains', uid).get(),
+    db.collection(MISSIONS).where('waitlistIds', 'array-contains', uid).get(),
+    db.collection(MISSIONS).where('coHostIds', 'array-contains', uid).get(),
+    db.collection(MISSIONS).where(new FieldPath('joinRequests', uid), '>=', '').get(),
+  ]);
+  for (const m of present.docs) {
+    await m.ref.collection('kudos').doc(uid).delete().catch(() => {});
+    const given = await m.ref.collection('kudos').where('kudos', 'array-contains', uid).get();
+    await Promise.all(given.docs.map((k) => k.ref.update({ kudos: FieldValue.arrayRemove(uid) }).catch(() => {})));
+  }
+  const missionRefs = new Map([...present.docs, ...waiting.docs, ...cohosting.docs, ...requested.docs].map((d) => [d.id, d.ref]));
+  await Promise.all([...missionRefs.values()].map((ref) => ref.update({
+    presentIds: FieldValue.arrayRemove(uid),
+    waitlistIds: FieldValue.arrayRemove(uid),
+    coHostIds: FieldValue.arrayRemove(uid),
+    [`joinRequests.${uid}`]: FieldValue.delete(),
+  }).catch(() => {})));
+
   const verifications = await db.collection(VERIFICATIONS).where('uid', '==', uid).get();
   const ledger = await db.collection(LEDGER).where('uid', '==', uid).get();
   const missions = await db.collection(MISSIONS).where('creatorId', '==', uid).get();
