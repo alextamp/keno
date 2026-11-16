@@ -28,6 +28,7 @@ import { useKfgStore } from '@/features/kfg/presentation/store/kfg.store';
 import { formatPoints } from '@/features/kfg/format';
 import { universityLabel } from '@/core/constants/universities';
 import { KfgPhotoWall } from '@/components/kfg/KfgPhotoWall';
+import { KfgParticipants } from '@/components/kfg/KfgParticipants';
 import { publicMissionUrl } from '@/core/constants/publicLinks';
 import { addToCalendar, isEventInCalendar, removeEventFromCalendar } from '@/core/utils/calendar';
 
@@ -273,6 +274,16 @@ function MissionInner() {
               label={t.kfgChatBtn}
               variant="outline"
               onPress={() => router.push(`/(app)/event-chat/${mission.id}?kfg=1` as any)}
+              fullWidth
+            />
+          )}
+
+          <KfgParticipants mission={mission} user={user} over={over} />
+
+          {over && mission.presentIds.includes(user.id) && mission.presentIds.length > 1 && (
+            <Button
+              label={t.eventReconnectCta}
+              onPress={() => router.push(`/(app)/swipes/${mission.id}?kfg=1` as any)}
               fullWidth
             />
           )}

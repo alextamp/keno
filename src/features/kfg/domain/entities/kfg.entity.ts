@@ -42,6 +42,8 @@ export interface KfgMission {
   status: KfgMissionStatus;
   participantCount: number;
   participantIds: string[];
+  /** Who was actually there (checked in / paid) — server-maintained, gates Kudos and reconnect. */
+  presentIds: string[];
   verifiedCount: number;
   finalized: boolean;
   rejectionReason?: string;

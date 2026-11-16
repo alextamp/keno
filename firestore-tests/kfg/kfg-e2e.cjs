@@ -83,6 +83,7 @@ const qr = async (pid) => {
   await fails(s2.call('kfgScan', { code }), 'not-your-mission', 'only the creator can scan');
   await fails(org.call('kfgScan', { code: code.slice(0, -1) + (code.endsWith('0') ? '1' : '0') }), 'invalid-code', 'tampered code rejected');
   ok((await org.call('kfgScan', { code })).result === 'checkedIn', 'first scan checks in');
+  ok((await db.doc(`kfgMissions/${missionId}`).get()).data().presentIds.includes('s1'), 'check-in marks them present');
   const r2 = await org.call('kfgScan', { code: await qr(participationId) });
   ok(r2.result === 'completed', 'second scan completes (min duration 0)');
   const p = (await db.doc(`kfgParticipations/${participationId}`).get()).data();

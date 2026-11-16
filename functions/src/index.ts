@@ -594,18 +594,33 @@ export const onCheckInCreated = onDocumentCreated(
 );
 
 // Mutual match detection — daily check for mutual swipes and create matches
+// Keno for Good missions run the same "Θα ξαναβρεθούμε;" flow; a match from
+// one carries kfg: true and no eventId in its notification, so it opens the DM.
+export const onKfgSwipeCreated = onDocumentCreated(
+  'kfgMissions/{missionId}/swipes/{swipeId}',
+  async (event) => {
+    const swipe = event.data?.data();
+    if (!swipe || swipe.direction !== 'interested') return;
+    await handleMutualSwipe('kfgMissions', event.params.missionId, swipe.fromUid, swipe.toUid);
+  },
+);
+
 export const onSwipeCreated = onDocumentCreated(
   'events/{eventId}/swipes/{swipeId}',
   async (event) => {
     const swipe = event.data?.data();
     if (!swipe || swipe.direction !== 'interested') return;
+    await handleMutualSwipe('events', event.params.eventId, swipe.fromUid, swipe.toUid);
+  },
+);
 
-    const { eventId } = event.params;
-    const { fromUid, toUid } = swipe;
+async function handleMutualSwipe(root: 'events' | 'kfgMissions', eventId: string, fromUid: string, toUid: string): Promise<void> {
+  {
+    const kfg = root === 'kfgMissions';
 
     try {
       // Check if the other person also swiped interested on this person
-      const q = db.collection(`events/${eventId}/swipes`).where('fromUid', '==', toUid).where('toUid', '==', fromUid).where('direction', '==', 'interested');
+      const q = db.collection(`${root}/${eventId}/swipes`).where('fromUid', '==', toUid).where('toUid', '==', fromUid).where('direction', '==', 'interested');
       const snap = await q.get();
 
       if (snap.empty) return; // No mutual match
@@ -644,7 +659,9 @@ export const onSwipeCreated = onDocumentCreated(
           fromName: user2?.name ?? 'Someone',
           fromAvatarColor: user2?.avatarColor ?? '#C94D0A',
           fromPhotoUri: user2?.photoUri ?? null,
-          eventId,
+          eventId: kfg ? null : eventId,
+          kfg,
+          read: false,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         }),
         db.collection(`users/${toUid}/notifications`).add({
@@ -653,7 +670,9 @@ export const onSwipeCreated = onDocumentCreated(
           fromName: user1?.name ?? 'Someone',
           fromAvatarColor: user1?.avatarColor ?? '#C94D0A',
           fromPhotoUri: user1?.photoUri ?? null,
-          eventId,
+          eventId: kfg ? null : eventId,
+          kfg,
+          read: false,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         }),
       ]);
@@ -679,8 +698,8 @@ export const onSwipeCreated = onDocumentCreated(
     } catch (err) {
       console.error('Mutual match detection failed:', err);
     }
-  },
-);
+  }
+}
 
 // Attendee claims stand-in host duties (QR display, roll-call) after the
 // creator failed to show up within HOST_GRACE_PERIOD_MS of the event's

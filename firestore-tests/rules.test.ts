@@ -407,6 +407,21 @@ describe('Keno for Good', () => {
     await assertFails(addDoc(collection(asUser(USER_B), 'kfgMissions', 'c2', 'messages'), msg(USER_B)));
   });
 
+  test('mission kudos and reconnect swipes: only between people who were there', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'kfgMissions', 'k1'), { creatorId: USER_A, status: 'published', presentIds: [USER_B, USER_C] });
+    });
+    const kd = (db: Firestore, target: string) => doc(db, 'kfgMissions', 'k1', 'kudos', target);
+    await assertSucceeds(setDoc(kd(asUser(USER_B), USER_C), { kudos: [USER_B] }));
+    await assertFails(setDoc(kd(asUser(USER_C), USER_C), { kudos: [USER_C] }));
+    await assertFails(setDoc(kd(asUser(USER_A), USER_C), { kudos: [USER_B, USER_A] }));
+    await assertFails(setDoc(kd(asUser(USER_B), USER_A), { kudos: [USER_B] }));
+    await assertFails(updateDoc(kd(asUser(USER_C), USER_C), { kudos: [] }));
+    await assertSucceeds(updateDoc(kd(asUser(USER_B), USER_C), { kudos: [] }));
+    await assertSucceeds(addDoc(collection(asUser(USER_B), 'kfgMissions', 'k1', 'swipes'), { fromUid: USER_B, toUid: USER_C, direction: 'interested' }));
+    await assertFails(addDoc(collection(asUser(USER_A), 'kfgMissions', 'k1', 'swipes'), { fromUid: USER_A, toUid: USER_C, direction: 'interested' }));
+  });
+
   test('trust scores are not readable by users', async () => {
     await seed(async (db) => { await setDoc(doc(db, 'kfgTrust', USER_A), { score: 0.5 }); });
     await assertFails(getDoc(doc(asUser(USER_A), 'kfgTrust', USER_A)));

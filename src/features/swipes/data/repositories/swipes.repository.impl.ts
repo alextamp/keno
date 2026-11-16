@@ -7,6 +7,9 @@ import { Failure, ServerFailure } from '@/core/errors/failures';
 import { SwipeEntity, MutualMatchEntity } from '../../domain/entities/swipe.entity';
 import { SwipesRepository } from '../../domain/repositories/swipes.repository';
 
+/** Events, or Keno for Good missions (kfgMissions/{id}/swipes, onKfgSwipeCreated). */
+export type SwipeRoot = 'events' | 'kfgMissions';
+
 class SwipesRepositoryImpl implements SwipesRepository {
   async getSwipeableAttendees(eventId: string, currentUid: string): Promise<Either<Failure, any[]>> {
     try {
@@ -20,9 +23,9 @@ class SwipesRepositoryImpl implements SwipesRepository {
     }
   }
 
-  async recordSwipe(eventId: string, fromUid: string, toUid: string, direction: 'interested' | 'skip'): Promise<Either<Failure, SwipeEntity>> {
+  async recordSwipe(eventId: string, fromUid: string, toUid: string, direction: 'interested' | 'skip', root: SwipeRoot = 'events'): Promise<Either<Failure, SwipeEntity>> {
     try {
-      const docRef = await addDoc(collection(db, 'events', eventId, 'swipes'), {
+      const docRef = await addDoc(collection(db, root, eventId, 'swipes'), {
         fromUid,
         toUid,
         direction,
@@ -41,10 +44,10 @@ class SwipesRepositoryImpl implements SwipesRepository {
     }
   }
 
-  async getSwipesForEvent(eventId: string, uid: string): Promise<Either<Failure, SwipeEntity[]>> {
+  async getSwipesForEvent(eventId: string, uid: string, root: SwipeRoot = 'events'): Promise<Either<Failure, SwipeEntity[]>> {
     try {
       const q = query(
-        collection(db, 'events', eventId, 'swipes'),
+        collection(db, root, eventId, 'swipes'),
         where('fromUid', '==', uid),
       );
       const snap = await getDocs(q);

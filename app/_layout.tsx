@@ -168,6 +168,8 @@ function RootLayout() {
         router.push(`/(app)/user/${data.fromUid}` as any);
       } else if (data.type === 'group_invite' && data.eventId) {
         router.push(`/(app)/group/${data.eventId}` as any);
+      } else if (data.type === 'mutual_match' && !data.eventId && data.fromUid) {
+        router.push(`/(app)/dm/${data.fromUid}` as any);
       } else if (data.type === 'kfg_message' && data.eventId) {
         router.push(`/(app)/event-chat/${data.eventId}?kfg=1` as any);
       } else if (typeof data.type === 'string' && data.type.startsWith('kfg_') && data.eventId) {

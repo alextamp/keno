@@ -21,7 +21,10 @@ import { useTranslation } from '@/core/i18n';
 import { useEventsStore } from '@/features/events/presentation/store/events.store';
 
 export default function SwipesScreen() {
-  const { eventId } = useLocalSearchParams<{ eventId: string }>();
+  // ?kfg=1: a Keno for Good mission — the people to reconnect with are the
+  // ones who were actually there (presentIds), not everyone signed up.
+  const { eventId, kfg } = useLocalSearchParams<{ eventId: string; kfg?: string }>();
+  const root = kfg === '1' ? 'kfgMissions' : 'events';
   const router = useRouter();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -47,7 +50,7 @@ export default function SwipesScreen() {
     if (!eventId || !user) return;
     setLoading(true);
     try {
-      const eventSnap = await getDoc(doc(db, 'events', eventId));
+      const eventSnap = await getDoc(doc(db, root, eventId));
       if (!eventSnap.exists()) {
         Alert.alert(t.createAlertSaveError, t.swipesEventNotFound);
         router.back();
@@ -57,11 +60,11 @@ export default function SwipesScreen() {
       const ev = eventSnap.data();
       setEvent(ev);
 
-      const result = await swipesRepository.getSwipesForEvent(eventId, user.id);
+      const result = await swipesRepository.getSwipesForEvent(eventId, user.id, root);
       const alreadySwipedSet: Set<string> = isRight(result) ? new Set(result.right.map((s) => s.toUid)) : new Set();
       setAlreadySwiped(alreadySwipedSet);
 
-      const others = (ev.attendeeIds ?? []).filter((uid: string) => uid !== user.id);
+      const others = ((root === 'kfgMissions' ? ev.presentIds : ev.attendeeIds) ?? []).filter((uid: string) => uid !== user.id);
       setAttendees(others);
       const loaded = await fetchUserProfiles(others);
       setProfiles(loaded);
@@ -79,7 +82,7 @@ export default function SwipesScreen() {
     haptics.light();
 
     try {
-      const result = await swipesRepository.recordSwipe(eventId, user.id, uid, 'interested');
+      const result = await swipesRepository.recordSwipe(eventId, user.id, uid, 'interested', root);
       if (isRight(result)) {
         setAlreadySwiped((prev) => new Set([...prev, uid]));
       } else {
@@ -93,7 +96,7 @@ export default function SwipesScreen() {
   };
 
   const suggestedEvent = useMemo(() => {
-    if (!event) return null;
+    if (!event || root === 'kfgMissions') return null;
     const now = new Date();
     return allEvents.find((e) =>
       e.id !== eventId

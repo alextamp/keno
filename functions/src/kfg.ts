@@ -202,6 +202,15 @@ export async function awardPoints(uid: string, delta: number, meta: AwardMeta): 
   });
 }
 
+/**
+ * `presentIds` on the mission = who was actually there (checked in, or paid
+ * for a group/photo mission). Public, like an event's checkIns list — it's
+ * what Kudos, "who came" and the reconnect swipes are gated on.
+ */
+async function markPresent(missionId: string, uid: string): Promise<void> {
+  await db.doc(`${MISSIONS}/${missionId}`).update({ presentIds: FieldValue.arrayUnion(uid) }).catch(() => {});
+}
+
 /** Pays a participant and stores the result on their participation (the completion screen reads it). */
 async function payParticipant(
   participationRef: admin.firestore.DocumentReference,
@@ -217,6 +226,7 @@ async function payParticipant(
     status: 'completed', award, completedAt: FieldValue.serverTimestamp(),
     completedDayId: athensDayId(new Date()), completedWeekId: athensWeekId(new Date()),
   });
+  await markPresent(missionId, uid);
   return award;
 }
 
@@ -459,6 +469,7 @@ export const kfgScan = onCall(async (request) => {
 
   if (p.status === 'joined') {
     await participationRef.update({ status: 'checkedIn', checkInAt: FieldValue.serverTimestamp() });
+    await markPresent(p.missionId, p.uid);
     await db.collection(VERIFICATIONS).add({
       type: 'qrIn', uid: p.uid, participationId: participationRef.id, missionId: p.missionId, by: uid,
       createdAt: FieldValue.serverTimestamp(),

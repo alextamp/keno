@@ -130,6 +130,8 @@ export default function NotificationsScreen() {
     }
     if ((notif.type === 'group_invite' || notif.type === 'group_join_request' || notif.type === 'group_join_accepted' || notif.type === 'group_message') && notif.eventId) {
       router.push(`/(app)/group/${notif.eventId}`);
+    } else if (notif.type === 'mutual_match' && !notif.eventId && notif.fromUid) {
+      router.push(`/(app)/dm/${notif.fromUid}` as any);
     } else if (notif.type === 'kfg_message' && notif.eventId) {
       router.push(`/(app)/event-chat/${notif.eventId}?kfg=1` as any);
     } else if (isKfgNotif(notif.type) && notif.eventId) {

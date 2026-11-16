@@ -504,6 +504,29 @@ service cloud.firestore {
         allow write: if isOwner(userId);
       }
 
+      // Kudos on someone who was there (presentIds, server-maintained), from
+      // someone who was there too — the events/{id}/checkIns kudos mechanic.
+      // Each person only adds/removes their own uid.
+      match /kudos/{targetUid} {
+        allow read: if signedIn();
+        allow create, update: if signedIn() && request.auth.uid != targetUid &&
+          request.auth.uid in get(/databases/$(database)/documents/kfgMissions/$(missionId)).data.get('presentIds', []) &&
+          targetUid in get(/databases/$(database)/documents/kfgMissions/$(missionId)).data.get('presentIds', []) &&
+          request.resource.data.keys().hasOnly(['kudos']) &&
+          request.resource.data.kudos.toSet().difference(resource == null ? [].toSet() : resource.data.kudos.toSet()).hasOnly([request.auth.uid]) &&
+          (resource == null ? [].toSet() : resource.data.kudos.toSet()).difference(request.resource.data.kudos.toSet()).hasOnly([request.auth.uid]);
+        allow delete: if false;
+      }
+
+      // "Θα ξαναβρεθούμε;" — same as events/{id}/swipes (onKfgSwipeCreated
+      // matches), only between people who were there.
+      match /swipes/{swipeId} {
+        allow read: if signedIn() && request.auth.uid == resource.data.fromUid;
+        allow create: if signedIn() && request.resource.data.fromUid == request.auth.uid &&
+          request.auth.uid in get(/databases/$(database)/documents/kfgMissions/$(missionId)).data.get('presentIds', []);
+        allow update, delete: if false;
+      }
+
       // Photo wall — same as events/{id}/photos: only people who were
       // actually there (checked in, or already verified/completed) can post,
       // and only if the creator left the wall on (photoWall: false turns it
