@@ -115,7 +115,18 @@ type NotifType =
   | 'ride_request'
   | 'ride_confirmed'
   | 'ride_declined'
-  | 'ride_cancelled';
+  | 'ride_cancelled'
+  | 'kfg_message'
+  | 'kfg_approved'
+  | 'kfg_rejected'
+  | 'kfg_reminder'
+  | 'kfg_new_mission'
+  | 'kfg_join'
+  | 'kfg_cancelled'
+  | 'kfg_waitlist_promoted'
+  | 'kfg_join_request'
+  | 'kfg_join_accepted'
+  | 'kfg_invite';
 
 // Which Settings toggle (users.notificationPrefs.<key>) silences the push for
 // a given type. Types not listed here always push. The in-app list entry is
@@ -129,6 +140,7 @@ const PREF_FOR_TYPE: Partial<Record<NotifType, 'groupMessages' | 'suggestions' |
   ride_confirmed: 'rides',
   ride_declined: 'rides',
   ride_cancelled: 'rides',
+  kfg_new_mission: 'suggestions',
 };
 
 function buildPushMessage(type: NotifType, fromName: string, eventTitle?: string, messagePreview?: string): { title: string; body: string } {
@@ -140,6 +152,28 @@ function buildPushMessage(type: NotifType, fromName: string, eventTitle?: string
         title: '🎉 Someone joined!',
         body: eventTitle ? `${fromName} joined "${eventTitle}"` : `${fromName} joined your event`,
       };
+    case 'kfg_message':
+      return { title: '💬 New message', body: eventTitle ? `${fromName} sent a message in "${eventTitle}"` : `${fromName} sent you a message` };
+    case 'kfg_approved':
+      return { title: '💚 Approved!', body: eventTitle ? `Your mission "${eventTitle}" is live` : 'Your mission is live' };
+    case 'kfg_rejected':
+      return { title: 'Keno for Good', body: eventTitle ? `Your mission "${eventTitle}" wasn't approved` : "Your mission wasn't approved" };
+    case 'kfg_reminder':
+      return { title: '⏰ Starting soon', body: eventTitle ? `"${eventTitle}" starts in 1 hour` : 'A mission you joined starts in 1 hour' };
+    case 'kfg_new_mission':
+      return { title: '💚 New mission', body: eventTitle ? `New in your community: "${eventTitle}"` : 'A new mission in your community' };
+    case 'kfg_join':
+      return { title: '🙌 New volunteer', body: eventTitle ? `${fromName} joined "${eventTitle}"` : `${fromName} joined your mission` };
+    case 'kfg_cancelled':
+      return { title: '❌ Mission cancelled', body: eventTitle ? `"${eventTitle}" has been cancelled` : 'A mission you joined has been cancelled' };
+    case 'kfg_waitlist_promoted':
+      return { title: "🎊 You're in!", body: eventTitle ? `A spot opened up — you're now in "${eventTitle}"` : "A spot opened up and you're in!" };
+    case 'kfg_join_request':
+      return { title: '🙋 Join request', body: eventTitle ? `${fromName} wants to join "${eventTitle}"` : `${fromName} wants to join your mission` };
+    case 'kfg_join_accepted':
+      return { title: '✅ Request approved', body: eventTitle ? `You've been added to "${eventTitle}"` : 'Your join request was approved!' };
+    case 'kfg_invite':
+      return { title: "📩 You're invited!", body: eventTitle ? `${fromName} invited you to "${eventTitle}"` : `${fromName} invited you to a mission` };
     case 'event_message':
       return {
         title: '💬 New message',
@@ -914,18 +948,21 @@ export const sweepExpiredChats = onSchedule('every 24 hours', async () => {
   const now = Date.now();
   const expiredBefore = admin.firestore.Timestamp.fromMillis(now - CHAT_EXPIRY_MS);
   const lookback = admin.firestore.Timestamp.fromMillis(now - CHAT_SWEEP_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
-  const snap = await db.collection('events')
-    .where('dateTime', '<=', expiredBefore)
-    .where('dateTime', '>=', lookback)
-    .get();
-  if (snap.empty) return;
+  // Keno for Good missions have the same 24h chat, keyed on startsAt.
+  const [eventSnap, missionSnap] = await Promise.all([
+    db.collection('events').where('dateTime', '<=', expiredBefore).where('dateTime', '>=', lookback).get(),
+    db.collection('kfgMissions').where('startsAt', '<=', expiredBefore).where('startsAt', '>=', lookback).get(),
+  ]);
+  const docs = [...eventSnap.docs, ...missionSnap.docs];
+  if (docs.length === 0) return;
 
   let archived = 0;
-  await Promise.all(snap.docs.map(async (eventDoc) => {
+  await Promise.all(docs.map(async (eventDoc) => {
     if (eventDoc.data().chatArchivedAt) return;
+    const root = eventDoc.ref.parent.id;
     const [messagesSnap, typingSnap] = await Promise.all([
-      db.collection(`events/${eventDoc.id}/messages`).get(),
-      db.collection(`events/${eventDoc.id}/typing`).get(),
+      db.collection(`${root}/${eventDoc.id}/messages`).get(),
+      db.collection(`${root}/${eventDoc.id}/typing`).get(),
     ]);
     const batch = db.batch();
     messagesSnap.docs.forEach((d) => batch.delete(d.ref));

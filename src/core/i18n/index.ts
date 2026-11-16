@@ -430,6 +430,8 @@ export type Translations = {
   kfgWrappedThanks: string;
   kfgWrappedMore: (n: number) => string;
   kfgTicketsLink: string;
+  kfgNotif: (type: string, from: string, title: string) => string;
+  kfgChatBtn: string;
   kfgTabCharacter: string;
   kfgTabLeaderboard: string;
   kfgBackA11y: string;
@@ -1705,6 +1707,20 @@ const en: Translations = {
   kfgWrappedThanks: 'THANK YOU',
   kfgWrappedMore: (n) => `+ ${n} more mission${n === 1 ? '' : 's'} this semester`,
   kfgTicketsLink: 'My tickets',
+  kfgNotif: (type, from, title) => ({
+    kfg_message: `${from} sent a message in "${title}"`,
+    kfg_approved: `Your mission "${title}" was approved and is live`,
+    kfg_rejected: `Your mission "${title}" wasn't approved`,
+    kfg_reminder: `"${title}" starts in 1 hour`,
+    kfg_new_mission: `New mission in your community: "${title}"`,
+    kfg_join: `${from} joined "${title}"`,
+    kfg_cancelled: `"${title}" was cancelled`,
+    kfg_waitlist_promoted: `A spot opened up — you're in "${title}"`,
+    kfg_join_request: `${from} wants to join "${title}"`,
+    kfg_join_accepted: `You've been added to "${title}"`,
+    kfg_invite: `${from} invited you to "${title}"`,
+  } as Record<string, string>)[type] ?? title,
+  kfgChatBtn: 'Mission chat',
   kfgTabCharacter: 'Character',
   kfgTabLeaderboard: 'Ranking',
   kfgBackA11y: 'Back to Keno',
@@ -2999,6 +3015,20 @@ const el: Translations = {
   kfgWrappedThanks: 'ΕΥΧΑΡΙΣΤΟΥΜΕ',
   kfgWrappedMore: (n) => `+ ${n} ακόμα ${n === 1 ? 'αποστολή' : 'αποστολές'} αυτό το εξάμηνο`,
   kfgTicketsLink: 'Τα εισιτήριά μου',
+  kfgNotif: (type, from, title) => ({
+    kfg_message: `${from} έγραψε στο «${title}»`,
+    kfg_approved: `Η αποστολή «${title}» εγκρίθηκε και δημοσιεύτηκε`,
+    kfg_rejected: `Η αποστολή «${title}» δεν εγκρίθηκε`,
+    kfg_reminder: `Η αποστολή «${title}» ξεκινάει σε 1 ώρα`,
+    kfg_new_mission: `Νέα αποστολή στην κοινότητά σου: «${title}»`,
+    kfg_join: `${from} δήλωσε συμμετοχή στο «${title}»`,
+    kfg_cancelled: `Η αποστολή «${title}» ακυρώθηκε`,
+    kfg_waitlist_promoted: `Άνοιξε θέση — είσαι πλέον στο «${title}»`,
+    kfg_join_request: `${from} θέλει να έρθει στο «${title}»`,
+    kfg_join_accepted: `Μπήκες στο «${title}»`,
+    kfg_invite: `${from} σε προσκαλεί στο «${title}»`,
+  } as Record<string, string>)[type] ?? title,
+  kfgChatBtn: 'Chat αποστολής',
   kfgTabCharacter: 'Χαρακτήρας',
   kfgTabLeaderboard: 'Κατάταξη',
   kfgBackA11y: 'Πίσω στο Keno',

@@ -8,18 +8,18 @@ import {
 import { pickImage } from '@/core/utils/imagePicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useTheme } from '@/core/theme';
+import { AccentScopeProvider, useTheme } from '@/core/theme';
 import { UIFont, UIFontLight, FontSize, FontWeight, Spacing, BorderRadius } from '@/core/constants/theme';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { useTranslation, useLanguageStore } from '@/core/i18n';
 import { formatMessageTime } from '@/core/utils/time';
 import { haptics } from '@/core/utils/haptics';
 import { containsBlockedContent } from '@/core/utils/contentModeration';
-import { notificationsRepository } from '@/features/notifications/notifications.repository';
 import { uploadEventChatImage } from '@/core/utils/uploadImage';
-import { chatRepository } from '@/features/events/data/repositories/chat.repository';
+import { chatRepository, kfgChatRepository } from '@/features/events/data/repositories/chat.repository';
+import { kfgRepository } from '@/features/kfg/data/repositories/kfg.repository.impl';
 import { eventsRepository } from '@/features/events/data/repositories/events.repository.impl';
-import { EventEntity, ChatMessage, isAttending } from '@/features/events/domain/entities/event.entity';
+import { ChatMessage, isAttending } from '@/features/events/domain/entities/event.entity';
 import { fetchUserProfiles, UserProfile } from '@/core/utils/userProfiles';
 import { isRight } from '@/core/utils/either';
 import { useKeyboardOffset } from '@/core/hooks/useKeyboardOffset';
@@ -38,8 +38,29 @@ function Avatar({ profile, size = 28 }: { profile?: UserProfile; size?: number }
   );
 }
 
+/** What the chat needs from an event — or from a Keno for Good mission (?kfg=1). */
+interface ChatTarget {
+  id: string;
+  title: string;
+  /** The chat closes 24h after this. */
+  startsAt: Date;
+  creatorId: string;
+  memberIds: string[];
+  canPost: (uid: string) => boolean;
+}
+
 export default function EventChatScreen() {
+  const { kfg } = useLocalSearchParams<{ kfg?: string }>();
+  return (
+    <AccentScopeProvider value={kfg === '1' ? 'kfg' : 'default'}>
+      <EventChatInner isKfg={kfg === '1'} />
+    </AccentScopeProvider>
+  );
+}
+
+function EventChatInner({ isKfg }: { isKfg: boolean }) {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const chatRepo = isKfg ? kfgChatRepository : chatRepository;
   const router = useRouter();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -48,7 +69,7 @@ export default function EventChatScreen() {
   const { language } = useLanguageStore();
   const t = useTranslation();
 
-  const [event, setEvent] = useState<EventEntity | null>(null);
+  const [event, setEvent] = useState<ChatTarget | null>(null);
   const [profiles, setProfiles] = useState<Record<string, UserProfile>>({});
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [typingUids, setTypingUids] = useState<string[]>([]);
@@ -67,21 +88,36 @@ export default function EventChatScreen() {
 
   useEffect(() => {
     if (!id) return;
+    if (isKfg) {
+      return kfgRepository.subscribeMission(id, (m) => {
+        if (!m) return;
+        const memberIds = [m.creatorId, ...m.participantIds];
+        setEvent({
+          id: m.id, title: m.title, startsAt: m.startsAt, creatorId: m.creatorId, memberIds,
+          canPost: (uid) => memberIds.includes(uid),
+        });
+      });
+    }
     eventsRepository.getEvent(id).then((result) => {
-      if (isRight(result)) setEvent(result.right);
+      if (!isRight(result)) return;
+      const e = result.right;
+      setEvent({
+        id: e.id, title: e.title, startsAt: e.dateTime, creatorId: e.creatorId, memberIds: e.attendeeIds,
+        canPost: (uid) => isAttending(e, uid),
+      });
     });
-  }, [id]);
+  }, [id, isKfg]);
 
-  const attending = !!(event && user && isAttending(event, user.id));
+  const attending = !!(event && user && event.canPost(user.id));
   // Auto-expiring chat (research doc #8) — closes 24h after the event
   // starts. Also enforced server-side (firestore.rules) so a modified
   // client can't keep posting once the UI has closed the composer; the
   // actual message backlog gets deleted later by sweepExpiredChats.
-  const chatExpired = !!event && Date.now() >= event.dateTime.getTime() + 24 * 3600_000;
+  const chatExpired = !!event && Date.now() >= event.startsAt.getTime() + 24 * 3600_000;
 
   useEffect(() => {
     if (!id) return;
-    const unsub = chatRepository.subscribeToMessages(id, (msgs) => {
+    const unsub = chatRepo.subscribeToMessages(id, (msgs) => {
       setMessages(msgs);
       setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: false }), 80);
     });
@@ -90,7 +126,7 @@ export default function EventChatScreen() {
 
   useEffect(() => {
     if (!id || !user) return;
-    const unsub = chatRepository.subscribeToTyping(id, user.id, setTypingUids);
+    const unsub = chatRepo.subscribeToTyping(id, user.id, setTypingUids);
     return () => {
       unsub();
       if (typingTimeout.current) clearTimeout(typingTimeout.current);
@@ -102,7 +138,7 @@ export default function EventChatScreen() {
   // any sender profile that isn't in the attendee-seeded map yet.
   useEffect(() => {
     if (!event) return;
-    fetchUserProfiles(event.attendeeIds).then(setProfiles);
+    fetchUserProfiles(event.memberIds).then(setProfiles);
   }, [event?.id]);
 
   useEffect(() => {
@@ -123,16 +159,16 @@ export default function EventChatScreen() {
     if (typingTimeout.current) clearTimeout(typingTimeout.current);
     if (text.trim()) {
       if (!typingDebounce.current) {
-        chatRepository.setTyping(event.id, user.id, true);
+        chatRepo.setTyping(event.id, user.id, true);
         typingDebounce.current = setTimeout(() => { typingDebounce.current = null; }, 2000);
       }
       typingTimeout.current = setTimeout(() => {
-        chatRepository.setTyping(event.id!, user.id, false);
+        chatRepo.setTyping(event.id!, user.id, false);
         typingDebounce.current = null;
       }, 4000);
     } else {
       if (typingDebounce.current) { clearTimeout(typingDebounce.current); typingDebounce.current = null; }
-      chatRepository.setTyping(event.id, user.id, false);
+      chatRepo.setTyping(event.id, user.id, false);
     }
   }, [event?.id, user?.id]);
 
@@ -147,22 +183,12 @@ export default function EventChatScreen() {
     const text = chatDraft;
     setChatDraft('');
     if (typingTimeout.current) clearTimeout(typingTimeout.current);
-    chatRepository.setTyping(event.id, user.id, false);
+    chatRepo.setTyping(event.id, user.id, false);
     try {
-      await chatRepository.sendMessage(event.id, user.id, text);
+      // sendMessage already notifies the creator (chat.repository's
+      // notifyEventMessage) — a second notification here used to double it.
+      await chatRepo.sendMessage(event.id, user.id, text);
       setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
-      if (event.creatorId !== user.id) {
-        notificationsRepository.create({
-          toUid: event.creatorId,
-          fromUid: user.id,
-          fromName: user.name,
-          fromAvatarColor: user.avatarColor,
-          fromPhotoUri: user.photoUri,
-          type: 'event_message',
-          eventId: event.id,
-          eventTitle: event.title,
-        }).catch(() => {});
-      }
     } catch {
       // Silently ignore
     }
@@ -179,7 +205,7 @@ export default function EventChatScreen() {
     setUploadingChatImage(true);
     try {
       const imageUrl = await uploadEventChatImage(chatSelectedImage);
-      await chatRepository.sendImageMessage(event.id, user.id, imageUrl);
+      await chatRepo.sendImageMessage(event.id, user.id, imageUrl);
       setChatSelectedImage(null);
       setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
     } catch {
@@ -195,15 +221,15 @@ export default function EventChatScreen() {
     const msg = messages.find((m) => m.id === messageId);
     const alreadyReacted = msg?.reactions?.[emoji]?.includes(user.id);
     if (alreadyReacted) {
-      await chatRepository.removeReaction(event.id, messageId, user.id, emoji);
+      await chatRepo.removeReaction(event.id, messageId, user.id, emoji);
     } else {
-      await chatRepository.reactToMessage(event.id, messageId, user.id, emoji);
+      await chatRepo.reactToMessage(event.id, messageId, user.id, emoji);
     }
   };
 
   const handleEditMsg = async () => {
     if (!event || !editingMsgId || !editingMsgText.trim()) return;
-    await chatRepository.editMessage(event.id, editingMsgId, editingMsgText.trim());
+    await chatRepo.editMessage(event.id, editingMsgId, editingMsgText.trim());
     setEditingMsgId(null);
     setEditingMsgText('');
   };
@@ -212,7 +238,7 @@ export default function EventChatScreen() {
     if (!event) return;
     Alert.alert(t.eventDeleteMsgTitle, t.eventDeleteMsgBody, [
       { text: t.settingsBtnCancel, style: 'cancel' },
-      { text: t.eventDeleteBtn, style: 'destructive', onPress: () => chatRepository.deleteMessage(event.id, messageId) },
+      { text: t.eventDeleteBtn, style: 'destructive', onPress: () => chatRepo.deleteMessage(event.id, messageId) },
     ]);
   };
 
@@ -230,7 +256,7 @@ export default function EventChatScreen() {
           <Icon name="back" size={17} color={colors.textPrimary} />
         </AnimatedPressable>
         <AnimatedPressable
-          onPress={() => router.push(`/(app)/event/${event.id}`)}
+          onPress={() => router.push((isKfg ? `/(app)/kfg/mission/${event.id}` : `/(app)/event/${event.id}`) as any)}
           style={styles.headerTitleWrap}
         >
           <Text style={[styles.headerName, { color: colors.textPrimary }]} numberOfLines={1}>{event.title}</Text>

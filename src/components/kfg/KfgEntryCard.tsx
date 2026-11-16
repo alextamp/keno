@@ -8,6 +8,7 @@ import { BorderRadius, FontSize, FontWeight, Spacing, UIFont, UIFontLight } from
 import { useLanguageStore, useTranslation } from '@/core/i18n';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { useKfgStore } from '@/features/kfg/presentation/store/kfg.store';
+import { useKfgReminderSync } from '@/features/kfg/reminders';
 import { formatPoints, kfgLevelInfo } from '@/features/kfg/format';
 import { openMissionsFor } from '@/features/kfg/missions';
 import { KfgCharacter } from './KfgCharacter';
@@ -29,6 +30,7 @@ function EntryCardInner({ flush }: { flush: boolean }) {
   const { language } = useLanguageStore();
   const user = useAuthStore((s) => s.user);
   const { profile, missions, participations, start, stop } = useKfgStore();
+  useKfgReminderSync();
 
   useEffect(() => {
     if (!user) return;

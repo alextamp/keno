@@ -483,6 +483,27 @@ service cloud.firestore {
         onlyChangedFields(['title', 'description', 'infoText']);
       allow create, delete: if false;
 
+      // Mission chat — same as events/{id}/messages: closes 24h after the
+      // mission starts (sweepExpiredChats deletes the backlog), and only the
+      // creator or someone signed up can post.
+      match /messages/{messageId} {
+        allow read: if signedIn();
+        allow create: if signedIn() && request.resource.data.userId == request.auth.uid &&
+          request.time < get(/databases/$(database)/documents/kfgMissions/$(missionId)).data.startsAt + duration.value(24, 'h') &&
+          (get(/databases/$(database)/documents/kfgMissions/$(missionId)).data.creatorId == request.auth.uid ||
+           request.auth.uid in get(/databases/$(database)/documents/kfgMissions/$(missionId)).data.participantIds);
+        allow update: if signedIn() && (
+          onlyChangedFields(['reactions']) ||
+          (resource.data.userId == request.auth.uid && onlyChangedFields(['text', 'editedAt', 'isDeleted', 'imageUri']))
+        );
+        allow delete: if false;
+      }
+
+      match /typing/{userId} {
+        allow read: if signedIn();
+        allow write: if isOwner(userId);
+      }
+
       // Photo wall — same as events/{id}/photos: only people who were
       // actually there (checked in, or already verified/completed) can post,
       // and only if the creator left the wall on (photoWall: false turns it

@@ -71,6 +71,8 @@ const qr = async (pid) => {
 
   await fails(org.call('kfgJoin', { missionId }), 'organizations-cannot-join', 'organization cannot join');
   const { participationId } = await s1.call('kfgJoin', { missionId });
+  const orgNotifs = (await db.collection('users/org1/notifications').get()).docs.map((d) => d.data());
+  ok(orgNotifs.some((n) => n.type === 'kfg_join' && n.eventId === missionId && n.fromUid === 's1'), 'creator notified when someone joins');
   await s1.call('kfgJoin', { missionId });
   ok((await db.doc(`kfgMissions/${missionId}`).get()).data().participantCount === 1, 'joining twice is idempotent');
   await s2.call('kfgJoin', { missionId });
@@ -114,6 +116,8 @@ const qr = async (pid) => {
   const adminC = await signIn('s4');
   await adminC.call('kfgReviewMission', { missionId: st.missionId, approve: true });
   ok((await db.doc(`kfgMissions/${st.missionId}`).get()).data().status === 'published', 'admin approval publishes');
+  const hostNotifs = (await db.collection('users/host/notifications').get()).docs.map((d) => d.data());
+  ok(hostNotifs.some((n) => n.type === 'kfg_approved' && n.eventId === st.missionId), 'creator notified of approval');
   const j = await s2.call('kfgJoin', { missionId: st.missionId });
   await host.call('kfgScan', { code: await qr(j.participationId) });
   ok((await host.call('kfgScan', { code: await qr(j.participationId) })).result === 'verified', 'student mission: verified, paid at finalize');

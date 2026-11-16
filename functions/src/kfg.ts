@@ -71,6 +71,37 @@ function optStr(v: unknown, field: string, max: number): string | null {
   return str(v, field, 1, max);
 }
 
+// ── Notifications ───────────────────────────────────────────────────────────
+// Same users/{uid}/notifications docs the app writes (onNotificationCreated
+// in index.ts turns them into pushes); KfG types carry the mission id in
+// `eventId`, which is what the client routes on.
+
+async function notify(
+  toUids: string[], type: string, missionId: string, missionTitle: string,
+  from?: { uid: string; name?: string; avatarColor?: string; photoUri?: string },
+): Promise<void> {
+  const targets = [...new Set(toUids)].filter((u) => u && u !== from?.uid);
+  if (targets.length === 0) return;
+  for (let i = 0; i < targets.length; i += 400) {
+    const batch = db.batch();
+    targets.slice(i, i + 400).forEach((uid) => batch.set(db.collection(`users/${uid}/notifications`).doc(), {
+      fromUid: from?.uid ?? 'keno', fromName: from?.name ?? 'Keno for Good',
+      fromAvatarColor: from?.avatarColor ?? null, fromPhotoUri: from?.photoUri ?? null,
+      type, eventId: missionId, eventTitle: missionTitle, messagePreview: null,
+      read: false, createdAt: Timestamp.now(),
+    }));
+    await batch.commit().catch((err) => logger.error('kfg notify failed', { type, missionId, err: String(err) }));
+  }
+}
+
+/** A mission just went live: tell its community (the creator excluded). */
+async function announceToCommunity(groupId: unknown, missionId: string, title: string, creatorId: string): Promise<void> {
+  if (typeof groupId !== 'string' || !groupId) return;
+  const g = (await db.doc(`groups/${groupId}`).get()).data();
+  if (!g) return;
+  await notify((g.memberIds ?? []).filter((u: string) => u !== creatorId), 'kfg_new_mission', missionId, title);
+}
+
 // ── Communities (groups docs with scope 'kfg') ──────────────────────────────
 
 /** The KfG community a mission is posted to: must exist, be a KfG community, and include the creator. */
@@ -266,7 +297,10 @@ export const kfgCreateMission = onCall(async (request) => {
     createdMonthId: monthId,
     createdAt: FieldValue.serverTimestamp(),
   });
-  if (creatorType === 'organization') await syncCommunityMission(community?.id, ref.id, true);
+  if (creatorType === 'organization') {
+    await syncCommunityMission(community?.id, ref.id, true);
+    await announceToCommunity(community?.id, ref.id, String(d.title).trim(), uid);
+  }
   return { missionId: ref.id, status: creatorType === 'organization' ? 'published' : 'pending' };
 });
 
@@ -276,18 +310,24 @@ export const kfgReviewMission = onCall(async (request) => {
   const { missionId, approve, reason } = request.data ?? {};
   const ref = db.doc(`${MISSIONS}/${String(missionId)}`);
   let groupId: unknown = null;
+  let mission: FirebaseFirestore.DocumentData = {};
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists) throw new HttpsError('not-found', 'mission');
     if (snap.data()!.status !== 'pending') throw new HttpsError('failed-precondition', 'not-pending');
     groupId = snap.data()!.groupId;
+    mission = snap.data()!;
     tx.update(ref, {
       status: approve === true ? 'published' : 'rejected',
       rejectionReason: approve === true ? null : (typeof reason === 'string' ? reason.slice(0, 300) : null),
       reviewedBy: uid, reviewedAt: FieldValue.serverTimestamp(),
     });
   });
-  if (approve === true) await syncCommunityMission(groupId, String(missionId), true);
+  if (approve === true) {
+    await syncCommunityMission(groupId, String(missionId), true);
+    await announceToCommunity(groupId, String(missionId), mission.title, mission.creatorId);
+  }
+  await notify([mission.creatorId], approve === true ? 'kfg_approved' : 'kfg_rejected', String(missionId), mission.title);
   return { ok: true };
 });
 
@@ -304,6 +344,7 @@ export const kfgCancelMission = onCall(async (request) => {
 
   await ref.update({ status: 'cancelled', cancelledAt: FieldValue.serverTimestamp() });
   await syncCommunityMission(m.groupId, missionId, false);
+  await notify(m.participantIds ?? [], 'kfg_cancelled', missionId, m.title, { uid });
   const open = await db.collection(PARTICIPATIONS).where('missionId', '==', missionId).get();
   const batch = db.batch();
   open.docs.filter((p) => OPEN_STATUSES.includes(p.data().status))
@@ -332,6 +373,7 @@ export const kfgJoin = onCall(async (request) => {
     .where('uid', '==', uid).where('status', 'in', OPEN_STATUSES).count().get();
   if (open.data().count >= KFG_LIMITS.maxOpenParticipations) throw new HttpsError('resource-exhausted', 'too-many-open');
 
+  let joined: FirebaseFirestore.DocumentData | null = null;
   await db.runTransaction(async (tx) => {
     const [mSnap, pSnap] = await Promise.all([tx.get(missionRef), tx.get(participationRef)]);
     if (!mSnap.exists) throw new HttpsError('not-found', 'mission');
@@ -344,6 +386,7 @@ export const kfgJoin = onCall(async (request) => {
     if (ineligible) throw new HttpsError('permission-denied', ineligible);
     if ((m.participantCount ?? 0) >= m.capacity) throw new HttpsError('resource-exhausted', 'full');
 
+    joined = m;
     tx.set(participationRef, {
       uid, missionId, missionCreatorId: m.creatorId, kind: m.kind, creatorType: m.creatorType,
       status: 'joined', joinedAt: FieldValue.serverTimestamp(),
@@ -352,6 +395,8 @@ export const kfgJoin = onCall(async (request) => {
     tx.set(participationRef.collection('private').doc('qr'), { secret: randomBytes(16).toString('hex') });
     tx.update(missionRef, { participantCount: FieldValue.increment(1), participantIds: FieldValue.arrayUnion(uid) });
   });
+  const j = joined as FirebaseFirestore.DocumentData | null;
+  if (j) await notify([j.creatorId], 'kfg_join', missionId, j.title, { uid, name: user.name, avatarColor: user.avatarColor, photoUri: user.photoUri });
   return { participationId: participationRef.id };
 });
 

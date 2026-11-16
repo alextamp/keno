@@ -7,9 +7,9 @@ import { db } from '@/lib/firebase';
 import { ChatMessage } from '../../domain/entities/event.entity';
 import { notificationsRepository } from '@/features/notifications/notifications.repository';
 
-function msgPath(eventId: string) {
-  return collection(db, 'events', eventId, 'messages');
-}
+// Same chat for events (events/{id}) and Keno for Good missions
+// (kfgMissions/{id}) — only the root collection and the notification differ.
+type ChatRoot = 'events' | 'kfgMissions';
 
 function fromDoc(snap: { id: string; data(): Record<string, any> }): ChatMessage {
   const d = snap.data();
@@ -25,10 +25,10 @@ function fromDoc(snap: { id: string; data(): Record<string, any> }): ChatMessage
   };
 }
 
-async function notifyEventMessage(eventId: string, userId: string): Promise<void> {
+async function notifyEventMessage(root: ChatRoot, eventId: string, userId: string): Promise<void> {
   try {
     const [eventSnap, userSnap] = await Promise.all([
-      getDoc(doc(db, 'events', eventId)),
+      getDoc(doc(db, root, eventId)),
       getDoc(doc(db, 'users', userId)),
     ]);
     if (!eventSnap.exists() || !userSnap.exists()) return;
@@ -42,7 +42,7 @@ async function notifyEventMessage(eventId: string, userId: string): Promise<void
       fromName: userData.name ?? 'Someone',
       fromAvatarColor: userData.avatarColor,
       fromPhotoUri: userData.photoUri,
-      type: 'event_message',
+      type: root === 'events' ? 'event_message' : 'kfg_message',
       eventId,
       eventTitle: eventData.title,
     });
@@ -51,7 +51,9 @@ async function notifyEventMessage(eventId: string, userId: string): Promise<void
   }
 }
 
-export const chatRepository = {
+function makeChatRepository(root: ChatRoot) {
+  const msgPath = (eventId: string) => collection(db, root, eventId, 'messages');
+  return {
   subscribeToMessages(eventId: string, onUpdate: (msgs: ChatMessage[]) => void): () => void {
     const q = query(msgPath(eventId), orderBy('timestamp', 'asc'));
     return onSnapshot(q, (snap) => onUpdate(snap.docs.map(fromDoc)), () => {});
@@ -64,7 +66,7 @@ export const chatRepository = {
       timestamp: Timestamp.now(),
       reactions: {},
     });
-    await notifyEventMessage(eventId, userId);
+    await notifyEventMessage(root, eventId, userId);
   },
 
   async sendImageMessage(eventId: string, userId: string, imageUri: string): Promise<void> {
@@ -75,11 +77,11 @@ export const chatRepository = {
       timestamp: Timestamp.now(),
       reactions: {},
     });
-    await notifyEventMessage(eventId, userId);
+    await notifyEventMessage(root, eventId, userId);
   },
 
   async reactToMessage(eventId: string, messageId: string, userId: string, emoji: string): Promise<void> {
-    const ref = doc(db, 'events', eventId, 'messages', messageId);
+    const ref = doc(db, root, eventId, 'messages', messageId);
     // Toggle: if already reacted with this emoji, remove; otherwise add
     // We use arrayUnion/Remove on the reactions sub-field
     // Read is done optimistically in the UI
@@ -89,24 +91,24 @@ export const chatRepository = {
   },
 
   async removeReaction(eventId: string, messageId: string, userId: string, emoji: string): Promise<void> {
-    const ref = doc(db, 'events', eventId, 'messages', messageId);
+    const ref = doc(db, root, eventId, 'messages', messageId);
     await updateDoc(ref, {
       [`reactions.${emoji}`]: arrayRemove(userId),
     });
   },
 
   async editMessage(eventId: string, messageId: string, text: string): Promise<void> {
-    const ref = doc(db, 'events', eventId, 'messages', messageId);
+    const ref = doc(db, root, eventId, 'messages', messageId);
     await updateDoc(ref, { text: text.trim(), editedAt: Timestamp.now() });
   },
 
   async deleteMessage(eventId: string, messageId: string): Promise<void> {
-    const ref = doc(db, 'events', eventId, 'messages', messageId);
+    const ref = doc(db, root, eventId, 'messages', messageId);
     await updateDoc(ref, { isDeleted: true, text: deleteField(), imageUri: deleteField() });
   },
 
   setTyping(eventId: string, userId: string, isTyping: boolean): void {
-    const ref = doc(db, 'events', eventId, 'typing', userId);
+    const ref = doc(db, root, eventId, 'typing', userId);
     updateDoc(ref, { isTyping, updatedAt: Timestamp.now() }).catch(() => {
       // Doc might not exist yet
       if (isTyping) {
@@ -118,7 +120,7 @@ export const chatRepository = {
   },
 
   subscribeToTyping(eventId: string, currentUserId: string, onUpdate: (typingUids: string[]) => void): () => void {
-    const typingCol = collection(db, 'events', eventId, 'typing');
+    const typingCol = collection(db, root, eventId, 'typing');
     return onSnapshot(typingCol, (snap) => {
       const now = Date.now();
       const active = snap.docs
@@ -134,4 +136,8 @@ export const chatRepository = {
       onUpdate(active);
     }, () => {});
   },
-};
+  };
+}
+
+export const chatRepository = makeChatRepository('events');
+export const kfgChatRepository = makeChatRepository('kfgMissions');

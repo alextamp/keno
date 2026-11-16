@@ -8,6 +8,7 @@ import { TabBar, TabBarItem } from '@/components/ui/TabBar';
 import { haptics } from '@/core/utils/haptics';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { useKfgStore } from '@/features/kfg/presentation/store/kfg.store';
+import { useKfgReminderSync } from '@/features/kfg/reminders';
 import MissionsTab from '@/screens/kfg/MissionsTab';
 import CharacterTab from '@/screens/kfg/CharacterTab';
 import KfgLeaderboardTab from '@/screens/kfg/KfgLeaderboardTab';
@@ -30,6 +31,7 @@ function KfgHubInner() {
   const t = useTranslation();
   const user = useAuthStore((s) => s.user);
   const { start, stop } = useKfgStore();
+  useKfgReminderSync();
   const labels = [t.kfgTabMissions, t.kfgTabCommunities, t.kfgTabCharacter, t.kfgTabLeaderboard];
   const pagerRef = useRef<PagerView>(null);
   const [activeIndex, setActiveIndex] = useState(0);

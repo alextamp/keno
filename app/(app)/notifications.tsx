@@ -12,7 +12,7 @@ import { useTheme } from '@/core/theme';
 import { UIFont, UIFontLight, TitleFont, FontSize, FontWeight, Spacing } from '@/core/constants/theme';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { useNotificationsStore } from '@/features/notifications/notifications.store';
-import { NotificationEntity, NotifType } from '@/features/notifications/notification.entity';
+import { isKfgNotif, NotificationEntity, NotifType } from '@/features/notifications/notification.entity';
 import { formatMessageTime } from '@/core/utils/time';
 import { useTranslation, useLanguageStore } from '@/core/i18n';
 import { Icon, IconName } from '@/components/ui/Icon';
@@ -42,6 +42,17 @@ const NOTIF_ICONS: Record<NotifType, IconName> = {
   ride_confirmed: 'check',
   ride_declined: 'x',
   ride_cancelled: 'x',
+  kfg_message: 'chat',
+  kfg_approved: 'heart',
+  kfg_rejected: 'x',
+  kfg_reminder: 'clock',
+  kfg_new_mission: 'heart',
+  kfg_join: 'users',
+  kfg_cancelled: 'x',
+  kfg_waitlist_promoted: 'zap',
+  kfg_join_request: 'lock',
+  kfg_join_accepted: 'check',
+  kfg_invite: 'mail',
 };
 
 // Screen 26: notifications grouped into ΣΗΜΕΡΑ / ΧΘΕΣ / ΠΑΛΙΟΤΕΡΑ sections.
@@ -119,6 +130,10 @@ export default function NotificationsScreen() {
     }
     if ((notif.type === 'group_invite' || notif.type === 'group_join_request' || notif.type === 'group_join_accepted' || notif.type === 'group_message') && notif.eventId) {
       router.push(`/(app)/group/${notif.eventId}`);
+    } else if (notif.type === 'kfg_message' && notif.eventId) {
+      router.push(`/(app)/event-chat/${notif.eventId}?kfg=1` as any);
+    } else if (isKfgNotif(notif.type) && notif.eventId) {
+      router.push(`/(app)/kfg/mission/${notif.eventId}` as any);
     } else if (notif.type === 'event_message' && notif.eventId) {
       router.push(`/(app)/event-chat/${notif.eventId}` as any);
     } else if (notif.type.startsWith('ride_') && notif.eventId) {
@@ -170,6 +185,7 @@ export default function NotificationsScreen() {
   };
 
   const getLabel = (notif: NotificationEntity): string => {
+    if (isKfgNotif(notif.type)) return t.kfgNotif(notif.type, notif.fromName, notif.eventTitle ?? '');
     switch (notif.type) {
       case 'follow': return t.notifFollow(notif.fromName);
       case 'event_join': return t.notifEventJoin(notif.fromName, notif.eventTitle ?? '');

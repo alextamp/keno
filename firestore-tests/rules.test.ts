@@ -392,6 +392,21 @@ describe('Keno for Good', () => {
     await assertSucceeds(getDocs(collection(asUser(USER_C), 'kfgMissions', 'w1', 'photos')));
   });
 
+  test('mission chat: creator and participants only, closes 24h after the start', async () => {
+    const soon = Timestamp.fromMillis(Date.now() + 3600_000);
+    const old = Timestamp.fromMillis(Date.now() - 30 * 3600_000);
+    await seed(async (db) => {
+      await setDoc(doc(db, 'kfgMissions', 'c1'), { creatorId: USER_A, status: 'published', startsAt: soon, participantIds: [USER_B] });
+      await setDoc(doc(db, 'kfgMissions', 'c2'), { creatorId: USER_A, status: 'published', startsAt: old, participantIds: [USER_B] });
+    });
+    const msg = (uid: string) => ({ userId: uid, text: 'γεια', timestamp: Timestamp.now(), reactions: {} });
+    await assertSucceeds(addDoc(collection(asUser(USER_A), 'kfgMissions', 'c1', 'messages'), msg(USER_A)));
+    await assertSucceeds(addDoc(collection(asUser(USER_B), 'kfgMissions', 'c1', 'messages'), msg(USER_B)));
+    await assertFails(addDoc(collection(asUser(USER_C), 'kfgMissions', 'c1', 'messages'), msg(USER_C)));
+    await assertFails(addDoc(collection(asUser(USER_B), 'kfgMissions', 'c1', 'messages'), msg(USER_A)));
+    await assertFails(addDoc(collection(asUser(USER_B), 'kfgMissions', 'c2', 'messages'), msg(USER_B)));
+  });
+
   test('trust scores are not readable by users', async () => {
     await seed(async (db) => { await setDoc(doc(db, 'kfgTrust', USER_A), { score: 0.5 }); });
     await assertFails(getDoc(doc(asUser(USER_A), 'kfgTrust', USER_A)));

@@ -228,6 +228,15 @@ function MissionInner() {
             </Card>
           )}
 
+          {(isMine || joined) && (
+            <Button
+              label={t.kfgChatBtn}
+              variant="outline"
+              onPress={() => router.push(`/(app)/event-chat/${mission.id}?kfg=1` as any)}
+              fullWidth
+            />
+          )}
+
           {mission.photoWall && <KfgPhotoWall missionId={mission.id} user={user} status={participation?.status} />}
 
           {joined && status === 'joined' && !started && (
