@@ -14,6 +14,8 @@ export interface NotificationEntity {
   type: NotifType;
   eventId?: string;
   eventTitle?: string;
+  /** Keno for Good: eventId is a mission id. */
+  kfg?: boolean;
   read: boolean;
   createdAt: Date;
 }

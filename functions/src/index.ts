@@ -336,6 +336,7 @@ export const onNotificationCreated = onDocumentCreated(
           type: notif.type,
           eventId: notif.eventId ?? null,
           fromUid: notif.fromUid ?? null,
+          kfg: notif.kfg === true,
         },
       };
 

@@ -177,7 +177,7 @@ function RootLayout() {
       } else if (data.type === 'event_message' && data.eventId) {
         router.push(`/(app)/event-chat/${data.eventId}` as any);
       } else if (data.type?.startsWith('ride_') && data.eventId) {
-        router.push(`/(app)/event/rides/${data.eventId}` as any);
+        router.push(`/(app)/event/rides/${data.eventId}${data.kfg ? '?kfg=1' : ''}` as any);
       } else if (data.eventId) {
         router.push(`/(app)/event/${data.eventId}` as any);
       }

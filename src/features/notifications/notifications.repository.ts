@@ -25,6 +25,8 @@ export interface CreateNotifParams {
    *  "📷 Photo") shown in the push notification body, Instagram-style,
    *  instead of a generic "sent you a message". */
   messagePreview?: string;
+  /** Keno for Good: eventId is a mission id (rides / matches route accordingly). */
+  kfg?: boolean;
 }
 
 function notifCol(uid: string) {
@@ -42,6 +44,7 @@ export const notificationsRepository = {
       eventId: params.eventId ?? null,
       eventTitle: params.eventTitle ?? null,
       messagePreview: params.messagePreview ?? null,
+      ...(params.kfg ? { kfg: true } : {}),
       read: false,
       createdAt: Timestamp.now(),
     });
@@ -59,6 +62,7 @@ export const notificationsRepository = {
             fromName: data.fromName,
             fromAvatarColor: data.fromAvatarColor ?? undefined,
             fromPhotoUri: data.fromPhotoUri ?? undefined,
+            kfg: data.kfg === true,
             type: data.type as NotifType,
             eventId: data.eventId ?? undefined,
             eventTitle: data.eventTitle ?? undefined,

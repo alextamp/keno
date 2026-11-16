@@ -527,6 +527,57 @@ service cloud.firestore {
         allow update, delete: if false;
       }
 
+      // Rides — the events' rides block, for a mission's participants
+      // (event() here is the mission; ridesEnabled is set by its creator).
+      match /rides/{rideId} {
+        function event() {
+          return get(/databases/$(database)/documents/kfgMissions/$(missionId)).data;
+        }
+        function ride() {
+          return get(/databases/$(database)/documents/kfgMissions/$(missionId)/rides/$(rideId)).data;
+        }
+
+        allow read: if signedIn();
+        allow create: if signedIn() &&
+          event().get('ridesEnabled', false) == true &&
+          (request.auth.uid in event().get('participantIds', []) || request.auth.uid == event().creatorId) &&
+          request.resource.data.driverId == request.auth.uid &&
+          request.resource.data.seats is int &&
+          request.resource.data.seats >= 1 && request.resource.data.seats <= 6 &&
+          request.resource.data.confirmedIds.size() == 0;
+        allow update: if signedIn() && (
+          (resource.data.driverId == request.auth.uid &&
+            onlyChangedFields(['departureArea', 'departureTime', 'seats', 'costPerPerson', 'confirmedIds']) &&
+            request.resource.data.seats is int &&
+            request.resource.data.seats >= 1 && request.resource.data.seats <= 6 &&
+            request.resource.data.confirmedIds.size() <= request.resource.data.seats) ||
+          (onlyChangedFields(['confirmedIds']) &&
+            request.auth.uid in resource.data.confirmedIds &&
+            request.resource.data.confirmedIds.toSet() ==
+              resource.data.confirmedIds.toSet().difference([request.auth.uid].toSet()))
+        );
+        allow delete: if signedIn() && resource.data.driverId == request.auth.uid;
+
+        match /bookings/{uid} {
+          allow read: if signedIn() && (request.auth.uid == uid || ride().driverId == request.auth.uid);
+          allow create: if signedIn() && request.auth.uid == uid &&
+            ride().driverId != uid &&
+            (request.auth.uid in event().get('participantIds', []) || request.auth.uid == event().creatorId) &&
+            request.resource.data.status == 'pending';
+          allow update: if signedIn() && ride().driverId == request.auth.uid &&
+            onlyChangedFields(['status']) &&
+            request.resource.data.status in ['confirmed', 'declined'];
+          allow delete: if signedIn() && (request.auth.uid == uid || ride().driverId == request.auth.uid);
+        }
+
+        match /private/{docId} {
+          allow read: if signedIn() && (
+            ride().driverId == request.auth.uid || request.auth.uid in ride().confirmedIds
+          );
+          allow write: if signedIn() && ride().driverId == request.auth.uid;
+        }
+      }
+
       // Photo wall — same as events/{id}/photos: only people who were
       // actually there (checked in, or already verified/completed) can post,
       // and only if the creator left the wall on (photoWall: false turns it

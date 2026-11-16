@@ -422,6 +422,17 @@ describe('Keno for Good', () => {
     await assertFails(addDoc(collection(asUser(USER_A), 'kfgMissions', 'k1', 'swipes'), { fromUid: USER_A, toUid: USER_C, direction: 'interested' }));
   });
 
+  test('mission rides: only participants, only when the creator turned rides on', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'kfgMissions', 'r1'), { creatorId: USER_A, status: 'published', ridesEnabled: true, participantIds: [USER_B] });
+      await setDoc(doc(db, 'kfgMissions', 'r2'), { creatorId: USER_A, status: 'published', ridesEnabled: false, participantIds: [USER_B] });
+    });
+    const ride = (uid: string) => ({ driverId: uid, seats: 3, confirmedIds: [], departureArea: 'Κέντρο', departureTime: Timestamp.now() });
+    await assertSucceeds(addDoc(collection(asUser(USER_B), 'kfgMissions', 'r1', 'rides'), ride(USER_B)));
+    await assertFails(addDoc(collection(asUser(USER_C), 'kfgMissions', 'r1', 'rides'), ride(USER_C)));
+    await assertFails(addDoc(collection(asUser(USER_B), 'kfgMissions', 'r2', 'rides'), ride(USER_B)));
+  });
+
   test('trust scores are not readable by users', async () => {
     await seed(async (db) => { await setDoc(doc(db, 'kfgTrust', USER_A), { score: 0.5 }); });
     await assertFails(getDoc(doc(asUser(USER_A), 'kfgTrust', USER_A)));

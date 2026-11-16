@@ -13,47 +13,79 @@ import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import { BorderRadius, FontSize, FontWeight, Spacing, TitleFont, UIFont, UIFontLight } from '@/core/constants/theme';
 import { isVerifiedUser } from '@/core/constants/gamification';
-import { useTheme } from '@/core/theme';
+import { AccentScopeProvider, useTheme } from '@/core/theme';
 import { getDateLocale, useLanguageStore, useTranslation } from '@/core/i18n';
 import { isLeft } from '@/core/utils/either';
 import { analytics } from '@/core/utils/analytics';
 import { containsBlockedContent } from '@/core/utils/contentModeration';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { UserEntity } from '@/features/auth/domain/entities/user.entity';
-import { EventEntity } from '@/features/events/domain/entities/event.entity';
 import { eventsRepository } from '@/features/events/data/repositories/events.repository.impl';
 import { notificationsRepository } from '@/features/notifications/notifications.repository';
 import { NotifType } from '@/features/notifications/notification.entity';
-import { Booking, Ride, ridesRepository } from '@/features/rides/rides.repository';
+import { Booking, kfgRidesRepository, Ride, ridesRepository } from '@/features/rides/rides.repository';
+import { kfgRepository } from '@/features/kfg/data/repositories/kfg.repository.impl';
 
 // Leave this many minutes before the event starts — a chip row instead of a
 // full time picker, since a ride only ever makes sense shortly before.
 const LEAVE_BEFORE_OPTIONS = [30, 60, 90, 120] as const;
 
-function notify(type: NotifType, toUid: string, from: UserEntity, event: EventEntity) {
+/** What rides need from an event — or from a Keno for Good mission (?kfg=1). */
+interface RideTarget {
+  id: string;
+  title: string;
+  dateTime: Date;
+  attendeeIds: string[];
+  kfg: boolean;
+}
+
+const repoFor = (target: RideTarget) => (target.kfg ? kfgRidesRepository : ridesRepository);
+
+function notify(type: NotifType, toUid: string, from: UserEntity, event: RideTarget) {
   notificationsRepository.create({
     toUid, type,
     fromUid: from.id, fromName: from.name, fromAvatarColor: from.avatarColor, fromPhotoUri: from.photoUri,
-    eventId: event.id, eventTitle: event.title,
+    eventId: event.id, eventTitle: event.title, kfg: event.kfg,
   }).catch(() => {});
 }
 
 export default function RidesScreen() {
+  const { kfg } = useLocalSearchParams<{ kfg?: string }>();
+  return (
+    <AccentScopeProvider value={kfg === '1' ? 'kfg' : 'default'}>
+      <RidesInner isKfg={kfg === '1'} />
+    </AccentScopeProvider>
+  );
+}
+
+function RidesInner({ isKfg }: { isKfg: boolean }) {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const t = useTranslation();
   const user = useAuthStore((s) => s.user);
-  const [event, setEvent] = useState<EventEntity | null>(null);
+  const [event, setEvent] = useState<RideTarget | null>(null);
   const [rides, setRides] = useState<Ride[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [offering, setOffering] = useState(false);
 
   useEffect(() => {
     if (!id) return;
-    eventsRepository.getEvent(id).then((r) => (isLeft(r) ? setFailed(true) : setEvent(r.right)));
+    if (isKfg) {
+      const unsub = kfgRepository.subscribeMission(id, (m) => {
+        if (!m) { setFailed(true); return; }
+        setEvent({ id: m.id, title: m.title, dateTime: m.startsAt, attendeeIds: [m.creatorId, ...m.participantIds], kfg: true });
+      });
+      const unsubRides = kfgRidesRepository.subscribeRides(id, setRides);
+      return () => { unsub(); unsubRides(); };
+    }
+    eventsRepository.getEvent(id).then((r) => {
+      if (isLeft(r)) { setFailed(true); return; }
+      const e = r.right;
+      setEvent({ id: e.id, title: e.title, dateTime: e.dateTime, attendeeIds: e.attendeeIds, kfg: false });
+    });
     return ridesRepository.subscribeRides(id, setRides);
-  }, [id]);
+  }, [id, isKfg]);
 
   if (failed) {
     return (
@@ -112,7 +144,7 @@ export default function RidesScreen() {
   );
 }
 
-function OfferForm({ event, user, onDone }: { event: EventEntity; user: UserEntity; onDone: () => void }) {
+function OfferForm({ event, user, onDone }: { event: RideTarget; user: UserEntity; onDone: () => void }) {
   const { colors } = useTheme();
   const t = useTranslation();
   const [area, setArea] = useState('');
@@ -133,7 +165,7 @@ function OfferForm({ event, user, onDone }: { event: EventEntity; user: UserEnti
       return;
     }
     setSaving(true);
-    const result = await ridesRepository.offerRide(event.id, {
+    const result = await repoFor(event).offerRide(event.id, {
       driver: { id: user.id, name: user.name, avatarColor: user.avatarColor, photoUri: user.photoUri, checkInCount: user.checkInCount },
       departureArea: area.trim(),
       departureTime: new Date(event.dateTime.getTime() - leaveBefore * 60_000),
@@ -198,7 +230,7 @@ function OfferForm({ event, user, onDone }: { event: EventEntity; user: UserEnti
   );
 }
 
-function RideCard({ ride, event, user, canBook }: { ride: Ride; event: EventEntity; user: UserEntity; canBook: boolean }) {
+function RideCard({ ride, event, user, canBook }: { ride: Ride; event: RideTarget; user: UserEntity; canBook: boolean }) {
   const { colors } = useTheme();
   const t = useTranslation();
   const router = useRouter();
@@ -213,12 +245,12 @@ function RideCard({ ride, event, user, canBook }: { ride: Ride; event: EventEnti
   const seatsLeft = Math.max(0, ride.seats - ride.confirmedIds.length);
 
   useEffect(() => {
-    if (isMine) return ridesRepository.subscribeBookings(event.id, ride.id, setBookings);
-    return ridesRepository.subscribeMyBooking(event.id, ride.id, user.id, setMyBooking);
+    if (isMine) return repoFor(event).subscribeBookings(event.id, ride.id, setBookings);
+    return repoFor(event).subscribeMyBooking(event.id, ride.id, user.id, setMyBooking);
   }, [isMine, event.id, ride.id, user.id]);
 
   useEffect(() => {
-    if (isMine || confirmed) ridesRepository.getMeetingPoint(event.id, ride.id).then(setMeetingPoint);
+    if (isMine || confirmed) repoFor(event).getMeetingPoint(event.id, ride.id).then(setMeetingPoint);
   }, [isMine, confirmed, event.id, ride.id]);
   const showMeeting = !!meetingPoint && (isMine || confirmed);
 
@@ -229,7 +261,7 @@ function RideCard({ ride, event, user, canBook }: { ride: Ride; event: EventEnti
   };
 
   const request = () => run(async () => {
-    const r = await ridesRepository.requestSeat(event.id, ride.id, { id: user.id, name: user.name, avatarColor: user.avatarColor, photoUri: user.photoUri });
+    const r = await repoFor(event).requestSeat(event.id, ride.id, { id: user.id, name: user.name, avatarColor: user.avatarColor, photoUri: user.photoUri });
     if (isLeft(r)) { Alert.alert(t.ridesTitle, t.authErrGeneric); return; }
     analytics.track('ride_seat_requested', { eventId: event.id });
     notify('ride_request', ride.driverId, user, event);
@@ -237,20 +269,20 @@ function RideCard({ ride, event, user, canBook }: { ride: Ride; event: EventEnti
 
   const cancelSeat = () => run(async () => {
     const wasConfirmed = confirmed;
-    const r = await ridesRepository.cancelSeat(event.id, ride.id, user.id, wasConfirmed);
+    const r = await repoFor(event).cancelSeat(event.id, ride.id, user.id, wasConfirmed);
     if (isLeft(r)) { Alert.alert(t.ridesTitle, t.authErrGeneric); return; }
     if (wasConfirmed) notify('ride_cancelled', ride.driverId, user, event);
   });
 
   const confirm = (b: Booking) => run(async () => {
-    const r = await ridesRepository.confirmSeat(event.id, ride.id, b.uid);
+    const r = await repoFor(event).confirmSeat(event.id, ride.id, b.uid);
     if (isLeft(r)) { Alert.alert(t.ridesTitle, t.ridesFull); return; }
     analytics.track('ride_seat_confirmed', { eventId: event.id });
     notify('ride_confirmed', b.uid, user, event);
   });
 
   const decline = (b: Booking) => run(async () => {
-    const r = await ridesRepository.declineSeat(event.id, ride.id, b.uid, b.status === 'confirmed');
+    const r = await repoFor(event).declineSeat(event.id, ride.id, b.uid, b.status === 'confirmed');
     if (isLeft(r)) { Alert.alert(t.ridesTitle, t.authErrGeneric); return; }
     notify('ride_declined', b.uid, user, event);
   });
@@ -261,7 +293,7 @@ function RideCard({ ride, event, user, canBook }: { ride: Ride; event: EventEnti
       {
         text: t.ridesCancelRideBtn, style: 'destructive',
         onPress: () => run(async () => {
-          const r = await ridesRepository.cancelRide(event.id, ride.id);
+          const r = await repoFor(event).cancelRide(event.id, ride.id);
           if (isLeft(r)) { Alert.alert(t.ridesTitle, t.authErrGeneric); return; }
           bookings.filter((b) => b.status !== 'declined').forEach((b) => notify('ride_cancelled', b.uid, user, event));
         }),

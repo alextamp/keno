@@ -44,13 +44,6 @@ export interface OfferRideParams {
   meetingPoint: string;
 }
 
-const ridesCol = (eventId: string) => collection(db, 'events', eventId, 'rides');
-const rideDoc = (eventId: string, rideId: string) => doc(db, 'events', eventId, 'rides', rideId);
-const bookingDoc = (eventId: string, rideId: string, uid: string) =>
-  doc(db, 'events', eventId, 'rides', rideId, 'bookings', uid);
-const meetingDoc = (eventId: string, rideId: string) =>
-  doc(db, 'events', eventId, 'rides', rideId, 'private', 'meeting');
-
 async function attempt<T>(fn: () => Promise<T>, fallback: string): Promise<Either<Failure, T>> {
   try {
     return right(await fn());
@@ -59,7 +52,18 @@ async function attempt<T>(fn: () => Promise<T>, fallback: string): Promise<Eithe
   }
 }
 
-export const ridesRepository = {
+// Same rides for events (events/{id}) and Keno for Good missions
+// (kfgMissions/{id}, see firestore.rules) — only the root differs.
+export type RidesRoot = 'events' | 'kfgMissions';
+
+function makeRidesRepository(root: RidesRoot) {
+  const ridesCol = (eventId: string) => collection(db, root, eventId, 'rides');
+  const rideDoc = (eventId: string, rideId: string) => doc(db, root, eventId, 'rides', rideId);
+  const bookingDoc = (eventId: string, rideId: string, uid: string) =>
+    doc(db, root, eventId, 'rides', rideId, 'bookings', uid);
+  const meetingDoc = (eventId: string, rideId: string) =>
+    doc(db, root, eventId, 'rides', rideId, 'private', 'meeting');
+  return {
   subscribeRides(eventId: string, onUpdate: (rides: Ride[]) => void): () => void {
     return onSnapshot(ridesCol(eventId), (snap) => {
       onUpdate(snap.docs.map((d) => {
@@ -83,7 +87,7 @@ export const ridesRepository = {
 
   /** Bookings on the driver's own ride (rules hide them from everyone else). */
   subscribeBookings(eventId: string, rideId: string, onUpdate: (bookings: Booking[]) => void): () => void {
-    return onSnapshot(collection(db, 'events', eventId, 'rides', rideId, 'bookings'), (snap) => {
+    return onSnapshot(collection(db, root, eventId, 'rides', rideId, 'bookings'), (snap) => {
       onUpdate(snap.docs.map((d) => ({ uid: d.id, ...(d.data() as Omit<Booking, 'uid'>) })));
     }, () => onUpdate([]));
   },
@@ -169,4 +173,8 @@ export const ridesRepository = {
       await batch.commit();
     }, 'Failed to decline seat.');
   },
-};
+  };
+}
+
+export const ridesRepository = makeRidesRepository('events');
+export const kfgRidesRepository = makeRidesRepository('kfgMissions');

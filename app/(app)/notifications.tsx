@@ -139,7 +139,7 @@ export default function NotificationsScreen() {
     } else if (notif.type === 'event_message' && notif.eventId) {
       router.push(`/(app)/event-chat/${notif.eventId}` as any);
     } else if (notif.type.startsWith('ride_') && notif.eventId) {
-      router.push(`/(app)/event/rides/${notif.eventId}` as any);
+      router.push(`/(app)/event/rides/${notif.eventId}${notif.kfg ? '?kfg=1' : ''}` as any);
     } else if (notif.eventId) {
       router.push(`/(app)/event/${notif.eventId}`);
     } else if (notif.type === 'follow') {

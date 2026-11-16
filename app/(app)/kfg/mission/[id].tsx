@@ -28,6 +28,7 @@ import { useKfgStore } from '@/features/kfg/presentation/store/kfg.store';
 import { formatPoints } from '@/features/kfg/format';
 import { universityLabel } from '@/core/constants/universities';
 import { KfgPhotoWall } from '@/components/kfg/KfgPhotoWall';
+import { FEATURES } from '@/core/constants/features';
 import { KfgParticipants } from '@/components/kfg/KfgParticipants';
 import { KfgLiveMode } from '@/components/kfg/KfgLiveMode';
 import { KfgRequests } from '@/components/kfg/KfgRequests';
@@ -353,6 +354,10 @@ function MissionInner() {
 
           {isCoHost && mission.kind === 'partnerQr' && !over && (
             <Button label={t.kfgScanBtn} variant="outline" onPress={() => router.push(`/(app)/kfg/scan?missionId=${mission.id}` as any)} fullWidth />
+          )}
+
+          {FEATURES.rides && mission.ridesEnabled && (joined || runs) && !over && (
+            <Button label={t.ridesTitle} variant="outline" onPress={() => router.push(`/(app)/event/rides/${mission.id}?kfg=1` as any)} fullWidth />
           )}
 
           {(joined || runs) && !over && mission.status === 'published' && (
