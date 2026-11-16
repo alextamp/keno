@@ -44,7 +44,8 @@ export function KfgParticipants({ mission, user, over, onLongPress }: {
     setKudos(Object.fromEntries(snap.docs.map((d) => [d.id, (d.data().kudos as string[] | undefined) ?? []])));
   }, () => {}), [mission.id]);
 
-  if (mission.participantIds.length === 0) return null;
+  const shown = mission.participantIds.filter((uid) => !user.blockedUserIds?.includes(uid));
+  if (shown.length === 0) return null;
   const iWasThere = mission.presentIds.includes(user.id);
 
   const toggleKudos = async (uid: string) => {
@@ -82,7 +83,7 @@ export function KfgParticipants({ mission, user, over, onLongPress }: {
     <View style={styles.section}>
       <Text style={[styles.title, { color: colors.textPrimary }]}>{t.eventWhosGoing}</Text>
       <View style={styles.grid}>
-        {mission.participantIds.map((uid) => {
+        {shown.map((uid) => {
           const p = profiles[uid];
           const isMe = uid === user.id;
           const wasThere = mission.presentIds.includes(uid);

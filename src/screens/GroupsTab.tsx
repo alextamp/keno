@@ -99,7 +99,10 @@ export default function GroupsScreen({ scope = 'keno' }: { scope?: GroupScope } 
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
-  const publicGroups = useGroupsStore((s) => (kfg ? s.kfgPublicGroups : s.publicGroups));
+  const rawPublic = useGroupsStore((s) => (kfg ? s.kfgPublicGroups : s.publicGroups));
+  // KfG communities by people you've blocked are hidden (like their missions).
+  const publicGroups = kfg && user?.blockedUserIds?.length
+    ? rawPublic.filter((g) => !user.blockedUserIds!.includes(g.creatorId)) : rawPublic;
   const myGroups = useGroupsStore((s) => (kfg ? s.kfgMyGroups : s.myGroups));
   const isLoading = useGroupsStore((s) => s.isLoading);
   const loadPublicGroups = useGroupsStore((s) => s.loadPublicGroups);

@@ -60,6 +60,8 @@ export interface KfgMission {
   waitlistIds: string[];
   /** Can scan QR codes and run the mission like the creator. */
   coHostIds: string[];
+  /** A participant who took over because the creator didn't show (also in coHostIds). */
+  standInHostId?: string;
   /** Private "how was it?" totals — the creator's organiser stats only. */
   feedbackGoodCount: number;
   feedbackBadCount: number;

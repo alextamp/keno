@@ -73,7 +73,9 @@ export function KfgPhotoWall({ missionId, user, status }: {
     setUploading(false);
   };
 
-  if (photos.length === 0 && !canPost) return null;
+  // People you've blocked don't show up on the wall (same as their chat messages).
+  const shown = photos.filter((p) => !user.blockedUserIds?.includes(p.uploaderUid));
+  if (shown.length === 0 && !canPost) return null;
 
   return (
     <View style={styles.section}>
@@ -81,7 +83,7 @@ export function KfgPhotoWall({ missionId, user, status }: {
         <View style={styles.titleRow}>
           <Icon name="camera" size={16} color={colors.textSecondary} />
           <Text style={[styles.title, { color: colors.textPrimary }]}>
-            {t.eventPhotoWall}{photos.length > 0 ? ` (${photos.length})` : ''}
+            {t.eventPhotoWall}{shown.length > 0 ? ` (${shown.length})` : ''}
           </Text>
         </View>
         {canPost && (
@@ -96,7 +98,7 @@ export function KfgPhotoWall({ missionId, user, status }: {
         )}
       </View>
 
-      {photos.length === 0 ? (
+      {shown.length === 0 ? (
         <View style={[styles.empty, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Icon name="image" size={26} color={colors.textDecor} />
           <Text style={[styles.emptyText, { color: colors.textHint }]}>{t.eventPhotoWallEmpty}</Text>
@@ -104,7 +106,7 @@ export function KfgPhotoWall({ missionId, user, status }: {
       ) : (
         <>
           <View style={styles.grid}>
-            {photos.map((p) => (
+            {shown.map((p) => (
               <View key={p.id} style={[styles.item, { borderColor: colors.border }]}>
                 <Pressable onPress={() => setSaveUri(p.uri)}>
                   <Image source={{ uri: p.uri }} style={styles.img} resizeMode="cover" />

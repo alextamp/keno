@@ -183,6 +183,14 @@ export const kfgRepository: KfgRepository = {
     return attempt(() => call<void>('kfgDecideRequest', { missionId, uid, accept }));
   },
 
+  rollCall(missionId, uid) {
+    return attempt(() => call<KfgScanResult>('kfgRollCall', { missionId, uid }));
+  },
+
+  claimStandIn(missionId) {
+    return attempt(() => call<void>('kfgClaimStandIn', { missionId }));
+  },
+
   feedback(missionId, value) {
     return attempt(() => call<void>('kfgFeedback', { missionId, value }));
   },

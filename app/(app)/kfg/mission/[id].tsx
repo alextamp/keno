@@ -32,6 +32,9 @@ import { FEATURES } from '@/core/constants/features';
 import { KfgParticipants } from '@/components/kfg/KfgParticipants';
 import { KfgLiveMode } from '@/components/kfg/KfgLiveMode';
 import { KfgRequests } from '@/components/kfg/KfgRequests';
+import { KfgRollCall } from '@/components/kfg/KfgRollCall';
+import { addDoc, collection } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { KfgInviteModal } from '@/components/kfg/KfgInviteModal';
 import { KfgRequestModal } from '@/components/kfg/KfgRequestModal';
 import { publicMissionUrl } from '@/core/constants/publicLinks';
@@ -160,6 +163,56 @@ function MissionInner() {
     haptics.success();
   };
 
+  const report = () => {
+    Alert.alert(t.eventReportTitle, undefined, [
+      { text: t.eventReportSpam, onPress: () => submitReport('spam') },
+      { text: t.eventReportInappropriate, onPress: () => submitReport('inappropriate') },
+      { text: t.eventReportMisinformation, onPress: () => submitReport('misinformation') },
+      { text: t.settingsBtnCancel, style: 'cancel' },
+    ]);
+  };
+
+  // Same reports collection as events (admin-reports.tsx shows the mission).
+  const submitReport = async (reason: string) => {
+    try {
+      await addDoc(collection(db, 'reports'), {
+        reportedMissionId: mission.id,
+        reportedUid: mission.creatorId,
+        reporterUid: user.id,
+        reason,
+        createdAt: new Date(),
+      });
+      Alert.alert(t.eventReportSubmitted, t.eventReportSubmittedBody);
+    } catch {
+      Alert.alert(t.createAlertSaveError, t.authErrGeneric);
+    }
+  };
+
+  const cancelMission = () => Alert.alert(t.kfgCancelConfirmTitle, t.kfgCancelConfirmBody, [
+    { text: t.settingsBtnCancel, style: 'cancel' },
+    {
+      text: t.kfgCancelBtn,
+      style: 'destructive',
+      onPress: async () => {
+        const r = await kfgRepository.cancelMission(mission.id);
+        if (isLeft(r)) Alert.alert(mission.title, t.kfgError(r.left.message));
+        else { haptics.success(); router.back(); }
+      },
+    },
+  ]);
+
+  const claimStandIn = () => Alert.alert(t.kfgStandInBtn, t.kfgStandInConfirm, [
+    { text: t.settingsBtnCancel, style: 'cancel' },
+    {
+      text: 'OK',
+      onPress: async () => {
+        const r = await kfgRepository.claimStandIn(mission.id);
+        if (isLeft(r)) Alert.alert(mission.title, t.kfgError(r.left.message));
+        else haptics.success();
+      },
+    },
+  ]);
+
   const sendFeedback = async (value: 'good' | 'bad') => {
     haptics.light();
     setFeedbackSent(true);
@@ -258,6 +311,17 @@ function MissionInner() {
           >
             <Icon name="back" size={17} color={colors.textPrimary} />
           </AnimatedPressable>
+          {!isMine && (
+            <AnimatedPressable
+              onPress={report}
+              accessibilityRole="button"
+              accessibilityLabel={t.eventReportBtn}
+              hitSlop={8}
+              style={[styles.backBtn, styles.reportBtn, { top: insets.top + 10, backgroundColor: colors.surface, borderColor: colors.border }]}
+            >
+              <Icon name="flag" size={15} color={colors.textPrimary} />
+            </AnimatedPressable>
+          )}
         </View>
 
         <View style={styles.content}>
@@ -299,12 +363,32 @@ function MissionInner() {
           )}
 
           {isMine && !started && (mission.status === 'pending' || mission.status === 'published') && (
-            <Button
-              label={t.kfgEditBtn}
-              variant="outline"
-              size="sm"
-              onPress={() => router.push(`/(app)/kfg/create?edit=${mission.id}` as any)}
-            />
+            <View style={styles.quickRow}>
+              <Button
+                label={t.kfgEditBtn}
+                variant="outline"
+                size="sm"
+                onPress={() => router.push(`/(app)/kfg/create?edit=${mission.id}` as any)}
+                style={styles.flex}
+              />
+              <Button label={t.kfgCancelBtn} variant="outline" size="sm" onPress={cancelMission} style={styles.flex} />
+            </View>
+          )}
+
+          {/* Stand-in host (like events): the creator hasn't scanned anyone
+              15 minutes in, so a participant can take over. */}
+          {joined && !runs && mission.kind === 'partnerQr' && !mission.standInHostId && mission.presentIds.length === 0
+            && now >= mission.startsAt.getTime() + 15 * 60_000 && !over && (
+            <Button label={t.kfgStandInBtn} variant="outline" onPress={claimStandIn} fullWidth />
+          )}
+          {mission.standInHostId === user.id && (
+            <Text style={[styles.status, { color: colors.accentInk }]}>{t.eventStandInBadge}</Text>
+          )}
+
+          {/* Roll-call fallback for codes that won't scan. */}
+          {runs && mission.kind === 'partnerQr' && mission.status === 'published'
+            && now >= mission.startsAt.getTime() - 30 * 60_000 && !over && (
+            <KfgRollCall mission={mission} me={user.id} />
           )}
 
           <View style={styles.quickRow}>
@@ -413,6 +497,7 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center', gap: Spacing.md, padding: Spacing.gutter },
   hero: { height: 200, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  reportBtn: { left: undefined, right: Spacing.gutter },
   backBtn: {
     position: 'absolute', left: Spacing.gutter, width: 34, height: 34, borderRadius: 17, borderWidth: 1,
     alignItems: 'center', justifyContent: 'center',

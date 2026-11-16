@@ -10,7 +10,7 @@ import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { useKfgStore } from '@/features/kfg/presentation/store/kfg.store';
 import { useKfgReminderSync } from '@/features/kfg/reminders';
 import { formatPoints, kfgLevelInfo } from '@/features/kfg/format';
-import { openMissionsFor } from '@/features/kfg/missions';
+import { openMissionsFor, withoutBlocked } from '@/features/kfg/missions';
 import { KfgCharacter } from './KfgCharacter';
 
 /** The quiet Feed card that leads into Keno for Good. `flush` drops its own
@@ -39,7 +39,7 @@ function EntryCardInner({ flush }: { flush: boolean }) {
   }, [user?.id]);
 
   const waiting = useMemo(
-    () => (user ? openMissionsFor(missions, participations, user.id).length : 0),
+    () => (user ? openMissionsFor(withoutBlocked(missions, user.blockedUserIds), participations, user.id).length : 0),
     [missions, participations, user?.id],
   );
   if (!user) return null;

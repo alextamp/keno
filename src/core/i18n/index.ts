@@ -459,6 +459,15 @@ export type Translations = {
   kfgCoHostHint: string;
   kfgMakeCoHost: (name: string) => string;
   kfgRemoveCoHost: (name: string) => string;
+  kfgCancelBtn: string;
+  kfgCancelConfirmTitle: string;
+  kfgCancelConfirmBody: string;
+  kfgRollCallTitle: string;
+  kfgRollCallHint: string;
+  kfgRollCallIn: string;
+  kfgRollCallOut: string;
+  kfgStandInBtn: string;
+  kfgStandInConfirm: string;
   kfgTabCharacter: string;
   kfgTabLeaderboard: string;
   kfgBackA11y: string;
@@ -1775,6 +1784,15 @@ const en: Translations = {
   kfgCoHostHint: 'Long-press someone to make them a co-host — they can scan codes with you.',
   kfgMakeCoHost: (name) => `Make ${name} a co-host?`,
   kfgRemoveCoHost: (name) => `Remove ${name} as co-host?`,
+  kfgCancelBtn: 'Cancel mission',
+  kfgCancelConfirmTitle: 'Cancel this mission?',
+  kfgCancelConfirmBody: 'Everyone signed up is told it is cancelled.',
+  kfgRollCallTitle: 'Roll-call',
+  kfgRollCallHint: "For when someone's code won't scan — tick them in, and out once they've stayed long enough.",
+  kfgRollCallIn: 'Check in',
+  kfgRollCallOut: 'Check out',
+  kfgStandInBtn: 'The organizer isn’t here — take over',
+  kfgStandInConfirm: 'You become a co-host and can scan everyone else in. (Someone else has to scan you.)',
   kfgTabCharacter: 'Character',
   kfgTabLeaderboard: 'Ranking',
   kfgBackA11y: 'Back to Keno',
@@ -1830,6 +1848,9 @@ const en: Translations = {
   } as Record<string, string>)[status] ?? '',
   kfgError: (code) => ({
     full: 'The spots just filled up.',
+    'own-code': 'You can’t scan yourself in — ask another organizer.',
+    'host-here': 'The organizer is already checking people in.',
+    'too-early': 'You can take over 15 minutes after the start.',
     private: 'This mission is by request — ask to join.',
     'not-private': 'This mission is open — just join.',
     'no-request': 'That request was already handled.',
@@ -3115,6 +3136,15 @@ const el: Translations = {
   kfgCoHostHint: 'Κράτα πατημένο κάποιον για να τον κάνεις συνδιοργανωτή — θα σκανάρει κι αυτός QR.',
   kfgMakeCoHost: (name) => `Να γίνει ${name} συνδιοργανωτής;`,
   kfgRemoveCoHost: (name) => `Να μην είναι πια ${name} συνδιοργανωτής;`,
+  kfgCancelBtn: 'Ακύρωση αποστολής',
+  kfgCancelConfirmTitle: 'Ακύρωση της αποστολής;',
+  kfgCancelConfirmBody: 'Όσοι έχουν δηλώσει συμμετοχή θα ενημερωθούν ότι ακυρώθηκε.',
+  kfgRollCallTitle: 'Παρουσιολόγιο',
+  kfgRollCallHint: 'Για όταν δεν σκανάρεται κάποιο QR — τσέκαρέ τον μέσα, και έξω όταν μείνει αρκετά.',
+  kfgRollCallIn: 'Check-in',
+  kfgRollCallOut: 'Check-out',
+  kfgStandInBtn: 'Δεν ήρθε ο διοργανωτής — ανάλαβε εσύ',
+  kfgStandInConfirm: 'Γίνεσαι συνδιοργανωτής και σκανάρεις τους υπόλοιπους. (Εσένα πρέπει να σε σκανάρει κάποιος άλλος.)',
   kfgTabCharacter: 'Χαρακτήρας',
   kfgTabLeaderboard: 'Κατάταξη',
   kfgBackA11y: 'Πίσω στο Keno',
@@ -3170,6 +3200,9 @@ const el: Translations = {
   } as Record<string, string>)[status] ?? '',
   kfgError: (code) => ({
     full: 'Οι θέσεις μόλις γέμισαν.',
+    'own-code': 'Δεν μπορείς να σκανάρεις τον εαυτό σου — ζήτα από άλλον διοργανωτή.',
+    'host-here': 'Ο διοργανωτής ήδη κάνει check-in.',
+    'too-early': 'Μπορείς να αναλάβεις 15 λεπτά μετά την έναρξη.',
     private: 'Η αποστολή είναι με αίτημα — στείλε αίτημα συμμετοχής.',
     'not-private': 'Η αποστολή είναι ανοιχτή — δήλωσε απλώς συμμετοχή.',
     'no-request': 'Το αίτημα έχει ήδη απαντηθεί.',

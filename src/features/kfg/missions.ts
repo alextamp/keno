@@ -22,3 +22,10 @@ export function missionsThisWeek(missions: KfgMission[], participations: KfgPart
       && (m.startsAt.getTime() < now + WEEK_MS || joined.has(m.id)))
     .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
 }
+
+/** Hides missions created by people you've blocked — the feed's rule for events. */
+export function withoutBlocked(missions: KfgMission[], blockedUserIds: string[] | undefined): KfgMission[] {
+  if (!blockedUserIds?.length) return missions;
+  const blocked = new Set(blockedUserIds);
+  return missions.filter((m) => !blocked.has(m.creatorId));
+}

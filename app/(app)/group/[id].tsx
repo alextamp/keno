@@ -345,7 +345,8 @@ function GroupDetailInner({ onScope }: { onScope: (kfg: boolean) => void }) {
   const groupEvents = events.filter((e) => group.eventIds.includes(e.id));
   const upcomingEvents = groupEvents.filter((e) => !isEventPast(e));
   const pastEvents = groupEvents.filter((e) => isEventPast(e));
-  const communityMissions = isKfgCommunity ? kfgMissions.filter((m) => m.groupId === group.id) : [];
+  const communityMissions = isKfgCommunity
+    ? kfgMissions.filter((m) => m.groupId === group.id && !user?.blockedUserIds?.includes(m.creatorId)) : [];
   const joinedMissionIds = new Set(kfgParticipations.filter((p) => p.status !== 'cancelled').map((p) => p.missionId));
 
   const handleToggleVerifiedOrganiser = async () => {

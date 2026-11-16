@@ -49,6 +49,7 @@ export function missionFromFirestore(snap: DocumentSnapshot<DocumentData>): KfgM
     joinRequests: d.joinRequests ?? {},
     waitlistIds: d.waitlistIds ?? [],
     coHostIds: d.coHostIds ?? [],
+    standInHostId: opt(d.standInHostId),
     feedbackGoodCount: d.feedbackGoodCount ?? 0,
     feedbackBadCount: d.feedbackBadCount ?? 0,
     verifiedCount: d.verifiedCount ?? 0,

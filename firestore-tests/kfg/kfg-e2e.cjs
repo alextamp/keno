@@ -73,6 +73,12 @@ const qr = async (pid) => {
   ok(pm.participantIds.includes('s2') && !('s2' in pm.joinRequests), 'accepted request joins');
   await org.call('kfgSetCoHost', { missionId: priv.missionId, uid: 's2', on: true });
   ok((await db.doc(`kfgMissions/${priv.missionId}`).get()).data().coHostIds.includes('s2'), 'creator can make a participant co-host');
+  const s2Priv = `${priv.missionId}_s2`;
+  await fails(s2.call('kfgScan', { code: await qr(s2Priv) }), 'own-code', 'a co-host cannot scan themselves in');
+  await fails(s2.call('kfgRollCall', { missionId: priv.missionId, uid: 's2' }), 'own-code', 'nor tick themselves on the roll-call');
+  ok((await org.call('kfgRollCall', { missionId: small.missionId, uid: 's3' })).result === 'checkedIn', 'roll-call checks someone in without a code');
+  ok((await db.doc(`kfgMissions/${small.missionId}`).get()).data().presentIds.includes('s3'), 'roll-call marks them present');
+  await fails(w3.call('kfgClaimStandIn', { missionId: small.missionId }), 'too-early', 'no stand-in before 15 minutes in');
 
   console.log('Recurring missions');
   const rec = await org.call('kfgCreateMission', {

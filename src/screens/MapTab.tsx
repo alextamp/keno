@@ -232,6 +232,7 @@ export default function MapScreen() {
 
   const now = new Date();
   const missionPins = !FEATURES.kenoForGood || selected ? [] : kfgMissions.filter((m) => {
+    if (user?.blockedUserIds?.includes(m.creatorId)) return false;
     if (m.latitude == null || m.longitude == null || m.endsAt.getTime() <= now.getTime()) return false;
     if (selectedCity && getEventCity(m.latitude, m.longitude) !== selectedCity) return false;
     if (radiusKm != null && userLocation

@@ -82,6 +82,10 @@ export interface KfgRepository {
   decideRequest(missionId: string, uid: string, accept: boolean): Promise<Either<Failure, void>>;
   setCoHost(missionId: string, uid: string, on: boolean): Promise<Either<Failure, void>>;
   feedback(missionId: string, value: 'good' | 'bad'): Promise<Either<Failure, void>>;
+  /** Manual check-in/out when a code won't scan (creator/co-host). */
+  rollCall(missionId: string, uid: string): Promise<Either<Failure, KfgScanResult>>;
+  /** Creator no-show: a participant takes over as co-host. */
+  claimStandIn(missionId: string): Promise<Either<Failure, void>>;
   leave(missionId: string): Promise<Either<Failure, void>>;
   scan(code: string): Promise<Either<Failure, KfgScanResult>>;
   checkOutAll(missionId: string): Promise<Either<Failure, { completed: number; tooEarly: number }>>;

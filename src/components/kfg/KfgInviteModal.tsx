@@ -18,7 +18,8 @@ export function KfgInviteModal({ visible, onClose, mission, user }: {
   const t = useTranslation();
   const [people, setPeople] = useState<UserProfile[]>([]);
   const [sent, setSent] = useState<string[]>([]);
-  const following = (user.following ?? []).filter((uid) => !mission.participantIds.includes(uid) && uid !== mission.creatorId);
+  const following = (user.following ?? []).filter((uid) =>
+    !mission.participantIds.includes(uid) && uid !== mission.creatorId && !user.blockedUserIds?.includes(uid));
   const key = following.join(',');
 
   useEffect(() => {

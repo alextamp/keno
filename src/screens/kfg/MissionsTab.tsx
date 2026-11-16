@@ -19,14 +19,17 @@ import { TAB_BAR_BASE_HEIGHT } from '@/core/constants/layout';
 import { useTranslation } from '@/core/i18n';
 import { MyMissionRow } from '@/components/kfg/MyMissionRow';
 import { useKfgStore } from '@/features/kfg/presentation/store/kfg.store';
-import { missionsThisWeek } from '@/features/kfg/missions';
+import { missionsThisWeek, withoutBlocked } from '@/features/kfg/missions';
+import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 
 export default function MissionsTab() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const t = useTranslation();
   const router = useRouter();
-  const { profile, missions, myMissions, participations, loaded } = useKfgStore();
+  const { profile, missions: allMissions, myMissions, participations, loaded } = useKfgStore();
+  const blocked = useAuthStore((s) => s.user?.blockedUserIds);
+  const missions = useMemo(() => withoutBlocked(allMissions, blocked), [allMissions, blocked]);
   // Taken once per mount (render must stay pure).
   const [now] = useState(Date.now);
   const mine = useMemo(

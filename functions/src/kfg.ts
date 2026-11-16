@@ -696,13 +696,28 @@ export const kfgScan = onCall(async (request) => {
   if (!secret || !isQrValid(secret, parsed.participationId, parsed.bucket, parsed.sig, now)) {
     throw new HttpsError('permission-denied', 'invalid-code');
   }
+  return applyScan(participationRef, p, m, uid, 'qr');
+});
+
+/**
+ * What a scan does — shared by QR scans and the manual roll-call: first one
+ * checks in, the next checks out once the minimum stay has passed. Nobody
+ * can do this for themselves (a co-host is also a participant).
+ */
+async function applyScan(
+  participationRef: admin.firestore.DocumentReference, p: admin.firestore.DocumentData,
+  m: admin.firestore.DocumentData, by: string, method: 'qr' | 'manual',
+): Promise<{ result: string; name: string; remainingMin?: number }> {
+  if (p.uid === by) throw new HttpsError('permission-denied', 'own-code');
+  const now = Date.now();
   const name = (await db.doc(`users/${p.uid}`).get()).data()?.name ?? '';
+  const tag = method === 'qr' ? 'qr' : 'manual';
 
   if (p.status === 'joined') {
     await participationRef.update({ status: 'checkedIn', checkInAt: FieldValue.serverTimestamp() });
     await markPresent(p.missionId, p.uid);
     await db.collection(VERIFICATIONS).add({
-      type: 'qrIn', uid: p.uid, participationId: participationRef.id, missionId: p.missionId, by: uid,
+      type: `${tag}In`, uid: p.uid, participationId: participationRef.id, missionId: p.missionId, by,
       createdAt: FieldValue.serverTimestamp(),
     });
     return { result: 'checkedIn', name };
@@ -713,12 +728,51 @@ export const kfgScan = onCall(async (request) => {
       return { result: 'tooEarly', name, remainingMin: Math.ceil(m.minDurationMin - elapsedMin) };
     }
     await db.collection(VERIFICATIONS).add({
-      type: 'qrOut', uid: p.uid, participationId: participationRef.id, missionId: p.missionId, by: uid,
+      type: `${tag}Out`, uid: p.uid, participationId: participationRef.id, missionId: p.missionId, by,
       createdAt: FieldValue.serverTimestamp(),
     });
     return { result: await completeQr(participationRef, p, m, p.missionId), name };
   }
   return { result: 'alreadyDone', name };
+}
+
+/** Roll-call fallback when a code won't scan (no camera, dead phone): the creator/co-host ticks the person instead. */
+export const kfgRollCall = onCall(async (request) => {
+  const uid = requireUid(request);
+  await checkRateLimit(uid, 'kfgRollCall', 300, 10 * 60_000);
+  const missionId = String(request.data?.missionId ?? '');
+  const target = String(request.data?.uid ?? '');
+  const m = (await db.doc(`${MISSIONS}/${missionId}`).get()).data();
+  if (!m) throw new HttpsError('not-found', 'mission');
+  if (!runsMission(m, uid) && !(await isAdminUid(uid))) throw new HttpsError('permission-denied', 'not-your-mission');
+  if (m.kind !== 'partnerQr' || m.status !== 'published') throw new HttpsError('failed-precondition', 'not-scannable');
+  if (!isInScanWindow(m.startsAt.toMillis(), m.endsAt.toMillis(), Date.now())) throw new HttpsError('failed-precondition', 'outside-window');
+  const participationRef = db.doc(`${PARTICIPATIONS}/${missionId}_${target}`);
+  const pSnap = await participationRef.get();
+  if (!pSnap.exists) throw new HttpsError('not-found', 'participation');
+  return applyScan(participationRef, pSnap.data()!, m, uid, 'manual');
+});
+
+/**
+ * Stand-in host, like events: the creator hasn't shown up (nobody checked in
+ * 15 minutes after the start), so a signed-up participant takes over as
+ * co-host and can scan everyone else.
+ */
+export const kfgClaimStandIn = onCall(async (request) => {
+  const uid = requireUid(request);
+  const missionId = String(request.data?.missionId ?? '');
+  const ref = db.doc(`${MISSIONS}/${missionId}`);
+  await db.runTransaction(async (tx) => {
+    const m = (await tx.get(ref)).data();
+    if (!m) throw new HttpsError('not-found', 'mission');
+    const now = Date.now();
+    if (m.status !== 'published' || m.kind !== 'partnerQr') throw new HttpsError('failed-precondition', 'not-scannable');
+    if (!(m.participantIds ?? []).includes(uid)) throw new HttpsError('permission-denied', 'not-participant');
+    if (now < m.startsAt.toMillis() + 15 * 60_000 || now > m.endsAt.toMillis()) throw new HttpsError('failed-precondition', 'too-early');
+    if ((m.presentIds ?? []).length > 0 || m.standInHostId) throw new HttpsError('failed-precondition', 'host-here');
+    tx.update(ref, { standInHostId: uid, coHostIds: FieldValue.arrayUnion(uid), standInClaimedAt: FieldValue.serverTimestamp() });
+  });
+  return { ok: true };
 });
 
 /** End of a QR mission: checks out everyone present long enough. Nobody else is credited. */

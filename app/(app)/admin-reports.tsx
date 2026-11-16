@@ -15,10 +15,14 @@ import { eventsRepository } from '@/features/events/data/repositories/events.rep
 import { Icon } from '@/components/ui/Icon';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { logAdminAction } from '@/core/utils/adminAuditLog';
+import { kfgRepository } from '@/features/kfg/data/repositories/kfg.repository.impl';
 
 interface ReportItem {
   id: string;
   reportedEventId?: string;
+  /** Keno for Good mission reports (kfg/mission/[id].tsx). */
+  reportedMissionId?: string;
+  missionTitle?: string;
   /** Absent for user-submitted "report an issue" tickets (Settings → Safety &
    *  Privacy) — those aren't about a specific user, just an app problem. */
   reportedUid?: string;
@@ -76,6 +80,7 @@ export default function AdminReportsScreen() {
           const base: ReportItem = {
             id: d.id,
             reportedEventId: data.reportedEventId,
+            reportedMissionId: data.reportedMissionId,
             reportedUid: data.reportedUid,
             reporterUid: data.reporterUid,
             reason: data.reason,
@@ -90,6 +95,10 @@ export default function AdminReportsScreen() {
           ]);
           base.reportedUserName = reportedUserName;
           base.reporterName = reporterName;
+          if (base.reportedMissionId) {
+            const m = await getDoc(doc(db, 'kfgMissions', base.reportedMissionId)).catch(() => null);
+            base.missionTitle = m?.exists() ? (m.data() as any).title : undefined;
+          }
           if (base.reportedEventId) {
             try {
               const eventSnap = await getDoc(doc(db, 'events', base.reportedEventId));
@@ -128,6 +137,26 @@ export default function AdminReportsScreen() {
     } finally {
       setBusyId(null);
     }
+  };
+
+  // Admins may cancel any mission (kfgCancelMission re-checks admin rights).
+  const cancelReportedMission = (report: ReportItem) => {
+    if (!report.reportedMissionId) return;
+    Alert.alert(t.kfgCancelConfirmTitle, t.kfgCancelConfirmBody, [
+      { text: t.settingsBtnCancel, style: 'cancel' },
+      {
+        text: t.kfgCancelBtn,
+        style: 'destructive',
+        onPress: async () => {
+          setBusyId(report.id);
+          const r = await kfgRepository.cancelMission(report.reportedMissionId!);
+          if (isLeft(r)) { setBusyId(null); Alert.alert(t.createAlertSaveError, t.kfgError(r.left.message)); return; }
+          await deleteDoc(doc(db, 'reports', report.id)).catch(() => {});
+          if (adminUid) logAdminAction(adminUid, 'reportedMissionCancelled', { reportId: report.id, missionId: report.reportedMissionId!, reason: report.reason });
+          setBusyId(null);
+        },
+      },
+    ]);
   };
 
   const deleteReportedEvent = (report: ReportItem) => {
@@ -210,6 +239,18 @@ export default function AdminReportsScreen() {
                   </AnimatedPressable>
                 )}
 
+                {report.reportedMissionId && (
+                  <AnimatedPressable
+                    onPress={() => router.push(`/(app)/kfg/mission/${report.reportedMissionId}` as any)}
+                    style={styles.metaRow}
+                  >
+                    <Text style={[styles.metaLabel, { color: colors.textHint }]}>Keno for Good</Text>
+                    <Text style={[styles.metaValue, { color: colors.primary }]} numberOfLines={1}>
+                      {report.missionTitle ?? report.reportedMissionId}
+                    </Text>
+                  </AnimatedPressable>
+                )}
+
                 {report.reportedUid && (
                   <AnimatedPressable
                     onPress={() => router.push(`/(app)/user/${report.reportedUid}`)}
@@ -250,6 +291,15 @@ export default function AdminReportsScreen() {
                   >
                     <Text style={[styles.actionText, { color: colors.textSecondary }]}>{t.adminReportsDismissBtn}</Text>
                   </AnimatedPressable>
+                  {report.reportedMissionId && (
+                    <AnimatedPressable
+                      onPress={() => cancelReportedMission(report)}
+                      disabled={isBusy}
+                      style={[styles.actionBtn, { backgroundColor: '#EF4444', borderColor: '#EF4444' }]}
+                    >
+                      <Text style={[styles.actionText, { color: '#fff' }]}>{t.kfgCancelBtn}</Text>
+                    </AnimatedPressable>
+                  )}
                   {report.reportedEventId && !report.eventGone && (
                     <AnimatedPressable
                       onPress={() => deleteReportedEvent(report)}
