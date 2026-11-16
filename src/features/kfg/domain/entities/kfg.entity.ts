@@ -44,6 +44,8 @@ export interface KfgMission {
   participantIds: string[];
   /** Who was actually there (checked in / paid) — server-maintained, gates Kudos and reconnect. */
   presentIds: string[];
+  /** The creator ended it early from Live Mode (endsAt was moved to that moment). */
+  endedEarly: boolean;
   verifiedCount: number;
   finalized: boolean;
   rejectionReason?: string;

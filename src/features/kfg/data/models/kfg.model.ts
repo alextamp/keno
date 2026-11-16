@@ -41,6 +41,7 @@ export function missionFromFirestore(snap: DocumentSnapshot<DocumentData>): KfgM
     participantCount: d.participantCount ?? 0,
     participantIds: d.participantIds ?? [],
     presentIds: d.presentIds ?? [],
+    endedEarly: d.endedEarlyAt != null,
     verifiedCount: d.verifiedCount ?? 0,
     finalized: d.finalized === true,
     rejectionReason: opt(d.rejectionReason),

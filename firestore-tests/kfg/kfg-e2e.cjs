@@ -70,6 +70,8 @@ const qr = async (pid) => {
   ok(!(await db.doc('groups/c1').get()).data().missionIds.includes(inC.missionId), 'cancelled mission leaves the community');
 
   await fails(org.call('kfgJoin', { missionId }), 'organizations-cannot-join', 'organization cannot join');
+  await fails(s1.call('kfgEndMission', { missionId }), 'not-creator', 'only the creator can end a mission early');
+  await fails(org.call('kfgEndMission', { missionId }), 'not-started', 'cannot end a mission before it starts');
   const { participationId } = await s1.call('kfgJoin', { missionId });
   const orgNotifs = (await db.collection('users/org1/notifications').get()).docs.map((d) => d.data());
   ok(orgNotifs.some((n) => n.type === 'kfg_join' && n.eventId === missionId && n.fromUid === 's1'), 'creator notified when someone joins');

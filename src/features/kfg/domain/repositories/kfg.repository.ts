@@ -65,6 +65,8 @@ export interface KfgRepository {
   createMission(params: CreateKfgMissionParams): Promise<Either<Failure, { missionId: string; status: 'pending' | 'published' }>>;
   reviewMission(missionId: string, approve: boolean, reason?: string): Promise<Either<Failure, void>>;
   cancelMission(missionId: string): Promise<Either<Failure, void>>;
+  /** Creator, while it's running: end it now (Live Mode). */
+  endMission(missionId: string): Promise<Either<Failure, void>>;
   join(missionId: string): Promise<Either<Failure, string>>;
   leave(missionId: string): Promise<Either<Failure, void>>;
   scan(code: string): Promise<Either<Failure, KfgScanResult>>;

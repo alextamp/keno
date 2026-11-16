@@ -432,6 +432,9 @@ export type Translations = {
   kfgTicketsLink: string;
   kfgNotif: (type: string, from: string, title: string) => string;
   kfgChatBtn: string;
+  kfgEndNowBtn: string;
+  kfgEndNowConfirmTitle: string;
+  kfgEndNowConfirmBody: string;
   kfgTabCharacter: string;
   kfgTabLeaderboard: string;
   kfgBackA11y: string;
@@ -1721,6 +1724,9 @@ const en: Translations = {
     kfg_invite: `${from} invited you to "${title}"`,
   } as Record<string, string>)[type] ?? title,
   kfgChatBtn: 'Mission chat',
+  kfgEndNowBtn: 'End the mission now',
+  kfgEndNowConfirmTitle: 'End the mission?',
+  kfgEndNowConfirmBody: 'It ends now for everyone. Remember to check people out (or use “Check-out all”) so they get their points.',
   kfgTabCharacter: 'Character',
   kfgTabLeaderboard: 'Ranking',
   kfgBackA11y: 'Back to Keno',
@@ -3029,6 +3035,9 @@ const el: Translations = {
     kfg_invite: `${from} σε προσκαλεί στο «${title}»`,
   } as Record<string, string>)[type] ?? title,
   kfgChatBtn: 'Chat αποστολής',
+  kfgEndNowBtn: 'Τερμάτισε την αποστολή τώρα',
+  kfgEndNowConfirmTitle: 'Τέλος αποστολής;',
+  kfgEndNowConfirmBody: 'Τελειώνει τώρα για όλους. Θυμήσου να κάνεις check-out (ή «Check-out όλων») για να πάρουν τους πόντους τους.',
   kfgTabCharacter: 'Χαρακτήρας',
   kfgTabLeaderboard: 'Κατάταξη',
   kfgBackA11y: 'Πίσω στο Keno',

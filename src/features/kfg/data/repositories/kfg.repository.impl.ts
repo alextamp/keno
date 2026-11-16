@@ -150,6 +150,10 @@ export const kfgRepository: KfgRepository = {
     return attempt(() => call<void>('kfgReviewMission', { missionId, approve, reason }));
   },
 
+  endMission(missionId) {
+    return attempt(() => call<void>('kfgEndMission', { missionId }));
+  },
+
   cancelMission(missionId) {
     return attempt(() => call<void>('kfgCancelMission', { missionId }));
   },

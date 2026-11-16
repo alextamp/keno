@@ -29,6 +29,7 @@ import { formatPoints } from '@/features/kfg/format';
 import { universityLabel } from '@/core/constants/universities';
 import { KfgPhotoWall } from '@/components/kfg/KfgPhotoWall';
 import { KfgParticipants } from '@/components/kfg/KfgParticipants';
+import { KfgLiveMode } from '@/components/kfg/KfgLiveMode';
 import { publicMissionUrl } from '@/core/constants/publicLinks';
 import { addToCalendar, isEventInCalendar, removeEventFromCalendar } from '@/core/utils/calendar';
 
@@ -95,7 +96,7 @@ function MissionInner() {
   const locale = getDateLocale(language);
   const isMine = mission.creatorId === user.id;
   const studentRun = mission.creatorType === 'student';
-  const over = mission.endsAt.getTime() <= now;
+  const over = mission.endsAt.getTime() <= now || mission.endedEarly;
   const started = mission.startsAt.getTime() <= now;
   const spotsLeft = mission.capacity - mission.participantCount;
   const joined = !!participation && participation.status !== 'cancelled';
@@ -234,6 +235,12 @@ function MissionInner() {
               />
             )}
           </View>
+
+          {/* Live Mode — like events: only while it's running, for whoever's
+              actually there (checked in), plus the creator. */}
+          {started && !over && (isMine || status === 'checkedIn') && (
+            <KfgLiveMode mission={mission} user={user} isCreator={isMine} />
+          )}
 
           <View style={styles.quickRow}>
             <Button label={t.eventShareAction} variant="outline" size="sm" onPress={share} style={styles.flex} />

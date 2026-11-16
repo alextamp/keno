@@ -363,6 +363,23 @@ export const kfgCancelMission = onCall(async (request) => {
   return { ok: true };
 });
 
+/** Live Mode's "end mission now" (creator only): moves endsAt to now, like an event's early end. */
+export const kfgEndMission = onCall(async (request) => {
+  const uid = requireUid(request);
+  const missionId = String(request.data?.missionId ?? '');
+  const ref = db.doc(`${MISSIONS}/${missionId}`);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError('not-found', 'mission');
+  const m = snap.data()!;
+  if (m.creatorId !== uid) throw new HttpsError('permission-denied', 'not-creator');
+  if (m.status !== 'published') throw new HttpsError('failed-precondition', 'not-published');
+  const now = Date.now();
+  if (m.startsAt.toMillis() > now) throw new HttpsError('failed-precondition', 'not-started');
+  if (m.endsAt.toMillis() <= now) return { ok: true };
+  await ref.update({ endsAt: Timestamp.fromMillis(now), endedEarlyAt: FieldValue.serverTimestamp() });
+  return { ok: true };
+});
+
 // ── Joining ─────────────────────────────────────────────────────────────────
 
 export const kfgJoin = onCall(async (request) => {

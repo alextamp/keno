@@ -20,6 +20,21 @@ interface WallPhoto { id: string; uri: string; uploaderUid: string; uploaderName
 /** Statuses that mean "was actually there" — mirrors the firestore.rules create check. */
 const WAS_THERE: KfgParticipationStatus[] = ['checkedIn', 'verified', 'inReview', 'completed'];
 
+/** Pick + upload one photo to a mission's wall (also used by Live Mode's shortcut). Returns false if nothing was posted. */
+export async function addMissionPhoto(missionId: string, user: UserEntity): Promise<boolean> {
+  const localUri = await pickImage({ aspect: [4, 3] });
+  if (!localUri) return false;
+  const uri = await uploadEventImage(localUri);
+  await addDoc(collection(db, 'kfgMissions', missionId, 'photos'), {
+    uri,
+    uploaderUid: user.id,
+    uploaderName: user.name,
+    uploaderAvatarColor: user.avatarColor ?? '#999',
+    createdAt: Timestamp.now(),
+  });
+  return true;
+}
+
 /**
  * The event photo wall, for a mission: kfgMissions/{id}/photos, posting only
  * for people who were actually there, 30-day retention (functions
@@ -49,19 +64,9 @@ export function KfgPhotoWall({ missionId, user, status }: {
 
   const add = async () => {
     if (!canPost || uploading) return;
-    const localUri = await pickImage({ aspect: [4, 3] });
-    if (!localUri) return;
     setUploading(true);
     try {
-      const uri = await uploadEventImage(localUri);
-      await addDoc(collection(db, 'kfgMissions', missionId, 'photos'), {
-        uri,
-        uploaderUid: user.id,
-        uploaderName: user.name,
-        uploaderAvatarColor: user.avatarColor ?? '#999',
-        createdAt: Timestamp.now(),
-      });
-      haptics.success();
+      if (await addMissionPhoto(missionId, user)) haptics.success();
     } catch {
       Alert.alert(t.createAlertSaveError, t.authErrGeneric);
     }
