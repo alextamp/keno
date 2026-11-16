@@ -58,6 +58,9 @@ export interface KfgMission {
   waitlistIds: string[];
   /** Can scan QR codes and run the mission like the creator. */
   coHostIds: string[];
+  /** Private "how was it?" totals — the creator's organiser stats only. */
+  feedbackGoodCount: number;
+  feedbackBadCount: number;
   verifiedCount: number;
   finalized: boolean;
   rejectionReason?: string;
@@ -89,6 +92,8 @@ export interface KfgParticipation {
   rejectionReason?: string;
   /** Automatic photo checks that failed ('faces', 'distance', 'day', 'order', 'window'). */
   reviewProblems?: string[];
+  /** Private "how was it?" answer (kfgFeedback), once. */
+  feedback?: 'good' | 'bad';
 }
 
 export interface KfgProfile {

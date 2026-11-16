@@ -64,6 +64,7 @@ function MissionInner() {
 
   const [showInvite, setShowInvite] = useState(false);
   const [showRequest, setShowRequest] = useState(false);
+  const [feedbackSent, setFeedbackSent] = useState(false);
   const [inCalendar, setInCalendar] = useState(false);
   useEffect(() => { if (id) isEventInCalendar(id).then(setInCalendar); }, [id]);
 
@@ -156,6 +157,13 @@ function MissionInner() {
     if (isLeft(r)) { haptics.error(); Alert.alert(mission.title, t.kfgError(r.left.message)); return; }
     setShowRequest(false);
     haptics.success();
+  };
+
+  const sendFeedback = async (value: 'good' | 'bad') => {
+    haptics.light();
+    setFeedbackSent(true);
+    const r = await kfgRepository.feedback(mission.id, value);
+    if (isLeft(r)) setFeedbackSent(false);
   };
 
   const toggleCoHost = (uid: string, name: string) => {
@@ -354,6 +362,17 @@ function MissionInner() {
           {isMine && !over && mission.participantIds.length > 0 && (
             <Text style={[styles.meta, { color: colors.textHint }]}>{t.kfgCoHostHint}</Text>
           )}
+          {/* Private "how was it?" — once, for whoever was there, after it's over. */}
+          {over && mission.presentIds.includes(user.id) && participation && !participation.feedback && !feedbackSent && (
+            <Card padded style={styles.info}>
+              <Text style={[styles.infoTitle, { color: colors.textPrimary }]}>{t.eventFeedbackQuestion}</Text>
+              <View style={styles.quickRow}>
+                <Button label={t.eventFeedbackGood} variant="soft" size="sm" onPress={() => sendFeedback('good')} style={styles.flex} />
+                <Button label={t.eventFeedbackBad} variant="outline" size="sm" onPress={() => sendFeedback('bad')} style={styles.flex} />
+              </View>
+            </Card>
+          )}
+
           <KfgParticipants mission={mission} user={user} over={over} onLongPress={isMine ? toggleCoHost : undefined} />
 
           {over && mission.presentIds.includes(user.id) && mission.presentIds.length > 1 && (

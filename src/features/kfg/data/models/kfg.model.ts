@@ -48,6 +48,8 @@ export function missionFromFirestore(snap: DocumentSnapshot<DocumentData>): KfgM
     joinRequests: d.joinRequests ?? {},
     waitlistIds: d.waitlistIds ?? [],
     coHostIds: d.coHostIds ?? [],
+    feedbackGoodCount: d.feedbackGoodCount ?? 0,
+    feedbackBadCount: d.feedbackBadCount ?? 0,
     verifiedCount: d.verifiedCount ?? 0,
     finalized: d.finalized === true,
     rejectionReason: opt(d.rejectionReason),
@@ -72,6 +74,7 @@ export function participationFromFirestore(snap: DocumentSnapshot<DocumentData>)
     reviewState: opt(d.reviewState),
     rejectionReason: opt(d.rejectionReason),
     reviewProblems: opt(d.reviewProblems),
+    feedback: d.feedback === 'good' || d.feedback === 'bad' ? d.feedback : undefined,
   };
 }
 

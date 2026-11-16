@@ -78,6 +78,7 @@ export interface KfgRepository {
   requestJoin(missionId: string, message: string): Promise<Either<Failure, void>>;
   decideRequest(missionId: string, uid: string, accept: boolean): Promise<Either<Failure, void>>;
   setCoHost(missionId: string, uid: string, on: boolean): Promise<Either<Failure, void>>;
+  feedback(missionId: string, value: 'good' | 'bad'): Promise<Either<Failure, void>>;
   leave(missionId: string): Promise<Either<Failure, void>>;
   scan(code: string): Promise<Either<Failure, KfgScanResult>>;
   checkOutAll(missionId: string): Promise<Either<Failure, { completed: number; tooEarly: number }>>;

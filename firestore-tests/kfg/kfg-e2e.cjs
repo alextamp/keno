@@ -118,6 +118,8 @@ const qr = async (pid) => {
   await fails(org.call('kfgScan', { code: code.slice(0, -1) + (code.endsWith('0') ? '1' : '0') }), 'invalid-code', 'tampered code rejected');
   ok((await org.call('kfgScan', { code })).result === 'checkedIn', 'first scan checks in');
   ok((await db.doc(`kfgMissions/${missionId}`).get()).data().presentIds.includes('s1'), 'check-in marks them present');
+  await fails(s1.call('kfgFeedback', { missionId, value: 'good' }), 'not-over', 'no feedback before it ends');
+  await fails(s2.call('kfgFeedback', { missionId, value: 'good' }), 'not-present', 'no feedback without being there');
   const r2 = await org.call('kfgScan', { code: await qr(participationId) });
   ok(r2.result === 'completed', 'second scan completes (min duration 0)');
   const p = (await db.doc(`kfgParticipations/${participationId}`).get()).data();

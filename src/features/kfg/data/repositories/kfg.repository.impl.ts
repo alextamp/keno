@@ -181,6 +181,10 @@ export const kfgRepository: KfgRepository = {
     return attempt(() => call<void>('kfgDecideRequest', { missionId, uid, accept }));
   },
 
+  feedback(missionId, value) {
+    return attempt(() => call<void>('kfgFeedback', { missionId, value }));
+  },
+
   setCoHost(missionId, uid, on) {
     return attempt(() => call<void>('kfgSetCoHost', { missionId, uid, on }));
   },

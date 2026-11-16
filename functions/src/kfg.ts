@@ -411,6 +411,36 @@ export const kfgEndMission = onCall(async (request) => {
   return { ok: true };
 });
 
+/**
+ * Private post-mission "how was it?" — the events' feedback signal: once per
+ * person who was actually there, after it's over. Counted on the mission and
+ * on the creator's organiserFeedback (never shown as a public rating).
+ */
+export const kfgFeedback = onCall(async (request) => {
+  const uid = requireUid(request);
+  const missionId = String(request.data?.missionId ?? '');
+  const value = request.data?.value;
+  if (value !== 'good' && value !== 'bad') throw new HttpsError('invalid-argument', 'value');
+  const missionRef = db.doc(`${MISSIONS}/${missionId}`);
+  const participationRef = db.doc(`${PARTICIPATIONS}/${missionId}_${uid}`);
+  let creatorId: string | null = null;
+  await db.runTransaction(async (tx) => {
+    const [mSnap, pSnap] = await Promise.all([tx.get(missionRef), tx.get(participationRef)]);
+    const m = mSnap.data();
+    if (!m || !pSnap.exists) throw new HttpsError('not-found', 'mission');
+    if (!(m.presentIds ?? []).includes(uid)) throw new HttpsError('permission-denied', 'not-present');
+    if (m.endsAt.toMillis() > Date.now()) throw new HttpsError('failed-precondition', 'not-over');
+    if (pSnap.data()!.feedback) return;
+    tx.update(participationRef, { feedback: value });
+    tx.update(missionRef, { [value === 'good' ? 'feedbackGoodCount' : 'feedbackBadCount']: FieldValue.increment(1) });
+    creatorId = m.creatorId;
+  });
+  if (creatorId) {
+    await db.doc(`users/${creatorId}`).update({ [`organiserFeedback.${value}`]: FieldValue.increment(1) }).catch(() => {});
+  }
+  return { ok: true };
+});
+
 // ── Joining ─────────────────────────────────────────────────────────────────
 
 /** Puts uid into a mission (participation + QR secret + counts). Call inside a transaction, after all reads. */

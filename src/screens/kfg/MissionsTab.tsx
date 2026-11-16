@@ -132,6 +132,13 @@ export default function MissionsTab() {
               />
             ))}
           </Card>
+          <AnimatedPressable onPress={() => router.push('/(app)/kfg/organiser-stats' as any)}>
+            <Card padded style={styles.statsRow}>
+              <Icon name="trophy" size={18} color={colors.primary} />
+              <Text style={[styles.statsText, { color: colors.textPrimary }]}>{t.orgStatsTitle}</Text>
+              <Icon name="fwd" size={15} color={colors.textDecor} />
+            </Card>
+          </AnimatedPressable>
         </>
       )}
 
@@ -152,6 +159,8 @@ const styles = StyleSheet.create({
   emptyTitle: { fontFamily: UIFont, fontSize: FontSize.lg, fontWeight: FontWeight.bold, textAlign: 'center' },
   emptyBody: { fontFamily: UIFontLight, fontSize: FontSize.md, textAlign: 'center' },
   newWrap: { marginTop: Spacing.sm },
+  statsRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  statsText: { flex: 1, fontFamily: UIFont, fontSize: FontSize.base, fontWeight: FontWeight.bold },
   searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: BorderRadius.full, paddingHorizontal: 14, height: 42 },
   searchInput: { flex: 1, fontFamily: UIFont, fontSize: FontSize.md },
   chips: { gap: 8 },
