@@ -15,7 +15,9 @@ describe('levels and unlocks', () => {
   it('unlocks level cosmetics only when crossing their level', () => {
     expect(levelUnlocks(1300, 1450)).toEqual(['sunhat']);
     expect(levelUnlocks(1450, 1600)).toEqual([]);
-    expect(levelUnlocks(0, 9000).sort()).toEqual(['hero_grin', 'sunhat']);
+    expect(levelUnlocks(0, 9000).sort()).toEqual(['hard_hat', 'heart_pendant', 'hero_grin', 'lion', 'owl', 'sunhat', 'unicorn']);
+    // Characters unlock the same way: the owl at level 4 (800 points).
+    expect(levelUnlocks(700, 820)).toEqual(['owl']);
   });
 });
 

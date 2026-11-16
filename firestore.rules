@@ -639,7 +639,7 @@ service cloud.firestore {
         request.resource.data.equipped == { 'head': null, 'face': null, 'neck': null };
       allow delete: if false;
       allow update: if isOwner(userId) && onlyChangedFields(['equipped', 'character']) &&
-        kfgValidCharacter(request.resource.data.get('character', 'classic')) &&
+        kfgCanUseCharacter(userId, request.resource.data.get('character', 'classic')) &&
         request.resource.data.equipped.keys().hasOnly(['head', 'face', 'neck']) &&
         kfgOwnsForSlot(userId, request.resource.data.equipped.get('head', null), 'head') &&
         kfgOwnsForSlot(userId, request.resource.data.equipped.get('face', null), 'face') &&
@@ -651,9 +651,16 @@ service cloud.firestore {
       }
     }
 
-    // Keep in sync with KFG_CHARACTERS (src/core/constants/kfg.ts).
-    function kfgValidCharacter(id) {
+    // Keep in sync with KFG_CHARACTERS (src/core/constants/kfg.ts): the free
+    // ones, or one you own (bought / level-unlocked, stored like a cosmetic).
+    function kfgFreeCharacter(id) {
       return id in ['classic', 'pup', 'kitty', 'bear', 'fox', 'bunny'];
+    }
+    function kfgValidCharacter(id) {
+      return kfgFreeCharacter(id);
+    }
+    function kfgCanUseCharacter(userId, id) {
+      return kfgFreeCharacter(id) || kfgOwnsForSlot(userId, id, 'character');
     }
 
     function kfgOwnsForSlot(userId, itemId, slot) {

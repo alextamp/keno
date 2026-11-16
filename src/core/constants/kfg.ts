@@ -132,6 +132,8 @@ export function nextStreak(
 export interface KfgCharacterDef {
   id: string;
   name: { el: string; en: string };
+  /** Missing = free. Otherwise bought with points or unlocked by level, like cosmetics. */
+  unlock?: { type: 'price'; points: number } | { type: 'level'; level: number };
 }
 
 export const KFG_CHARACTERS: KfgCharacterDef[] = [
@@ -141,6 +143,12 @@ export const KFG_CHARACTERS: KfgCharacterDef[] = [
   { id: 'bear', name: { el: 'Αρκουδάκι', en: 'Bear cub' } },
   { id: 'fox', name: { el: 'Αλεπουδίτσα', en: 'Fox' } },
   { id: 'bunny', name: { el: 'Κουνελάκι', en: 'Bunny' } },
+  { id: 'frog', name: { el: 'Βατραχάκι', en: 'Frog' }, unlock: { type: 'price', points: 400 } },
+  { id: 'panda', name: { el: 'Πάντα', en: 'Panda' }, unlock: { type: 'price', points: 500 } },
+  { id: 'koala', name: { el: 'Κοάλα', en: 'Koala' }, unlock: { type: 'price', points: 600 } },
+  { id: 'owl', name: { el: 'Κουκουβάγια', en: 'Owl' }, unlock: { type: 'level', level: 4 } },
+  { id: 'lion', name: { el: 'Λιονταράκι', en: 'Lion cub' }, unlock: { type: 'level', level: 7 } },
+  { id: 'unicorn', name: { el: 'Μονόκερος', en: 'Unicorn' }, unlock: { type: 'level', level: 10 } },
 ];
 
 export const DEFAULT_KFG_CHARACTER = 'classic';
@@ -174,6 +182,16 @@ export const KFG_COSMETICS: KfgCosmetic[] = [
   { id: 'scarf', slot: 'neck', name: { el: 'Κασκόλ', en: 'Scarf' }, unlock: { type: 'price', points: 300 } },
   { id: 'whistle', slot: 'neck', name: { el: 'Σφυρίχτρα', en: 'Whistle' }, unlock: { type: 'price', points: 600 } },
   { id: 'medal_top100', slot: 'neck', name: { el: 'Μετάλλιο Top 100', en: 'Top 100 medal' }, unlock: { type: 'leaderboard', top: KFG_LIMITS.leaderboardTop } },
+  { id: 'headband', slot: 'head', name: { el: 'Κορδέλα', en: 'Headband' }, unlock: { type: 'price', points: 250 } },
+  { id: 'flower_crown', slot: 'head', name: { el: 'Στεφάνι λουλουδιών', en: 'Flower crown' }, unlock: { type: 'price', points: 350 } },
+  { id: 'party_hat', slot: 'head', name: { el: 'Καπέλο πάρτι', en: 'Party hat' }, unlock: { type: 'price', points: 450 } },
+  { id: 'hard_hat', slot: 'head', name: { el: 'Κράνος εθελοντή', en: 'Volunteer hard hat' }, unlock: { type: 'level', level: 6 } },
+  { id: 'blush', slot: 'face', name: { el: 'Ροδαλά μάγουλα', en: 'Rosy cheeks' }, unlock: { type: 'price', points: 150 } },
+  { id: 'freckles', slot: 'face', name: { el: 'Φακίδες', en: 'Freckles' }, unlock: { type: 'price', points: 200 } },
+  { id: 'monocle', slot: 'face', name: { el: 'Μονόκλ', en: 'Monocle' }, unlock: { type: 'price', points: 700 } },
+  { id: 'bandana', slot: 'neck', name: { el: 'Μπαντάνα', en: 'Bandana' }, unlock: { type: 'price', points: 250 } },
+  { id: 'bowtie', slot: 'neck', name: { el: 'Παπιγιόν', en: 'Bow tie' }, unlock: { type: 'price', points: 350 } },
+  { id: 'heart_pendant', slot: 'neck', name: { el: 'Μενταγιόν καρδιά', en: 'Heart pendant' }, unlock: { type: 'level', level: 7 } },
 ];
 
 export function getCosmetic(id: string): KfgCosmetic | undefined {

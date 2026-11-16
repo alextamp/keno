@@ -40,7 +40,7 @@ export const KFG_LIMITS = {
 export const KFG_LEVEL_THRESHOLDS = [0, 150, 400, 800, 1400, 2200, 3200, 4500, 6000, 8000];
 
 /** Cosmetics the server needs to know about: slot, price, or what unlocks them. Mirrors KFG_COSMETICS. */
-export const KFG_COSMETICS: Record<string, { slot: 'head' | 'face' | 'neck'; price?: number; level?: number; top?: number }> = {
+export const KFG_COSMETICS: Record<string, { slot: 'head' | 'face' | 'neck' | 'character'; price?: number; level?: number; top?: number }> = {
   cap_green: { slot: 'head', price: 200 },
   beanie: { slot: 'head', price: 400 },
   sunhat: { slot: 'head', level: 5 },
@@ -50,6 +50,23 @@ export const KFG_COSMETICS: Record<string, { slot: 'head' | 'face' | 'neck'; pri
   scarf: { slot: 'neck', price: 300 },
   whistle: { slot: 'neck', price: 600 },
   medal_top100: { slot: 'neck', top: KFG_LIMITS.leaderboardTop },
+  headband: { slot: 'head', price: 250 },
+  flower_crown: { slot: 'head', price: 350 },
+  party_hat: { slot: 'head', price: 450 },
+  hard_hat: { slot: 'head', level: 6 },
+  blush: { slot: 'face', price: 150 },
+  freckles: { slot: 'face', price: 200 },
+  monocle: { slot: 'face', price: 700 },
+  bandana: { slot: 'neck', price: 250 },
+  bowtie: { slot: 'neck', price: 350 },
+  heart_pendant: { slot: 'neck', level: 7 },
+  // Characters beyond the 6 free ones — owned like cosmetics (slot 'character').
+  panda: { slot: 'character', price: 500 },
+  frog: { slot: 'character', price: 400 },
+  koala: { slot: 'character', price: 600 },
+  owl: { slot: 'character', level: 4 },
+  lion: { slot: 'character', level: 7 },
+  unicorn: { slot: 'character', level: 10 },
 };
 
 export function kfgLevel(lifetimePoints: number): number {

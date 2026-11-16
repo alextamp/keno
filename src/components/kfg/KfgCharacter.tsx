@@ -25,6 +25,11 @@ export function KfgCharacter({ size = 96, equipped = {}, character = 'classic' }
   const pink = colors.categoryChill;
   const animal = character !== 'classic';
   const grin = equipped.face === 'hero_grin';
+  const butter = '#F2C879';
+  const frogGreen = '#9DC08B';
+  const grey = '#B9B4AE';
+  // Panda's eye patches are dark, so its pupils are drawn light instead.
+  const eyeColor = character === 'panda' ? colors.surface : ink;
 
   return (
     <Svg width={size} height={size} viewBox="0 0 64 64">
@@ -56,6 +61,49 @@ export function KfgCharacter({ size = 96, equipped = {}, character = 'classic' }
           <Circle cx={42} cy={15.5} r={1.8} fill={soft} />
         </G>
       )}
+      {character === 'lion' && (
+        <G>
+          {Array.from({ length: 12 }, (_, i) => {
+            const a = (i / 12) * Math.PI * 2;
+            return <Circle key={i} cx={32 + Math.cos(a) * 14.5} cy={26 + Math.sin(a) * 14.5} r={4.2} fill={butter} {...line} />;
+          })}
+          <Circle cx={32} cy={26} r={15} fill={butter} />
+        </G>
+      )}
+      {character === 'panda' && (
+        <G>
+          <Circle cx={22} cy={15.5} r={4.2} fill={ink} {...line} />
+          <Circle cx={42} cy={15.5} r={4.2} fill={ink} {...line} />
+        </G>
+      )}
+      {character === 'koala' && (
+        <G>
+          <Circle cx={19.5} cy={18} r={6.5} fill={grey} {...line} />
+          <Circle cx={44.5} cy={18} r={6.5} fill={grey} {...line} />
+          <Circle cx={19.5} cy={18} r={3.4} fill={pink} opacity={0.35} />
+          <Circle cx={44.5} cy={18} r={3.4} fill={pink} opacity={0.35} />
+        </G>
+      )}
+      {character === 'owl' && (
+        <G>
+          <Path d="M21.5 18 L22 8 L28 14 Z" fill={fur} {...line} />
+          <Path d="M42.5 18 L42 8 L36 14 Z" fill={fur} {...line} />
+        </G>
+      )}
+      {character === 'frog' && (
+        <G>
+          <Circle cx={25} cy={15.5} r={5} fill={frogGreen} {...line} />
+          <Circle cx={39} cy={15.5} r={5} fill={frogGreen} {...line} />
+          <Circle cx={25} cy={15.5} r={2.6} fill={colors.surface} />
+          <Circle cx={39} cy={15.5} r={2.6} fill={colors.surface} />
+        </G>
+      )}
+      {character === 'unicorn' && (
+        <G>
+          <Path d="M22 20 L23.5 10 L29.5 15 Z" fill={colors.surface} {...line} />
+          <Path d="M42 20 L40.5 10 L34.5 15 Z" fill={colors.surface} {...line} />
+        </G>
+      )}
       {character === 'pup' && (
         <G>
           <Path d="M21.5 16 C14 16.5 13 29 18 33 C21 31.5 22.5 22 21.5 16 Z" fill={fur} {...line} />
@@ -69,6 +117,23 @@ export function KfgCharacter({ size = 96, equipped = {}, character = 'classic' }
         <Circle cx={32} cy={26} r={12.2} fill={fur} opacity={character === 'pup' ? 0.18 : 0.35} />
       )}
       {character === 'fox' && <Path d="M21 28 Q26 26 32 33 Q38 26 43 28 Q40 37 32 38.5 Q24 37 21 28 Z" fill={colors.surface} />}
+      {character === 'frog' && <Circle cx={32} cy={26} r={12.2} fill={frogGreen} opacity={0.75} />}
+      {character === 'koala' && <Circle cx={32} cy={26} r={12.2} fill={grey} opacity={0.45} />}
+      {character === 'owl' && <Circle cx={32} cy={26} r={12.2} fill={fur} opacity={0.4} />}
+      {character === 'lion' && <Circle cx={32} cy={26} r={12.2} fill={butter} opacity={0.3} />}
+      {character === 'panda' && (
+        <G>
+          <Ellipse cx={27.3} cy={25.3} rx={3.1} ry={3.8} fill={ink} transform="rotate(-20 27.3 25.3)" />
+          <Ellipse cx={36.7} cy={25.3} rx={3.1} ry={3.8} fill={ink} transform="rotate(20 36.7 25.3)" />
+        </G>
+      )}
+      {character === 'owl' && (
+        <G>
+          <Circle cx={27.5} cy={25} r={3.8} fill={colors.surface} {...line} />
+          <Circle cx={36.5} cy={25} r={3.8} fill={colors.surface} {...line} />
+        </G>
+      )}
+      {character === 'lion' && <Ellipse cx={32} cy={31} rx={5.2} ry={3.8} fill={colors.surface} {...line} />}
       {(character === 'bear' || character === 'pup') && (
         <Ellipse cx={32} cy={31} rx={5.2} ry={3.8} fill={colors.surface} {...line} />
       )}
@@ -76,21 +141,26 @@ export function KfgCharacter({ size = 96, equipped = {}, character = 'classic' }
       {/* Face (hero_grin replaces eyes and mouth) */}
       {!grin && (
         <G>
-          <Circle cx={27.5} cy={25} r={1.3} fill={ink} />
-          <Circle cx={36.5} cy={25} r={1.3} fill={ink} />
+          <Circle cx={27.5} cy={25} r={1.3} fill={eyeColor} />
+          <Circle cx={36.5} cy={25} r={1.3} fill={eyeColor} />
           {animal
             ? <Path d="M30 32 Q32 33.8 34 32" fill="none" {...line} />
             : <Path d="M28.5 30.5 Q32 33 35.5 30.5" fill="none" {...line} />}
         </G>
       )}
-      {animal && (
+      {animal && character === 'owl' && <Path d="M30.5 28 L33.5 28 L32 31.2 Z" fill={butter} {...line} />}
+      {animal && character === 'koala' && <Ellipse cx={32} cy={29.2} rx={2.6} ry={3.1} fill={ink} />}
+      {animal && !['owl', 'koala', 'frog'].includes(character) && (
         <Ellipse
           cx={32}
           cy={29.6}
           rx={1.6}
           ry={1.1}
-          fill={character === 'kitty' || character === 'bunny' ? pink : ink}
+          fill={character === 'kitty' || character === 'bunny' || character === 'unicorn' ? pink : ink}
         />
+      )}
+      {character === 'lion' && (
+        <Path d="M25.5 30 L20 29.5 M38.5 30 L44 29.5" stroke={ink} strokeWidth={0.9} strokeLinecap="round" />
       )}
       {(character === 'kitty' || character === 'fox') && (
         <Path d="M25.5 30 L19 29 M25.5 31.5 L19.5 32.5 M38.5 30 L45 29 M38.5 31.5 L44.5 32.5" stroke={ink} strokeWidth={0.9} strokeLinecap="round" />
@@ -120,7 +190,65 @@ export function KfgCharacter({ size = 96, equipped = {}, character = 'classic' }
         </G>
       )}
 
+      {character === 'unicorn' && !equipped.head && (
+        <G>
+          <Path d="M29.5 14.5 L32 1.5 L34.5 14.5 Z" fill={butter} {...line} />
+          <Path d="M30.3 10.5 L33.6 9.2 M30.9 6.8 L33 6" stroke={ink} strokeWidth={0.9} />
+          <Path d="M40 15 C46 17 47 24 45 28" fill="none" stroke={pink} strokeWidth={3} strokeLinecap="round" />
+        </G>
+      )}
+
+      {/* Face extras */}
+      {equipped.face === 'blush' && (
+        <G>
+          <Ellipse cx={24.5} cy={29.5} rx={2.4} ry={1.5} fill={pink} opacity={0.55} />
+          <Ellipse cx={39.5} cy={29.5} rx={2.4} ry={1.5} fill={pink} opacity={0.55} />
+        </G>
+      )}
+      {equipped.face === 'freckles' && (
+        <G fill={fur}>
+          {[[24, 28.5], [26, 29.8], [24.6, 30.9], [40, 28.5], [38, 29.8], [39.4, 30.9]].map(([x, y]) => (
+            <Circle key={`${x}-${y}`} cx={x} cy={y} r={0.6} />
+          ))}
+        </G>
+      )}
+      {equipped.face === 'monocle' && (
+        <G>
+          <Circle cx={36.5} cy={25} r={3.8} fill={colors.surface} opacity={0.25} {...line} />
+          <Path d="M40.3 25.5 Q43 32 40 39" fill="none" stroke={butter} strokeWidth={1.1} />
+        </G>
+      )}
+
       {/* Head slot */}
+      {equipped.head === 'headband' && (
+        <G>
+          <Path d="M19.8 21 Q32 10.5 44.2 21" fill="none" stroke={accent} strokeWidth={3.2} strokeLinecap="round" />
+          <Path d="M39 13.5 L43.5 10.5 L43 15.5 Z M39 13.5 L42.5 17.8 L44.8 14.2 Z" fill={accent} {...line} />
+        </G>
+      )}
+      {equipped.head === 'flower_crown' && (
+        <G>
+          <Path d="M20.5 18.5 Q32 11 43.5 18.5" fill="none" stroke={accent} strokeWidth={1.4} />
+          {[[21.5, 17.5, pink], [26, 14.6, butter], [32, 13.4, pink], [38, 14.6, butter], [42.5, 17.5, pink]].map(([x, y, c]) => (
+            <Circle key={`${x}`} cx={x as number} cy={y as number} r={2.3} fill={c as string} {...line} />
+          ))}
+        </G>
+      )}
+      {equipped.head === 'party_hat' && (
+        <G>
+          <Path d="M26 15.5 L32.5 0.8 L38.5 15.5 Z" fill={accent} {...line} />
+          <Path d="M28.3 10 L36.2 10 M29.9 6 L34.6 6" stroke={butter} strokeWidth={1.4} />
+          <Circle cx={32.5} cy={1.5} r={1.8} fill={butter} {...line} />
+        </G>
+      )}
+      {equipped.head === 'hard_hat' && (
+        <G>
+          <Path d="M20.5 19 C20.5 8.5 43.5 8.5 43.5 19 Z" fill={butter} {...line} />
+          <Rect x={18.5} y={17.8} width={27} height={3.2} rx={1.6} fill={butter} {...line} />
+          <Path d="M32 10 L32 18" {...line} />
+          <Circle cx={32} cy={14.5} r={1.6} fill={accent} />
+        </G>
+      )}
       {equipped.head === 'cap_green' && (
         <G>
           <Path d="M19.5 20 C20 11 44 11 44.5 20 Z" fill={accent} {...line} />
@@ -153,6 +281,27 @@ export function KfgCharacter({ size = 96, equipped = {}, character = 'classic' }
         <G>
           <Path d="M25 41 Q32 51 39 41" fill="none" {...line} />
           <Rect x={29} y={48} width={6} height={4} rx={1.5} fill={accent} {...line} />
+        </G>
+      )}
+      {equipped.neck === 'bandana' && (
+        <G>
+          <Path d="M23 41.5 Q32 45 41 41.5 L32 53 Z" fill={accent} {...line} />
+          <Circle cx={30} cy={46} r={0.8} fill={colors.surface} />
+          <Circle cx={34} cy={46} r={0.8} fill={colors.surface} />
+          <Circle cx={32} cy={49.5} r={0.8} fill={colors.surface} />
+        </G>
+      )}
+      {equipped.neck === 'bowtie' && (
+        <G>
+          <Path d="M32 45 L25.5 41.5 L25.5 48.5 Z" fill={accent} {...line} />
+          <Path d="M32 45 L38.5 41.5 L38.5 48.5 Z" fill={accent} {...line} />
+          <Circle cx={32} cy={45} r={1.6} fill={accent} {...line} />
+        </G>
+      )}
+      {equipped.neck === 'heart_pendant' && (
+        <G>
+          <Path d="M25 41 Q32 50 39 41" fill="none" stroke={butter} strokeWidth={1.1} />
+          <Path d="M32 52.5 C27.5 49.5 28.3 46 30.6 46.2 C31.5 46.3 32 47 32 47.6 C32 47 32.5 46.3 33.4 46.2 C35.7 46 36.5 49.5 32 52.5 Z" fill={pink} {...line} />
         </G>
       )}
       {equipped.neck === 'medal_top100' && (

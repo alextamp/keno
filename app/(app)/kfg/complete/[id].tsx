@@ -14,7 +14,7 @@ import { SectionLabel } from '@/components/ui/SectionLabel';
 import { KfgCharacter } from '@/components/kfg/KfgCharacter';
 import { AccentScopeProvider, useTheme } from '@/core/theme';
 import { BorderRadius, FontSize, FontWeight, Spacing, TitleFont, UIFont, UIFontLight } from '@/core/constants/theme';
-import { getCosmetic, KFG_LEVELS } from '@/core/constants/kfg';
+import { getCosmetic, KFG_CHARACTERS, KFG_LEVELS } from '@/core/constants/kfg';
 import { useLanguageStore, useTranslation } from '@/core/i18n';
 import { isLeft } from '@/core/utils/either';
 import { haptics } from '@/core/utils/haptics';
@@ -78,6 +78,8 @@ function CompleteInner() {
   const levelName = (n: number) => KFG_LEVELS[n - 1]?.name[language] ?? '';
   const leveledUp = !!award && award.levelAfter > award.levelBefore;
   const unlocked = (award?.unlocked ?? []).map(getCosmetic).filter((c): c is NonNullable<typeof c> => !!c);
+  // Level-unlocked characters arrive in the same list as cosmetics.
+  const unlockedChars = KFG_CHARACTERS.filter((c) => (award?.unlocked ?? []).includes(c.id));
   const when = participation.checkOutAt ?? new Date();
 
   const shareTicket = async () => {
@@ -148,6 +150,31 @@ function CompleteInner() {
               {ownedCosmetics.includes(item.id) && (
                 <Button label={wearing ? t.kfgWearing : t.kfgWearIt} onPress={() => wear(item.id, item.slot)} disabled={wearing} size="sm" />
               )}
+            </Card>
+          </View>
+        );
+      })}
+
+      {unlockedChars.map((c) => {
+        const using = profile.character === c.id;
+        return (
+          <View key={c.id} style={styles.unlockWrap}>
+            <SectionLabel label={t.kfgUnlocked} />
+            <Card padded style={styles.unlockCard}>
+              <View style={[styles.unlockThumb, { backgroundColor: colors.accentSoft }]}>
+                <KfgCharacter size={72} equipped={profile.equipped} character={c.id} />
+              </View>
+              <Text style={[styles.unlockName, { color: colors.textPrimary }]}>{c.name[language]}</Text>
+              <Button
+                label={using ? t.kfgWearing : t.kfgWearIt}
+                onPress={async () => {
+                  const r = await kfgRepository.setCharacter(profile.uid, c.id);
+                  if (isLeft(r)) Alert.alert(t.kfgUnlocked, t.kfgError(r.left.message));
+                  else haptics.success();
+                }}
+                disabled={using}
+                size="sm"
+              />
             </Card>
           </View>
         );

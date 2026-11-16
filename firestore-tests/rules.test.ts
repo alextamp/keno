@@ -433,6 +433,19 @@ describe('Keno for Good', () => {
     await assertFails(addDoc(collection(asUser(USER_B), 'kfgMissions', 'r2', 'rides'), ride(USER_B)));
   });
 
+  test('locked characters need to be owned; a character cannot go in a wardrobe slot', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'kfgProfiles', USER_A), { lifetimePoints: 0, balance: 0, character: 'classic', equipped: { head: null, face: null, neck: null } });
+      await setDoc(doc(db, 'kfgProfiles', USER_B), { lifetimePoints: 0, balance: 0, character: 'classic', equipped: { head: null, face: null, neck: null } });
+      await setDoc(doc(db, 'kfgProfiles', USER_B, 'cosmetics', 'panda'), { slot: 'character' });
+    });
+    await assertSucceeds(updateDoc(doc(asUser(USER_A), 'kfgProfiles', USER_A), { character: 'fox' }));
+    await assertFails(updateDoc(doc(asUser(USER_A), 'kfgProfiles', USER_A), { character: 'panda' }));
+    await assertSucceeds(updateDoc(doc(asUser(USER_B), 'kfgProfiles', USER_B), { character: 'panda' }));
+    await assertFails(updateDoc(doc(asUser(USER_B), 'kfgProfiles', USER_B), { equipped: { head: 'panda', face: null, neck: null } }));
+    await assertFails(updateDoc(doc(asUser(USER_A), 'kfgProfiles', USER_A), { character: 'dragon' }));
+  });
+
   test('trust scores are not readable by users', async () => {
     await seed(async (db) => { await setDoc(doc(db, 'kfgTrust', USER_A), { score: 0.5 }); });
     await assertFails(getDoc(doc(asUser(USER_A), 'kfgTrust', USER_A)));

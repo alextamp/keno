@@ -11,7 +11,7 @@ import { KfgHeader } from '@/components/kfg/KfgHeader';
 import { useTheme } from '@/core/theme';
 import { BorderRadius, FontSize, FontWeight, Spacing, TitleFont, UIFont, UIFontLight } from '@/core/constants/theme';
 import { TAB_BAR_BASE_HEIGHT } from '@/core/constants/layout';
-import { KFG_CHARACTERS, KFG_COSMETICS, KfgCosmetic } from '@/core/constants/kfg';
+import { KFG_CHARACTERS, KFG_COSMETICS, KfgCharacterDef, KfgCosmetic } from '@/core/constants/kfg';
 import { useLanguageStore, useTranslation } from '@/core/i18n';
 import { isLeft } from '@/core/utils/either';
 import { haptics } from '@/core/utils/haptics';
@@ -64,8 +64,37 @@ export default function CharacterTab() {
   const character = profile?.character ?? 'classic';
   const { uid } = useKfgStore();
 
-  const pickCharacter = async (id: string) => {
+  // Free characters, or ones you own (bought / level-unlocked — stored with
+  // the cosmetics). A locked one for sale is bought first, then put on.
+  const ownsCharacter = (c: KfgCharacterDef) => !c.unlock || ownedCosmetics.includes(c.id);
+
+  const pickCharacter = async (c: KfgCharacterDef) => {
+    const id = c.id;
     if (!uid || id === character) return;
+    if (!ownsCharacter(c)) {
+      if (c.unlock?.type === 'level') {
+        Alert.alert(c.name[language], t.kfgLockedLevel(c.unlock.level));
+        return;
+      }
+      const price = c.unlock?.type === 'price' ? c.unlock.points : 0;
+      if (balance < price) { Alert.alert(t.kfgBuyTitle, t.kfgError('not-enough-points')); return; }
+      Alert.alert(t.kfgBuyTitle, t.kfgBuyConfirm(c.name[language], formatPoints(price, language)), [
+        { text: t.settingsBtnCancel, style: 'cancel' },
+        {
+          text: t.kfgBuyBtn,
+          onPress: async () => {
+            setBusyId(id);
+            const bought = await kfgRepository.purchase(id);
+            if (isLeft(bought)) { setBusyId(null); Alert.alert(t.kfgBuyTitle, t.kfgError(bought.left.message)); return; }
+            const r = await kfgRepository.setCharacter(uid, id);
+            setBusyId(null);
+            if (isLeft(r)) Alert.alert(t.kfgCharacters, t.kfgError(r.left.message));
+            else haptics.success();
+          },
+        },
+      ]);
+      return;
+    }
     setBusyId(id);
     const r = await kfgRepository.setCharacter(uid, id);
     setBusyId(null);
@@ -173,18 +202,26 @@ export default function CharacterTab() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.characters}>
         {KFG_CHARACTERS.map((c) => {
           const on = c.id === character;
+          const owned = ownsCharacter(c);
+          const lockLabel = owned ? null
+            : c.unlock?.type === 'level' ? t.kfgLockedLevel(c.unlock.level)
+              : t.kfgPointsShort(formatPoints(c.unlock?.type === 'price' ? c.unlock.points : 0, language));
           return (
             <AnimatedPressable
               key={c.id}
-              onPress={() => pickCharacter(c.id)}
+              onPress={() => pickCharacter(c)}
               disabled={busyId === c.id}
               accessibilityRole="button"
               accessibilityState={{ selected: on }}
-              accessibilityLabel={c.name[language]}
+              accessibilityLabel={lockLabel ? `${c.name[language]}, ${lockLabel}` : c.name[language]}
               style={[styles.charItem, { borderColor: on ? colors.primary : colors.border, backgroundColor: on ? colors.accentSoft : colors.surface }]}
             >
-              <KfgCharacter size={56} character={c.id} equipped={equipped} />
-              <Text style={[styles.charName, { color: on ? colors.accentInk : colors.textHint }]} numberOfLines={1}>{c.name[language]}</Text>
+              <View style={!owned && styles.lockedArt}>
+                <KfgCharacter size={56} character={c.id} equipped={equipped} />
+              </View>
+              <Text style={[styles.charName, { color: on ? colors.accentInk : colors.textHint }]} numberOfLines={1}>
+                {lockLabel ?? c.name[language]}
+              </Text>
             </AnimatedPressable>
           );
         })}
@@ -244,6 +281,7 @@ export default function CharacterTab() {
 const styles = StyleSheet.create({
   content: { paddingHorizontal: Spacing.gutter, gap: Spacing.md },
   hero: { alignItems: 'center', gap: 4, marginTop: Spacing.sm },
+  lockedArt: { opacity: 0.45 },
   wrappedCard: { flexDirection: 'row', alignItems: 'center', borderRadius: BorderRadius.lg, padding: Spacing.base, gap: Spacing.md },
   wrappedText: { flex: 1, gap: 2 },
   wrappedKicker: { fontSize: 10.5, letterSpacing: 2, fontFamily: UIFont, fontWeight: FontWeight.bold, color: 'rgba(250,247,242,0.75)' },
