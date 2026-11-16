@@ -5,7 +5,9 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { captureRef } from 'react-native-view-shot';
-import * as MediaLibrary from 'expo-media-library';
+// SDK 58: the package root's saveToLibraryAsync/requestPermissionsAsync now
+// throw at runtime (new Asset API); the unchanged API lives under /legacy.
+import * as MediaLibrary from 'expo-media-library/legacy';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';

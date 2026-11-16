@@ -1,4 +1,6 @@
-import * as Calendar from 'expo-calendar';
+// SDK 58: the package root's functions now throw at runtime (new object
+// API); the unchanged API lives under /legacy.
+import * as Calendar from 'expo-calendar/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { EventEntity } from '@/features/events/domain/entities/event.entity';

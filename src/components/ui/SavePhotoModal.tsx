@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Alert, Image, Modal, StyleSheet, View } from 'react-native';
-import * as MediaLibrary from 'expo-media-library';
+// SDK 58: the package root's saveToLibraryAsync/requestPermissionsAsync now
+// throw at runtime (new Asset API); the unchanged API lives under /legacy.
+import * as MediaLibrary from 'expo-media-library/legacy';
 import { File, Paths } from 'expo-file-system';
 import { AnimatedPressable } from './AnimatedPressable';
 import { Button } from './Button';
