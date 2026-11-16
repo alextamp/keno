@@ -443,6 +443,22 @@ export type Translations = {
   kfgEditBtn: string;
   kfgPrivateToggle: string;
   kfgPrivateHint: string;
+  kfgWaitlistBtn: string;
+  kfgOnWaitlist: (n: number) => string;
+  kfgWaitlistedAlert: string;
+  kfgRequestBtn: string;
+  kfgRequestSent: string;
+  kfgRequestsTitle: string;
+  kfgAccept: string;
+  kfgDecline: string;
+  kfgInviteBtn: string;
+  kfgInvited: string;
+  kfgInviteEmpty: string;
+  kfgInviteOne: string;
+  kfgCoHost: string;
+  kfgCoHostHint: string;
+  kfgMakeCoHost: (name: string) => string;
+  kfgRemoveCoHost: (name: string) => string;
   kfgTabCharacter: string;
   kfgTabLeaderboard: string;
   kfgBackA11y: string;
@@ -1743,6 +1759,22 @@ const en: Translations = {
   kfgEditBtn: 'Edit',
   kfgPrivateToggle: 'Join by request',
   kfgPrivateHint: 'People ask to join and you accept them — like a private event.',
+  kfgWaitlistBtn: 'Join the waitlist',
+  kfgOnWaitlist: (n) => `On the waitlist · #${n} — tap to leave`,
+  kfgWaitlistedAlert: "It's full, so you're on the waitlist. If a spot opens you're in automatically and we'll let you know.",
+  kfgRequestBtn: 'Ask to join',
+  kfgRequestSent: 'Request sent',
+  kfgRequestsTitle: 'Join requests',
+  kfgAccept: 'Accept',
+  kfgDecline: 'Decline',
+  kfgInviteBtn: 'Invite friends',
+  kfgInvited: 'Sent',
+  kfgInviteEmpty: 'Follow people to invite them here.',
+  kfgInviteOne: 'Invite',
+  kfgCoHost: 'Co-host',
+  kfgCoHostHint: 'Long-press someone to make them a co-host — they can scan codes with you.',
+  kfgMakeCoHost: (name) => `Make ${name} a co-host?`,
+  kfgRemoveCoHost: (name) => `Remove ${name} as co-host?`,
   kfgTabCharacter: 'Character',
   kfgTabLeaderboard: 'Ranking',
   kfgBackA11y: 'Back to Keno',
@@ -1798,6 +1830,11 @@ const en: Translations = {
   } as Record<string, string>)[status] ?? '',
   kfgError: (code) => ({
     full: 'The spots just filled up.',
+    private: 'This mission is by request — ask to join.',
+    'not-private': 'This mission is open — just join.',
+    'no-request': 'That request was already handled.',
+    'not-participant': 'Only people signed up can be co-hosts.',
+    'already-started': 'It has already started.',
     group: 'That community no longer exists.',
     'not-a-member': 'You can only post to communities you’re a member of.',
     'age-restricted': 'This mission is for a different age range.',
@@ -3062,6 +3099,22 @@ const el: Translations = {
   kfgEditBtn: 'Επεξεργασία',
   kfgPrivateToggle: 'Με αίτημα συμμετοχής',
   kfgPrivateHint: 'Όσοι θέλουν να έρθουν στέλνουν αίτημα και τους εγκρίνεις εσύ — όπως στα ιδιωτικά events.',
+  kfgWaitlistBtn: 'Μπες στη λίστα αναμονής',
+  kfgOnWaitlist: (n) => `Λίστα αναμονής · #${n} — πάτα για αποχώρηση`,
+  kfgWaitlistedAlert: 'Είναι γεμάτη, οπότε μπήκες στη λίστα αναμονής. Αν ανοίξει θέση, μπαίνεις αυτόματα και σε ειδοποιούμε.',
+  kfgRequestBtn: 'Αίτημα συμμετοχής',
+  kfgRequestSent: 'Το αίτημα στάλθηκε',
+  kfgRequestsTitle: 'Αιτήματα συμμετοχής',
+  kfgAccept: 'Αποδοχή',
+  kfgDecline: 'Απόρριψη',
+  kfgInviteBtn: 'Πρόσκληση φίλων',
+  kfgInvited: 'Στάλθηκε',
+  kfgInviteEmpty: 'Ακολούθησε άτομα για να τα προσκαλέσεις εδώ.',
+  kfgInviteOne: 'Πρόσκληση',
+  kfgCoHost: 'Συνδιοργανωτής',
+  kfgCoHostHint: 'Κράτα πατημένο κάποιον για να τον κάνεις συνδιοργανωτή — θα σκανάρει κι αυτός QR.',
+  kfgMakeCoHost: (name) => `Να γίνει ${name} συνδιοργανωτής;`,
+  kfgRemoveCoHost: (name) => `Να μην είναι πια ${name} συνδιοργανωτής;`,
   kfgTabCharacter: 'Χαρακτήρας',
   kfgTabLeaderboard: 'Κατάταξη',
   kfgBackA11y: 'Πίσω στο Keno',
@@ -3117,6 +3170,11 @@ const el: Translations = {
   } as Record<string, string>)[status] ?? '',
   kfgError: (code) => ({
     full: 'Οι θέσεις μόλις γέμισαν.',
+    private: 'Η αποστολή είναι με αίτημα — στείλε αίτημα συμμετοχής.',
+    'not-private': 'Η αποστολή είναι ανοιχτή — δήλωσε απλώς συμμετοχή.',
+    'no-request': 'Το αίτημα έχει ήδη απαντηθεί.',
+    'not-participant': 'Συνδιοργανωτές γίνονται μόνο όσοι έχουν δηλώσει συμμετοχή.',
+    'already-started': 'Έχει ήδη ξεκινήσει.',
     group: 'Η κοινότητα δεν υπάρχει πια.',
     'not-a-member': 'Μπορείς να δημοσιεύσεις μόνο σε κοινότητες όπου είσαι μέλος.',
     'age-restricted': 'Η αποστολή είναι για άλλο εύρος ηλικίας.',

@@ -71,7 +71,11 @@ export interface KfgRepository {
   cancelMission(missionId: string): Promise<Either<Failure, void>>;
   /** Creator, while it's running: end it now (Live Mode). */
   endMission(missionId: string): Promise<Either<Failure, void>>;
-  join(missionId: string): Promise<Either<Failure, string>>;
+  /** Full missions put you on the waitlist instead (waitlisted: true). */
+  join(missionId: string): Promise<Either<Failure, { waitlisted: boolean }>>;
+  requestJoin(missionId: string, message: string): Promise<Either<Failure, void>>;
+  decideRequest(missionId: string, uid: string, accept: boolean): Promise<Either<Failure, void>>;
+  setCoHost(missionId: string, uid: string, on: boolean): Promise<Either<Failure, void>>;
   leave(missionId: string): Promise<Either<Failure, void>>;
   scan(code: string): Promise<Either<Failure, KfgScanResult>>;
   checkOutAll(missionId: string): Promise<Either<Failure, { completed: number; tooEarly: number }>>;

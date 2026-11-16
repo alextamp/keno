@@ -410,25 +410,58 @@ export const kfgEndMission = onCall(async (request) => {
 
 // ── Joining ─────────────────────────────────────────────────────────────────
 
-export const kfgJoin = onCall(async (request) => {
-  const uid = requireUid(request);
-  await checkRateLimit(uid, 'kfgJoin', 20, 60 * 60_000);
-  const missionId = String(request.data?.missionId ?? '');
-  const missionRef = db.doc(`${MISSIONS}/${missionId}`);
+/** Puts uid into a mission (participation + QR secret + counts). Call inside a transaction, after all reads. */
+function addParticipantTx(
+  tx: admin.firestore.Transaction, missionRef: admin.firestore.DocumentReference, missionId: string,
+  m: admin.firestore.DocumentData, uid: string,
+): void {
   const participationRef = db.doc(`${PARTICIPATIONS}/${missionId}_${uid}`);
+  tx.set(participationRef, {
+    uid, missionId, missionCreatorId: m.creatorId, kind: m.kind, creatorType: m.creatorType,
+    status: 'joined', joinedAt: FieldValue.serverTimestamp(),
+    checkInAt: null, checkOutAt: null, award: null, photos: {}, reviewState: null,
+  });
+  tx.set(participationRef.collection('private').doc('qr'), { secret: randomBytes(16).toString('hex') });
+  tx.update(missionRef, {
+    participantCount: FieldValue.increment(1),
+    participantIds: FieldValue.arrayUnion(uid),
+    waitlistIds: FieldValue.arrayRemove(uid),
+  });
+}
 
+/** Creator or co-host — who runs the mission on the day. */
+function runsMission(m: admin.firestore.DocumentData, uid: string): boolean {
+  return m.creatorId === uid || (m.coHostIds ?? []).includes(uid);
+}
+
+async function joinerProfile(uid: string): Promise<admin.firestore.DocumentData> {
   const user = (await db.doc(`users/${uid}`).get()).data();
   if (!user) throw new HttpsError('failed-precondition', 'no-profile');
   if (user.isOrganization === true) throw new HttpsError('permission-denied', 'organizations-cannot-join');
   if (user.idVerificationStatus === 'pending' || user.idVerificationStatus === 'rejected') {
     throw new HttpsError('permission-denied', 'not-verified');
   }
+  return user;
+}
+
+/**
+ * Sign up. Full → you go on the waitlist (promoted automatically when a spot
+ * opens, like events). Private missions go through kfgRequestJoin instead.
+ */
+export const kfgJoin = onCall(async (request) => {
+  const uid = requireUid(request);
+  await checkRateLimit(uid, 'kfgJoin', 20, 60 * 60_000);
+  const missionId = String(request.data?.missionId ?? '');
+  const missionRef = db.doc(`${MISSIONS}/${missionId}`);
+  const participationRef = db.doc(`${PARTICIPATIONS}/${missionId}_${uid}`);
+  const user = await joinerProfile(uid);
 
   const open = await db.collection(PARTICIPATIONS)
     .where('uid', '==', uid).where('status', 'in', OPEN_STATUSES).count().get();
   if (open.data().count >= KFG_LIMITS.maxOpenParticipations) throw new HttpsError('resource-exhausted', 'too-many-open');
 
   let joined: FirebaseFirestore.DocumentData | null = null;
+  let waitlisted = false;
   await db.runTransaction(async (tx) => {
     const [mSnap, pSnap] = await Promise.all([tx.get(missionRef), tx.get(participationRef)]);
     if (!mSnap.exists) throw new HttpsError('not-found', 'mission');
@@ -437,35 +470,122 @@ export const kfgJoin = onCall(async (request) => {
     if (m.creatorId === uid) throw new HttpsError('failed-precondition', 'own-mission');
     if (m.endsAt.toMillis() <= Date.now()) throw new HttpsError('failed-precondition', 'over');
     if (pSnap.exists && pSnap.data()!.status !== 'cancelled') return; // already in — idempotent
+    if (m.isPrivate === true) throw new HttpsError('failed-precondition', 'private');
     const ineligible = missionEligibility(m, user);
     if (ineligible) throw new HttpsError('permission-denied', ineligible);
-    if ((m.participantCount ?? 0) >= m.capacity) throw new HttpsError('resource-exhausted', 'full');
-
+    if ((m.participantCount ?? 0) >= m.capacity) {
+      waitlisted = true;
+      tx.update(missionRef, { waitlistIds: FieldValue.arrayUnion(uid) });
+      return;
+    }
     joined = m;
-    tx.set(participationRef, {
-      uid, missionId, missionCreatorId: m.creatorId, kind: m.kind, creatorType: m.creatorType,
-      status: 'joined', joinedAt: FieldValue.serverTimestamp(),
-      checkInAt: null, checkOutAt: null, award: null, photos: {}, reviewState: null,
-    });
-    tx.set(participationRef.collection('private').doc('qr'), { secret: randomBytes(16).toString('hex') });
-    tx.update(missionRef, { participantCount: FieldValue.increment(1), participantIds: FieldValue.arrayUnion(uid) });
+    addParticipantTx(tx, missionRef, missionId, m, uid);
   });
   const j = joined as FirebaseFirestore.DocumentData | null;
   if (j) await notify([j.creatorId], 'kfg_join', missionId, j.title, { uid, name: user.name, avatarColor: user.avatarColor, photoUri: user.photoUri });
-  return { participationId: participationRef.id };
+  return { participationId: participationRef.id, waitlisted };
 });
 
+/** Leave the mission (or its waitlist). A freed spot goes to the first person waiting. */
 export const kfgLeave = onCall(async (request) => {
   const uid = requireUid(request);
   const missionId = String(request.data?.missionId ?? '');
   const missionRef = db.doc(`${MISSIONS}/${missionId}`);
   const participationRef = db.doc(`${PARTICIPATIONS}/${missionId}_${uid}`);
+  let promoted: { uid: string; title: string } | null = null;
   await db.runTransaction(async (tx) => {
-    const pSnap = await tx.get(participationRef);
+    const [mSnap, pSnap] = await Promise.all([tx.get(missionRef), tx.get(participationRef)]);
+    if (!mSnap.exists) throw new HttpsError('not-found', 'mission');
+    const m = mSnap.data()!;
+    const waiting: string[] = m.waitlistIds ?? [];
+    if (waiting.includes(uid) && (!pSnap.exists || pSnap.data()!.status !== 'joined')) {
+      tx.update(missionRef, { waitlistIds: FieldValue.arrayRemove(uid) });
+      return;
+    }
     if (!pSnap.exists || pSnap.data()!.status !== 'joined') throw new HttpsError('failed-precondition', 'cannot-leave');
+    const next = waiting.find((w) => w !== uid);
+    const nextRef = next ? db.doc(`${PARTICIPATIONS}/${missionId}_${next}`) : null;
+    const nextSnap = nextRef ? await tx.get(nextRef) : null;
     tx.update(participationRef, { status: 'cancelled' });
     tx.update(missionRef, { participantCount: FieldValue.increment(-1), participantIds: FieldValue.arrayRemove(uid) });
+    if (next && m.startsAt.toMillis() > Date.now() && (!nextSnap?.exists || nextSnap.data()!.status === 'cancelled')) {
+      addParticipantTx(tx, missionRef, missionId, m, next);
+      promoted = { uid: next, title: m.title };
+    }
   });
+  const pr = promoted as { uid: string; title: string } | null;
+  if (pr) await notify([pr.uid], 'kfg_waitlist_promoted', missionId, pr.title);
+  return { ok: true };
+});
+
+/** Private mission: ask to join (with an optional note); the creator and co-hosts decide. */
+export const kfgRequestJoin = onCall(async (request) => {
+  const uid = requireUid(request);
+  await checkRateLimit(uid, 'kfgRequestJoin', 20, 60 * 60_000);
+  const missionId = String(request.data?.missionId ?? '');
+  const message = typeof request.data?.message === 'string' ? request.data.message.trim().slice(0, 300) : '';
+  const user = await joinerProfile(uid);
+  const ref = db.doc(`${MISSIONS}/${missionId}`);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError('not-found', 'mission');
+  const m = snap.data()!;
+  if (m.status !== 'published' || m.isPrivate !== true) throw new HttpsError('failed-precondition', 'not-private');
+  if (m.endsAt.toMillis() <= Date.now()) throw new HttpsError('failed-precondition', 'over');
+  if ((m.participantIds ?? []).includes(uid) || m.creatorId === uid) return { ok: true };
+  const ineligible = missionEligibility(m, user);
+  if (ineligible) throw new HttpsError('permission-denied', ineligible);
+  await ref.update({ [`joinRequests.${uid}`]: message });
+  await notify([m.creatorId, ...(m.coHostIds ?? [])], 'kfg_join_request', missionId, m.title,
+    { uid, name: user.name, avatarColor: user.avatarColor, photoUri: user.photoUri });
+  return { ok: true };
+});
+
+/** Creator/co-host accepts or declines a request. Accepted into a full mission → waitlist. */
+export const kfgDecideRequest = onCall(async (request) => {
+  const uid = requireUid(request);
+  const missionId = String(request.data?.missionId ?? '');
+  const target = String(request.data?.uid ?? '');
+  const accept = request.data?.accept === true;
+  const missionRef = db.doc(`${MISSIONS}/${missionId}`);
+  const targetUser = accept ? await joinerProfile(target) : null;
+  let added = false;
+  await db.runTransaction(async (tx) => {
+    const mSnap = await tx.get(missionRef);
+    if (!mSnap.exists) throw new HttpsError('not-found', 'mission');
+    const m = mSnap.data()!;
+    if (!runsMission(m, uid)) throw new HttpsError('permission-denied', 'not-creator');
+    if (!(target in (m.joinRequests ?? {}))) throw new HttpsError('failed-precondition', 'no-request');
+    const pRef = db.doc(`${PARTICIPATIONS}/${missionId}_${target}`);
+    const pSnap = await tx.get(pRef);
+    tx.update(missionRef, { [`joinRequests.${target}`]: FieldValue.delete() });
+    if (!accept || (pSnap.exists && pSnap.data()!.status !== 'cancelled')) return;
+    const ineligible = missionEligibility(m, targetUser!);
+    if (ineligible) throw new HttpsError('permission-denied', ineligible);
+    if ((m.participantCount ?? 0) >= m.capacity) {
+      tx.update(missionRef, { waitlistIds: FieldValue.arrayUnion(target) });
+    } else {
+      addParticipantTx(tx, missionRef, missionId, m, target);
+    }
+    added = true;
+  });
+  if (added) {
+    const m = (await missionRef.get()).data()!;
+    await notify([target], 'kfg_join_accepted', missionId, m.title);
+  }
+  return { ok: true };
+});
+
+/** Creator makes a participant a co-host (can scan and run the day), or removes them. */
+export const kfgSetCoHost = onCall(async (request) => {
+  const uid = requireUid(request);
+  const missionId = String(request.data?.missionId ?? '');
+  const target = String(request.data?.uid ?? '');
+  const ref = db.doc(`${MISSIONS}/${missionId}`);
+  const m = (await ref.get()).data();
+  if (!m) throw new HttpsError('not-found', 'mission');
+  if (m.creatorId !== uid) throw new HttpsError('permission-denied', 'not-creator');
+  if (!(m.participantIds ?? []).includes(target)) throw new HttpsError('failed-precondition', 'not-participant');
+  await ref.update({ coHostIds: request.data?.on === true ? FieldValue.arrayUnion(target) : FieldValue.arrayRemove(target) });
   return { ok: true };
 });
 
@@ -501,7 +621,7 @@ export const kfgScan = onCall(async (request) => {
   const missionSnap = await db.doc(`${MISSIONS}/${p.missionId}`).get();
   const m = missionSnap.data();
   if (!m) throw new HttpsError('not-found', 'mission');
-  if (m.creatorId !== uid && !(await isAdminUid(uid))) throw new HttpsError('permission-denied', 'not-your-mission');
+  if (!runsMission(m, uid) && !(await isAdminUid(uid))) throw new HttpsError('permission-denied', 'not-your-mission');
   if (m.kind !== 'partnerQr' || m.status !== 'published') throw new HttpsError('failed-precondition', 'not-scannable');
   const now = Date.now();
   if (!isInScanWindow(m.startsAt.toMillis(), m.endsAt.toMillis(), now)) throw new HttpsError('failed-precondition', 'outside-window');
@@ -542,7 +662,7 @@ export const kfgCheckOutAll = onCall(async (request) => {
   const missionSnap = await db.doc(`${MISSIONS}/${missionId}`).get();
   const m = missionSnap.data();
   if (!m) throw new HttpsError('not-found', 'mission');
-  if (m.creatorId !== uid && !(await isAdminUid(uid))) throw new HttpsError('permission-denied', 'not-your-mission');
+  if (!runsMission(m, uid) && !(await isAdminUid(uid))) throw new HttpsError('permission-denied', 'not-your-mission');
   if (m.kind !== 'partnerQr') throw new HttpsError('failed-precondition', 'not-qr');
   const now = Date.now();
   if (!isInScanWindow(m.startsAt.toMillis(), m.endsAt.toMillis(), now)) throw new HttpsError('failed-precondition', 'outside-window');

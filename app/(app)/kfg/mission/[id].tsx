@@ -30,6 +30,8 @@ import { universityLabel } from '@/core/constants/universities';
 import { KfgPhotoWall } from '@/components/kfg/KfgPhotoWall';
 import { KfgParticipants } from '@/components/kfg/KfgParticipants';
 import { KfgLiveMode } from '@/components/kfg/KfgLiveMode';
+import { KfgRequests } from '@/components/kfg/KfgRequests';
+import { KfgInviteModal } from '@/components/kfg/KfgInviteModal';
 import { publicMissionUrl } from '@/core/constants/publicLinks';
 import { addToCalendar, isEventInCalendar, removeEventFromCalendar } from '@/core/utils/calendar';
 
@@ -59,6 +61,7 @@ function MissionInner() {
 
   useEffect(() => (id ? kfgRepository.subscribeMission(id, setMission) : undefined), [id]);
 
+  const [showInvite, setShowInvite] = useState(false);
   const [inCalendar, setInCalendar] = useState(false);
   useEffect(() => { if (id) isEventInCalendar(id).then(setInCalendar); }, [id]);
 
@@ -136,7 +139,35 @@ function MissionInner() {
     setBusy(false);
     if (isLeft(r)) { haptics.error(); Alert.alert(mission.title, t.kfgError(r.left.message)); return; }
     haptics.success();
+    if (r.right.waitlisted) {
+      Alert.alert(mission.title, t.kfgWaitlistedAlert);
+      analytics.track('kfg_mission_waitlisted', { missionId: mission.id });
+      return;
+    }
     analytics.track('kfg_mission_joined', { missionId: mission.id, kind: mission.kind });
+  };
+
+  const requestJoin = async () => {
+    setBusy(true);
+    const r = await kfgRepository.requestJoin(mission.id, '');
+    setBusy(false);
+    if (isLeft(r)) { haptics.error(); Alert.alert(mission.title, t.kfgError(r.left.message)); return; }
+    haptics.success();
+  };
+
+  const toggleCoHost = (uid: string, name: string) => {
+    const on = !mission.coHostIds.includes(uid);
+    Alert.alert(on ? t.kfgMakeCoHost(name) : t.kfgRemoveCoHost(name), undefined, [
+      { text: t.settingsBtnCancel, style: 'cancel' },
+      {
+        text: 'OK',
+        onPress: async () => {
+          const r = await kfgRepository.setCoHost(mission.id, uid, on);
+          if (isLeft(r)) Alert.alert(mission.title, t.kfgError(r.left.message));
+          else haptics.success();
+        },
+      },
+    ]);
   };
 
   const leave = () => Alert.alert(t.kfgLeaveBtn, t.kfgLeaveConfirm, [
@@ -162,6 +193,11 @@ function MissionInner() {
   const uniLine = mission.allowedUniversities?.map((u) => universityLabel(u, language)).join(', ') ?? null;
   const filterLine = [genderLine, ageLine, uniLine].filter(Boolean).join(' · ');
 
+  const isCoHost = mission.coHostIds.includes(user.id);
+  const runs = isMine || isCoHost;
+  const waitlistPos = mission.waitlistIds.indexOf(user.id) + 1;
+  const requested = user.id in mission.joinRequests;
+
   const status = participation?.status;
   const canVerify = joined && !over && (status === 'joined' || status === 'checkedIn');
 
@@ -178,11 +214,19 @@ function MissionInner() {
     action = <Button label={t.kfgVerifyBtn} onPress={() => router.push(`/(app)/kfg/verify/${mission.id}` as any)} />;
   } else if (over) {
     action = <Button label={t.kfgOverBtn} disabled onPress={() => {}} />;
-  } else if (spotsLeft <= 0) {
-    action = <Button label={t.kfgFullBtn} disabled onPress={() => {}} />;
+  } else if (waitlistPos > 0) {
+    action = <Button label={t.kfgOnWaitlist(waitlistPos)} variant="soft" onPress={leave} />;
   } else if (ineligible && !joined) {
     action = <Button label={t.kfgNotEligibleBtn} disabled onPress={() => {}} />;
-  } else if (!user.isOrganization) {
+  } else if (user.isOrganization) {
+    action = null;
+  } else if (mission.isPrivate) {
+    action = requested
+      ? <Button label={t.kfgRequestSent} disabled onPress={() => {}} />
+      : <Button label={t.kfgRequestBtn} onPress={requestJoin} loading={busy} />;
+  } else if (spotsLeft <= 0) {
+    action = <Button label={t.kfgWaitlistBtn} variant="soft" onPress={join} loading={busy} />;
+  } else {
     action = <Button label={t.kfgJoinBtn} onPress={join} loading={busy} />;
   }
 
@@ -294,7 +338,20 @@ function MissionInner() {
             />
           )}
 
-          <KfgParticipants mission={mission} user={user} over={over} />
+          {runs && <KfgRequests mission={mission} />}
+
+          {isCoHost && mission.kind === 'partnerQr' && !over && (
+            <Button label={t.kfgScanBtn} variant="outline" onPress={() => router.push(`/(app)/kfg/scan?missionId=${mission.id}` as any)} fullWidth />
+          )}
+
+          {(joined || runs) && !over && mission.status === 'published' && (
+            <Button label={t.kfgInviteBtn} variant="outline" onPress={() => setShowInvite(true)} fullWidth />
+          )}
+
+          {isMine && !over && mission.participantIds.length > 0 && (
+            <Text style={[styles.meta, { color: colors.textHint }]}>{t.kfgCoHostHint}</Text>
+          )}
+          <KfgParticipants mission={mission} user={user} over={over} onLongPress={isMine ? toggleCoHost : undefined} />
 
           {over && mission.presentIds.includes(user.id) && mission.presentIds.length > 1 && (
             <Button
@@ -318,6 +375,8 @@ function MissionInner() {
         </Text>
         {action}
       </View>
+
+      <KfgInviteModal visible={showInvite} onClose={() => setShowInvite(false)} mission={mission} user={user} />
     </View>
   );
 }

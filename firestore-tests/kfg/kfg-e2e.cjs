@@ -48,6 +48,32 @@ const qr = async (pid) => {
   ok(status === 'published', 'org mission is published immediately');
   ok((await db.doc(`kfgMissions/${missionId}`).get()).data().points === 300, 'points clamped to 300');
 
+  console.log('Waitlist, private missions, co-hosts');
+  const w3 = await signIn('s3');
+  const small = await org.call('kfgCreateMission', {
+    title: 'Μία θέση', description: 'Μόνο ένας εθελοντής.', kind: 'partnerQr', cause: 'food',
+    startsAt: start.toISOString(), endsAt: end.toISOString(), capacity: 1, areaLabel: 'Αθήνα',
+  });
+  await s2.call('kfgJoin', { missionId: small.missionId });
+  ok((await w3.call('kfgJoin', { missionId: small.missionId })).waitlisted === true, 'full mission puts you on the waitlist');
+  await s2.call('kfgLeave', { missionId: small.missionId });
+  const sm2 = (await db.doc(`kfgMissions/${small.missionId}`).get()).data();
+  ok(sm2.participantIds.includes('s3') && !sm2.waitlistIds.includes('s3'), 'leaving promotes the first person waiting');
+  ok((await db.collection('users/s3/notifications').where('type', '==', 'kfg_waitlist_promoted').get()).size === 1, 'promoted person is notified');
+
+  const priv = await org.call('kfgCreateMission', {
+    title: 'Ιδιωτική', description: 'Μόνο με αίτημα συμμετοχής.', kind: 'partnerQr', cause: 'people',
+    startsAt: start.toISOString(), endsAt: end.toISOString(), capacity: 5, areaLabel: 'Αθήνα', isPrivate: true,
+  });
+  await fails(s2.call('kfgJoin', { missionId: priv.missionId }), 'private', 'private mission needs a request');
+  await s2.call('kfgRequestJoin', { missionId: priv.missionId, message: 'Θα ήθελα να βοηθήσω' });
+  await fails(w3.call('kfgDecideRequest', { missionId: priv.missionId, uid: 's2', accept: true }), 'not-creator', 'only the creator/co-host decides');
+  await org.call('kfgDecideRequest', { missionId: priv.missionId, uid: 's2', accept: true });
+  const pm = (await db.doc(`kfgMissions/${priv.missionId}`).get()).data();
+  ok(pm.participantIds.includes('s2') && !('s2' in pm.joinRequests), 'accepted request joins');
+  await org.call('kfgSetCoHost', { missionId: priv.missionId, uid: 's2', on: true });
+  ok((await db.doc(`kfgMissions/${priv.missionId}`).get()).data().coHostIds.includes('s2'), 'creator can make a participant co-host');
+
   console.log('Communities');
   await db.doc('groups/c1').set({ name: 'Εθελοντές Αθήνας', scope: 'kfg', memberIds: ['org1'], missionIds: [] });
   await db.doc('groups/k1').set({ name: 'Μπάλα', memberIds: ['org1'] });
@@ -84,7 +110,8 @@ const qr = async (pid) => {
   ok((await db.doc(`kfgMissions/${missionId}`).get()).data().participantCount === 1, 'joining twice is idempotent');
   await s2.call('kfgJoin', { missionId });
   const s3 = await signIn('s3');
-  await fails(s3.call('kfgJoin', { missionId }), 'full', 'capacity enforced');
+  ok((await s3.call('kfgJoin', { missionId })).waitlisted === true, 'capacity enforced (extra person waitlisted)');
+  ok(!(await db.doc(`kfgMissions/${missionId}`).get()).data().participantIds.includes('s3'), 'waitlisted person is not a participant');
 
   const code = await qr(participationId);
   await fails(s2.call('kfgScan', { code }), 'not-your-mission', 'only the creator can scan');

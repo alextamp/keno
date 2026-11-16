@@ -168,7 +168,19 @@ export const kfgRepository: KfgRepository = {
   },
 
   join(missionId) {
-    return attempt(async () => (await call<{ participationId: string }>('kfgJoin', { missionId })).participationId);
+    return attempt(async () => ({ waitlisted: (await call<{ waitlisted?: boolean }>('kfgJoin', { missionId })).waitlisted === true }));
+  },
+
+  requestJoin(missionId, message) {
+    return attempt(() => call<void>('kfgRequestJoin', { missionId, message }));
+  },
+
+  decideRequest(missionId, uid, accept) {
+    return attempt(() => call<void>('kfgDecideRequest', { missionId, uid, accept }));
+  },
+
+  setCoHost(missionId, uid, on) {
+    return attempt(() => call<void>('kfgSetCoHost', { missionId, uid, on }));
   },
 
   leave(missionId) {

@@ -21,7 +21,11 @@ import { KfgMission } from '@/features/kfg/domain/entities/kfg.entity';
  * people who were there (kfgMissions/{id}/kudos/{uid}), and a one-tap
  * "recommend" once it's over.
  */
-export function KfgParticipants({ mission, user, over }: { mission: KfgMission; user: UserEntity; over: boolean }) {
+export function KfgParticipants({ mission, user, over, onLongPress }: {
+  mission: KfgMission; user: UserEntity; over: boolean;
+  /** Creator only: long-press toggles co-host (like the event page). */
+  onLongPress?: (uid: string, name: string) => void;
+}) {
   const { colors } = useTheme();
   const t = useTranslation();
   const router = useRouter();
@@ -88,6 +92,7 @@ export function KfgParticipants({ mission, user, over }: { mission: KfgMission; 
             <AnimatedPressable
               key={uid}
               onPress={() => open(uid)}
+              onLongPress={onLongPress && !isMe ? () => onLongPress(uid, p?.name ?? '') : undefined}
               style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
             >
               <View>
@@ -107,6 +112,9 @@ export function KfgParticipants({ mission, user, over }: { mission: KfgMission; 
               <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>
                 {isMe ? t.eventYou : p?.name ?? '…'}
               </Text>
+              {mission.coHostIds.includes(uid) && (
+                <Text style={[styles.mutual, { color: colors.accentInk }]} numberOfLines={1}>{t.kfgCoHost}</Text>
+              )}
               {mutual > 0 && (
                 <Text style={[styles.mutual, { color: colors.primary }]} numberOfLines={1}>{t.eventMutualConnections(mutual)}</Text>
               )}
