@@ -30,6 +30,25 @@ async function getOrCreateKenoCalendarId(): Promise<string> {
   return id;
 }
 
+/** Anything with a start/end that can go in the keno. calendar (events, KfG missions). */
+export interface CalendarItem { id: string; title: string; location: string; start: Date; end: Date; notes?: string }
+
+export async function addToCalendar(item: CalendarItem): Promise<boolean> {
+  try {
+    const { status } = await Calendar.requestCalendarPermissionsAsync();
+    if (status !== 'granted') return false;
+    const calId = await getOrCreateKenoCalendarId();
+    const calEventId = await Calendar.createEventAsync(calId, {
+      title: item.title, location: item.location, startDate: item.start, endDate: item.end, notes: item.notes,
+      alarms: [{ relativeOffset: -60 }],
+    });
+    await AsyncStorage.setItem(`${CAL_EVENT_KEY}${item.id}`, calEventId);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function addEventToCalendar(event: EventEntity): Promise<boolean> {
   try {
     const { status } = await Calendar.requestCalendarPermissionsAsync();

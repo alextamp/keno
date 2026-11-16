@@ -1442,6 +1442,66 @@ document.getElementById('open').addEventListener('click',function(){
   res.status(200).send(pageShell(`${title} · ${dateStr}`, ogDescription, image, body));
 });
 
+// Keno for Good mission page — same shell and privacy rules as eventPage:
+// only published missions, area label only (never the exact address), and
+// a student creator by first name only. Organizations are named in full,
+// since that's who's hosting.
+const KFG_CAUSE_EL: Record<string, string> = {
+  food: 'Τρόφιμα', animals: 'Ζώα', environment: 'Περιβάλλον', recycling: 'Ανακύκλωση', people: 'Άνθρωποι', other: 'Εθελοντισμός',
+};
+
+export const missionPage = onRequest({ cors: false }, async (req, res) => {
+  const id = String(req.query.id ?? req.path.split('/').filter(Boolean).pop() ?? '');
+  res.set('Cache-Control', 'public, max-age=300');
+  if (!/^[A-Za-z0-9]{10,40}$/.test(id)) {
+    res.status(404).send(notFoundPage());
+    return;
+  }
+  const m = (await db.doc(`kfgMissions/${id}`).get()).data();
+  if (!m || m.status !== 'published') {
+    res.status(404).send(notFoundPage());
+    return;
+  }
+
+  const when = (m.startsAt as admin.firestore.Timestamp).toDate();
+  const dateStr = new Intl.DateTimeFormat('el-GR', {
+    weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Athens',
+  }).format(when);
+  const isOver = (m.endsAt as admin.firestore.Timestamp).toMillis() < Date.now();
+  const title = String(m.title ?? 'Αποστολή');
+  const host = m.creatorType === 'organization'
+    ? String(m.creatorName ?? 'Keno for Good')
+    : String(m.creatorName ?? '').trim().split(/\s+/)[0] || 'Keno';
+  const image = typeof m.imageUri === 'string' && m.imageUri.startsWith('https://') ? m.imageUri : FALLBACK_OG_IMAGE;
+  const count = Number(m.participantCount ?? 0);
+  const capacity = Number(m.capacity ?? 0);
+  const area = String(m.areaLabel ?? '');
+  const description = String(m.description ?? '').slice(0, 600);
+  const ogDescription = `${dateStr}${area ? ` · ${area}` : ''} · ${count}/${capacity} εθελοντές`;
+
+  const deepLink = `keno://kfg/mission/${id}`;
+  const body = `<div class="card">${image !== FALLBACK_OG_IMAGE ? `<img class="cover" src="${escapeHtml(image)}" alt="">` : ''}
+<div class="inner"><span class="chip">💚 Keno for Good · ${escapeHtml(KFG_CAUSE_EL[m.cause] ?? 'Εθελοντισμός')}</span>
+<h1>${escapeHtml(title)}</h1>
+<p class="row">🕒 ${escapeHtml(dateStr)}${isOver ? ' · έχει τελειώσει' : ''}</p>
+${area ? `<p class="row">📍 ${escapeHtml(area)}</p>` : ''}
+<p class="row">🙌 ${count}/${capacity} εθελοντές · +${Number(m.points ?? 0)} πόντοι</p>
+<p class="row">Διοργάνωση: ${escapeHtml(host)}</p>
+${description ? `<p class="desc">${escapeHtml(description)}</p>` : ''}
+<a class="cta" id="open" href="${deepLink}">Άνοιξέ το στο Keno</a>
+<div class="stores"><a href="${STORE_IOS}">App Store</a><a href="${STORE_ANDROID}">Google Play</a></div>
+</div></div>
+<script>
+document.getElementById('open').addEventListener('click',function(){
+  var ua=navigator.userAgent||'';var store=/android/i.test(ua)?'${STORE_ANDROID}':/iphone|ipad|ipod/i.test(ua)?'${STORE_IOS}':null;
+  if(!store)return;var t=setTimeout(function(){if(!document.hidden)location.href=store;},1600);
+  document.addEventListener('visibilitychange',function(){if(document.hidden)clearTimeout(t);});
+});
+</script>`;
+
+  res.status(200).send(pageShell(`${title} · ${dateStr}`, ogDescription, image, body));
+});
+
 // ── Account deletion cleanup ────────────────────────────────────────────────
 // Settings' "delete account" removes users/{uid} and the Auth account; this
 // erases everything else tied to that person. Purely personal data is

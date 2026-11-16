@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
@@ -28,6 +28,8 @@ import { useKfgStore } from '@/features/kfg/presentation/store/kfg.store';
 import { formatPoints } from '@/features/kfg/format';
 import { universityLabel } from '@/core/constants/universities';
 import { KfgPhotoWall } from '@/components/kfg/KfgPhotoWall';
+import { publicMissionUrl } from '@/core/constants/publicLinks';
+import { addToCalendar, isEventInCalendar, removeEventFromCalendar } from '@/core/utils/calendar';
 
 export default function KfgMissionScreen() {
   return (
@@ -54,6 +56,9 @@ function MissionInner() {
   const [now] = useState(Date.now);
 
   useEffect(() => (id ? kfgRepository.subscribeMission(id, setMission) : undefined), [id]);
+
+  const [inCalendar, setInCalendar] = useState(false);
+  useEffect(() => { if (id) isEventInCalendar(id).then(setInCalendar); }, [id]);
 
   const firstIds = mission?.participantIds.slice(0, 3).join(',') ?? '';
   useEffect(() => {
@@ -98,6 +103,30 @@ function MissionInner() {
     + (mission.kind === 'partnerQr' && mission.minDurationMin > 0 ? ` · ${t.kfgMinDuration(minDuration)}` : '');
   const placeLine = [mission.address, distanceKm != null ? `${distanceKm.toFixed(1).replace('.', language === 'el' ? ',' : '.')} km` : null]
     .filter(Boolean).join(' · ');
+
+  const share = async () => {
+    haptics.light();
+    const when = format(mission.startsAt, 'EEE d MMM, HH:mm', { locale });
+    const link = mission.status === 'published' ? publicMissionUrl(mission.id) : `keno://kfg/mission/${mission.id}`;
+    const result = await Share.share({
+      title: mission.title,
+      message: `💚 ${mission.title}\n📌 ${mission.areaLabel}\n⏰ ${when}\n\n${t.eventShareCta}\n${link}`,
+    });
+    if (result.action !== 'dismissedAction') analytics.track('kfg_mission_shared', { missionId: mission.id });
+  };
+
+  const toggleCalendar = async () => {
+    haptics.light();
+    if (inCalendar) {
+      if (await removeEventFromCalendar(mission.id)) setInCalendar(false);
+      return;
+    }
+    const ok = await addToCalendar({
+      id: mission.id, title: mission.title, start: mission.startsAt, end: mission.endsAt, notes: mission.description,
+      location: [mission.address, mission.areaLabel].filter(Boolean).join(', '),
+    });
+    if (ok) { setInCalendar(true); haptics.success(); }
+  };
 
   const join = async () => {
     setBusy(true);
@@ -205,6 +234,17 @@ function MissionInner() {
             )}
           </View>
 
+          <View style={styles.quickRow}>
+            <Button label={t.eventShareAction} variant="outline" size="sm" onPress={share} style={styles.flex} />
+            <Button
+              label={inCalendar ? t.eventInCalendar : t.eventAddToCalendar}
+              variant={inCalendar ? 'soft' : 'outline'}
+              size="sm"
+              onPress={toggleCalendar}
+              style={styles.flex}
+            />
+          </View>
+
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           {firstIds && people.length > 0 ? (
@@ -268,6 +308,8 @@ const styles = StyleSheet.create({
   title: { fontFamily: TitleFont, fontSize: 25, fontWeight: FontWeight.bold, letterSpacing: -0.6, marginTop: -4 },
   status: { fontFamily: UIFont, fontSize: FontSize.md, fontWeight: FontWeight.bold },
   rows: { gap: 13, marginTop: 4 },
+  quickRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: 4 },
+  flex: { flex: 1 },
   divider: { height: 1, marginVertical: 4 },
   meta: { fontFamily: UIFontLight, fontSize: FontSize.md, lineHeight: 19 },
   body: { fontFamily: UIFontLight, fontSize: FontSize.base, lineHeight: 21 },
