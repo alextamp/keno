@@ -80,9 +80,9 @@ node scripts/import-events.js path/to/events.json
 
 | Var | Required | Notes |
 |---|---|---|
-| `GOOGLE_APPLICATION_CREDENTIALS` | one of these two | path to a service-account JSON file **outside this repo** |
-| `FIREBASE_SERVICE_ACCOUNT_JSON`  | one of these two | the service-account JSON contents inline, as a string |
-| `KENO_EVENTS_UID` | yes | uid of the existing "keno" account auto-published events are attributed to (`creatorId`) — must match `src/core/constants/eventsAccount.ts`'s `KENO_EVENTS_UID` |
+| `GOOGLE_APPLICATION_CREDENTIALS` | no | path to a service-account JSON file **outside this repo**. If neither this nor the inline JSON is set, the machine's own gcloud login is used (`gcloud auth application-default login`) |
+| `FIREBASE_SERVICE_ACCOUNT_JSON`  | no | the service-account JSON contents inline, as a string |
+| `KENO_EVENTS_UID` | no (defaults to the keno account) | uid of the existing "keno" account auto-published events are attributed to (`creatorId`) — must match `src/core/constants/eventsAccount.ts`'s `KENO_EVENTS_UID` |
 
 Never commit a service-account key file — `.gitignore` already blocks the
 common naming patterns (`*serviceAccount*.json`, `*-firebase-adminsdk-*.json`),

@@ -70,11 +70,10 @@ function initAdmin() {
     admin.initializeApp({ credential: admin.credential.cert(creds) });
     return;
   }
-  if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    admin.initializeApp({ credential: admin.credential.applicationDefault() });
-    return;
-  }
-  fail('Set GOOGLE_APPLICATION_CREDENTIALS or FIREBASE_SERVICE_ACCOUNT_JSON (see docs/events-ingestion.md).');
+  // GOOGLE_APPLICATION_CREDENTIALS if set; otherwise the machine's own
+  // gcloud login (`gcloud auth application-default login`), so a plain
+  // `node scripts/import-events.js <file>` works without exporting anything.
+  admin.initializeApp({ credential: admin.credential.applicationDefault(), projectId: process.env.FIREBASE_PROJECT_ID || 'keno-212fa' });
 }
 
 function computeExternalId(title, dateTimeIso, location) {
@@ -155,8 +154,8 @@ async function findExistingByExternalId(db, externalId) {
 
 async function main() {
   const { inputPath, dryRun } = parseArgs();
-  const kenoUid = process.env.KENO_EVENTS_UID;
-  if (!kenoUid) fail('Set KENO_EVENTS_UID (the uid of the "keno" account auto-imported events are attributed to).');
+  // Not a secret — same value as src/core/constants/eventsAccount.ts; the env var still overrides it.
+  const kenoUid = process.env.KENO_EVENTS_UID || 'ObDcfgYrUJQVHYhLcyZ5WetCxSE3';
 
   let raw;
   try {
