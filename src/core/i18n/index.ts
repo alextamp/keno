@@ -474,6 +474,9 @@ export type Translations = {
   kfgClaimed: string;
   kfgFlagshipOn: string;
   kfgFlagshipOff: string;
+  kfgStep1: string;
+  kfgStep2: string;
+  kfgStepBack: string;
   kfgTabCharacter: string;
   kfgTabLeaderboard: string;
   kfgBackA11y: string;
@@ -1807,6 +1810,9 @@ const en: Translations = {
   kfgClaimed: '✓ Claimed',
   kfgFlagshipOn: 'Pin as flagship',
   kfgFlagshipOff: 'Unpin flagship',
+  kfgStep1: 'Step 1 of 2 — The basics',
+  kfgStep2: 'Step 2 of 2 — Extras (optional — you can publish right away)',
+  kfgStepBack: 'Back',
   kfgTabCharacter: 'Character',
   kfgTabLeaderboard: 'Ranking',
   kfgBackA11y: 'Back to Keno',
@@ -3169,6 +3175,9 @@ const el: Translations = {
   kfgClaimed: '✓ Το πήρες',
   kfgFlagshipOn: 'Καρφίτσωμα ως flagship',
   kfgFlagshipOff: 'Ξεκαρφίτσωμα flagship',
+  kfgStep1: 'Βήμα 1 από 2 — Τα βασικά',
+  kfgStep2: 'Βήμα 2 από 2 — Επιπλέον (προαιρετικά — μπορείς να δημοσιεύσεις κατευθείαν)',
+  kfgStepBack: 'Πίσω',
   kfgTabCharacter: 'Χαρακτήρας',
   kfgTabLeaderboard: 'Κατάταξη',
   kfgBackA11y: 'Πίσω στο Keno',

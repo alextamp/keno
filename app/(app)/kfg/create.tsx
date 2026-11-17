@@ -11,6 +11,7 @@ import { Icon, IconName } from '@/components/ui/Icon';
 import { Input } from '@/components/ui/Input';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SectionLabel } from '@/components/ui/SectionLabel';
+import { ProgressTrack } from '@/components/ui/ProgressTrack';
 import { CAUSE_ICONS } from '@/components/kfg/KfgMissionRow';
 import { AccentScopeProvider, useTheme } from '@/core/theme';
 import { BorderRadius, FontSize, FontWeight, Spacing, UIFont, UIFontLight } from '@/core/constants/theme';
@@ -157,6 +158,22 @@ function CreateInner() {
   const valid = !missing.title && !missing.description && !missing.area;
   // Errors only show after a submit attempt, not while the form is still empty.
   const [tried, setTried] = useState(false);
+  // Two steps like event creation: the basics, then everything optional
+  // (with defaults, so step 2 can be skipped straight to publishing).
+  const [step, setStep] = useState<1 | 2>(1);
+  const next = () => {
+    if (!valid) {
+      setTried(true);
+      const fields = [
+        missing.title && t.kfgFieldTitle,
+        missing.description && t.kfgFieldDescription,
+        missing.area && t.kfgFieldArea,
+      ].filter((f): f is string => !!f);
+      Alert.alert(t.kfgCreateTitle, t.kfgMissingFields(fields));
+      return;
+    }
+    setStep(2);
+  };
 
   const pickInfoPhoto = async () => {
     const uri = await pickPhoto({ aspect: [4, 3] });
@@ -287,9 +304,14 @@ function CreateInner() {
   return (
     <KeyboardAvoidingView style={[styles.root, { backgroundColor: colors.background }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={{ paddingTop: insets.top + 12, paddingHorizontal: Spacing.gutter }}>
-        <ScreenHeader title={editing ? t.kfgEditTitle : t.kfgCreateTitle} />
+        <ScreenHeader title={editing ? t.kfgEditTitle : t.kfgCreateTitle} onBack={step === 2 ? () => setStep(1) : undefined} />
       </View>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]} keyboardShouldPersistTaps="handled">
+        <Text style={[styles.note, { color: colors.textHint }]}>{step === 1 ? t.kfgStep1 : t.kfgStep2}</Text>
+        <ProgressTrack progress={step === 1 ? 0.5 : 1} />
+
+        {step === 1 ? (
+          <>
         {!isOrg && !editing && (
           <Text style={[styles.note, { color: colors.textHint }]}>{t.kfgCreateStudentNote}</Text>
         )}
@@ -341,18 +363,6 @@ function CreateInner() {
           ))}
         </View>
 
-        {isOrg && !editing && (
-          <>
-            <SectionLabel label={t.kfgFieldKind} />
-            <View style={styles.chips}>
-              {KINDS.map((k) => (
-                <Chip key={k} label={t.kfgVerifyLabel(k, false)} icon={KIND_ICONS[k]} on={kind === k} onPress={() => setKind(k)} />
-              ))}
-            </View>
-            <Text style={[styles.note, { color: colors.textHint }]}>{t.kfgVerifyHow(kind, false)}</Text>
-          </>
-        )}
-
         <SectionLabel label={t.kfgFieldDate} />
         <View style={styles.dateRow}>
           <Chip label={format(startsAt, 'EEE d MMM', { locale })} icon="cal" on={picker === 'date'} onPress={() => setPicker(picker === 'date' ? null : 'date')} />
@@ -379,6 +389,37 @@ function CreateInner() {
             onChange={(d) => setDurationMin((v) => Math.min(KFG_LIMITS.maxDurationHours * 60, Math.max(30, v + d * 30)))}
           />
         </View>
+
+        <Input
+          label={t.kfgFieldArea}
+          hint={t.kfgFieldAreaHint}
+          value={areaLabel}
+          onChangeText={setAreaLabel}
+          maxLength={60}
+          error={tried && missing.area ? t.kfgMinChars(MIN.area) : undefined}
+        />
+        <Input label={t.kfgFieldAddress} value={address} onChangeText={setAddress} maxLength={160} />
+
+        <View style={styles.stepRow}>
+          <Text style={[styles.label, styles.stepLabel, { color: colors.textPrimary }]}>{t.kfgFieldCapacity}</Text>
+          <Stepper value={capacity} label={t.kfgFieldCapacity} onChange={(d) => setCapacity((v) => Math.min(KFG_LIMITS.maxCapacity, Math.max(1, v + d)))} />
+        </View>
+
+            <Button label={t.createBtnNext} onPress={next} fullWidth />
+          </>
+        ) : (
+          <>
+        {isOrg && !editing && (
+          <>
+            <SectionLabel label={t.kfgFieldKind} />
+            <View style={styles.chips}>
+              {KINDS.map((k) => (
+                <Chip key={k} label={t.kfgVerifyLabel(k, false)} icon={KIND_ICONS[k]} on={kind === k} onPress={() => setKind(k)} />
+              ))}
+            </View>
+            <Text style={[styles.note, { color: colors.textHint }]}>{t.kfgVerifyHow(kind, false)}</Text>
+          </>
+        )}
 
         {!editing && (
           <>
@@ -415,21 +456,6 @@ function CreateInner() {
             <Stepper value={minStay / 60} label={t.kfgFieldMinDuration} onChange={(d) => setMinStayMin((v) => Math.min(durationMin, Math.max(0, v + d * 30)))} />
           </View>
         )}
-
-        <Input
-          label={t.kfgFieldArea}
-          hint={t.kfgFieldAreaHint}
-          value={areaLabel}
-          onChangeText={setAreaLabel}
-          maxLength={60}
-          error={tried && missing.area ? t.kfgMinChars(MIN.area) : undefined}
-        />
-        <Input label={t.kfgFieldAddress} value={address} onChangeText={setAddress} maxLength={160} />
-
-        <View style={styles.stepRow}>
-          <Text style={[styles.label, styles.stepLabel, { color: colors.textPrimary }]}>{t.kfgFieldCapacity}</Text>
-          <Stepper value={capacity} label={t.kfgFieldCapacity} onChange={(d) => setCapacity((v) => Math.min(KFG_LIMITS.maxCapacity, Math.max(1, v + d)))} />
-        </View>
 
         {isOrg && !editing && effectiveKind === 'partnerQr' && (
           <>
@@ -512,12 +538,17 @@ function CreateInner() {
           </>
         )}
 
-        <Button
+            <View style={styles.stepRowButtons}>
+              <Button label={t.kfgStepBack} variant="outline" onPress={() => setStep(1)} style={styles.flex} />
+              <Button
           label={editing ? t.editEventSave : isOrg ? t.kfgPublishBtn : t.kfgSubmitForReviewBtn}
           onPress={submit}
           loading={saving}
-          fullWidth
+          style={styles.flex}
         />
+            </View>
+          </>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -534,6 +565,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderRadius: BorderRadius.full, paddingHorizontal: 14,
   },
   ageRow: { gap: 8 },
+  stepRowButtons: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm },
+  flex: { flex: 1 },
   infoPhoto: { height: 140, borderRadius: BorderRadius.md, borderWidth: 1, overflow: 'hidden' },
   cover: { height: 160, borderRadius: BorderRadius.lg, borderWidth: 1, overflow: 'hidden' },
   coverEmpty: { alignItems: 'center', justifyContent: 'center', gap: 4, borderStyle: 'dashed' },
