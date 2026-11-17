@@ -16,7 +16,7 @@ import GroupsScreen from '@/screens/GroupsTab';
 
 // Keno for Good: its own four-tab world inside the app, same structure as
 // AppHub (PagerView + the shared TabBar), with the green accent scope.
-const TAB_ICONS: IconName[] = ['heart', 'users', 'user', 'trophy'];
+const TAB_ICONS: IconName[] = ['heart', 'users', 'trophy', 'user'];
 
 export default function KfgHub() {
   return (
@@ -32,7 +32,7 @@ function KfgHubInner() {
   const user = useAuthStore((s) => s.user);
   const { start, stop } = useKfgStore();
   useKfgReminderSync();
-  const labels = [t.kfgTabMissions, t.kfgTabCommunities, t.kfgTabCharacter, t.kfgTabLeaderboard];
+  const labels = [t.kfgTabMissions, t.kfgTabCommunities, t.kfgTabLeaderboard, t.kfgTabCharacter];
   const pagerRef = useRef<PagerView>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [visited, setVisited] = useState(() => new Set([0]));
@@ -69,11 +69,11 @@ function KfgHubInner() {
         <View key="communities" style={styles.page}>
           {visited.has(1) && <GroupsScreen scope="kfg" />}
         </View>
-        <View key="character" style={styles.page}>
-          {visited.has(2) && <CharacterTab />}
-        </View>
         <View key="leaderboard" style={styles.page}>
-          {visited.has(3) && <KfgLeaderboardTab />}
+          {visited.has(2) && <KfgLeaderboardTab />}
+        </View>
+        <View key="character" style={styles.page}>
+          {visited.has(3) && <CharacterTab />}
         </View>
       </PagerView>
 
