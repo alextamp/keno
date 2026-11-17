@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card } from '@/components/ui/Card';
 import { SectionLabel } from '@/components/ui/SectionLabel';
-import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { KfgHeader } from '@/components/kfg/KfgHeader';
@@ -166,9 +165,7 @@ export default function MissionsTab() {
         </>
       )}
 
-      <View style={styles.newWrap}>
-        <Button label={t.kfgNewMission} variant="outline" onPress={() => router.push('/(app)/kfg/create' as any)} fullWidth />
-      </View>
+{/* New mission is the raised "+" in the KfG tab bar (like the main app's create button). */}
     </ScrollView>
   );
 }

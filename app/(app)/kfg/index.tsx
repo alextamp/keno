@@ -5,6 +5,8 @@ import { AccentScopeProvider, useTheme } from '@/core/theme';
 import { useTranslation } from '@/core/i18n';
 import { IconName } from '@/components/ui/Icon';
 import { TabBar, TabBarItem } from '@/components/ui/TabBar';
+import { TabBarFab } from '@/components/ui/TabBarFab';
+import { useRouter } from 'expo-router';
 import { haptics } from '@/core/utils/haptics';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { useKfgStore } from '@/features/kfg/presentation/store/kfg.store';
@@ -29,6 +31,7 @@ export default function KfgHub() {
 function KfgHubInner() {
   const { colors } = useTheme();
   const t = useTranslation();
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const { start, stop } = useKfgStore();
   useKfgReminderSync();
@@ -77,10 +80,17 @@ function KfgHubInner() {
         </View>
       </PagerView>
 
+      {/* Same bar as the main app: a raised "+" in the middle (new mission),
+          which opens the create screen rather than being a page. */}
       <TabBar>
-        {TAB_ICONS.map((icon, i) => (
+        {TAB_ICONS.slice(0, 2).map((icon, i) => (
           <TabBarItem key={icon} icon={icon} label={labels[i]} focused={activeIndex === i} onPress={() => goTo(i)} />
         ))}
+        <TabBarFab key="fab" label={t.kfgNewMission} onPress={() => router.push('/(app)/kfg/create' as any)} />
+        {TAB_ICONS.slice(2).map((icon, j) => {
+          const i = j + 2;
+          return <TabBarItem key={icon} icon={icon} label={labels[i]} focused={activeIndex === i} onPress={() => goTo(i)} />;
+        })}
       </TabBar>
     </View>
   );
