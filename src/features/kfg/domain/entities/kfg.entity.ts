@@ -138,6 +138,8 @@ export interface KfgLeaderboard {
   totalRanked: number;
   top: KfgLeaderboardEntry[];
   universities: { name: string; points: number }[];
+  /** First 3 adults (18+) in the ranking — who gets the monthly prize (provisional until `final`). */
+  prizeWinnerUids: string[];
 }
 
 export const EMPTY_KFG_PROFILE: Omit<KfgProfile, 'uid'> = {

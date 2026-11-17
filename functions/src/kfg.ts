@@ -11,7 +11,7 @@ import { db, checkRateLimit } from './shared';
 import {
   athensDayId, athensMonthId, athensWeekId, clampTrust, countsForLeaderboard, isInScanWindow, isQrValid,
   KFG_COSMETICS, KFG_LIMITS, KFG_POINTS, KfgCreatorType, KfgMissionKind, kfgLevel, levelUnlocks, missionEligibility,
-  missionPoints, nextStreak, sanitizeMissionFilters, KFG_QUESTS, questProgress, questClaimId, parseQrCode, PhotoShot, photoPairProblems, resolveGroup,
+  missionPoints, nextStreak, sanitizeMissionFilters, KFG_QUESTS, questProgress, questClaimId, prizeWinners, parseQrCode, PhotoShot, photoPairProblems, resolveGroup,
 } from './kfgLogic';
 
 // ── Keno for Good ───────────────────────────────────────────────────────────
@@ -1201,6 +1201,8 @@ async function writeLeaderboard(monthId: string, standings: Standing[], final: b
       };
     }),
     universities: Object.entries(universities).sort((a, b) => b[1] - a[1]).map(([name, points]) => ({ name, points })),
+    // Prize goes to the first 3 adults (18+) — final once the month is closed.
+    prizeWinnerUids: prizeWinners(top, (uid) => users[top.findIndex((s) => s.uid === uid)]?.data()?.age),
     updatedAt: FieldValue.serverTimestamp(),
     ...extra,
   }, { merge: true });

@@ -113,5 +113,6 @@ export function leaderboardFromFirestore(d: DocumentData): KfgLeaderboard {
       university: opt(e.university), avatarColor: opt(e.avatarColor), photoUri: opt(e.photoUri),
     })),
     universities: d.universities ?? [],
+    prizeWinnerUids: d.prizeWinnerUids ?? [],
   };
 }

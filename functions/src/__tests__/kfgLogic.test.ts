@@ -1,7 +1,7 @@
 import {
   athensMonthId, athensWeekId, isInScanWindow, isQrValid, KFG_LIMITS, kfgLevel, levelUnlocks, missionPoints,
   missionEligibility, nextStreak, parseQrCode, photoPairProblems, qrSignature, requiredConfirmations, resolveGroup,
-  sanitizeMissionFilters, KFG_QUESTS, questProgress, questClaimId,
+  sanitizeMissionFilters, KFG_QUESTS, questProgress, questClaimId, prizeWinners,
 } from '../kfgLogic';
 
 describe('levels and unlocks', () => {
@@ -172,5 +172,13 @@ describe('quests', () => {
   it('claim ids: weekly per week, challenges once', () => {
     expect(questClaimId(q('week_one'), '2026-W47')).toBe('week_one_2026-W47');
     expect(questClaimId(q('missions_5'), '2026-W47')).toBe('missions_5');
+  });
+});
+
+describe('prize winners', () => {
+  it('are the first three adults; minors and unknown ages still rank but are skipped', () => {
+    const ranked = ['a', 'minor', 'b', 'noAge', 'c', 'd'].map((uid) => ({ uid }));
+    const ages: Record<string, unknown> = { a: 19, minor: 17, b: 18, c: 22, d: 30 };
+    expect(prizeWinners(ranked, (u) => ages[u])).toEqual(['a', 'b', 'c']);
   });
 });

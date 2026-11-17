@@ -33,6 +33,8 @@ export const KFG_LIMITS = {
   initialTrust: 0.5,
   photoMaxDistanceM: 150,
   photoReviewSampleRate: 0.1,
+  /** Monthly prizes: the top N adults (see prizeWinners). Mirrors src/core/constants/kfg.ts. */
+  prizeWinners: 3,
   photoLocationRetentionDays: 30,
   /** Before/after verification photos are deleted this long after the decision (approved / rejected / expired). */
   verificationPhotoRetentionDays: 30,
@@ -343,4 +345,13 @@ export function questProgress(q: KfgQuestDef, done: KfgDoneForQuest[], weekId: s
 /** The claim doc id: weekly quests can be claimed once per week, challenges once ever. */
 export function questClaimId(q: KfgQuestDef, weekId: string): string {
   return q.weekly ? `${q.id}_${weekId}` : q.id;
+}
+
+/**
+ * Monthly prizes go to the first `n` ranked people who are adults — a stated
+ * age of 18+ on their profile. Younger or age not set: they still rank, the
+ * prize passes to the next adult (decided for legal simplicity, Nov 2026).
+ */
+export function prizeWinners(ranked: { uid: string }[], ageOf: (uid: string) => unknown, n: number = KFG_LIMITS.prizeWinners): string[] {
+  return ranked.filter((r) => { const a = ageOf(r.uid); return typeof a === 'number' && a >= 18; }).slice(0, n).map((r) => r.uid);
 }

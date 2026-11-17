@@ -22,7 +22,7 @@ import { KfgLeaderboard, KfgLeaderboardEntry } from '@/features/kfg/domain/entit
 import { useKfgStore } from '@/features/kfg/presentation/store/kfg.store';
 import { formatPoints } from '@/features/kfg/format';
 
-type Row = { key: string; rank: number; name: string; sub?: string; points: number; avatar?: KfgLeaderboardEntry; me: boolean };
+type Row = { key: string; rank: number; name: string; sub?: string; points: number; avatar?: KfgLeaderboardEntry; me: boolean; prize?: boolean };
 
 export default function KfgLeaderboardTab() {
   const { colors } = useTheme();
@@ -73,7 +73,7 @@ export default function KfgLeaderboardTab() {
       ? [...source, { uid: user.id, name: user.name, points: monthPoints, avatarColor: user.avatarColor, photoUri: user.photoUri }]
       : source;
     return [...withMe].sort((a, b) => b.points - a.points).slice(0, 20).map((e, i) => ({
-      key: e.uid, rank: i + 1, name: e.name, sub: e.university ? universityLabel(e.university, language) : undefined,
+      key: e.uid, rank: i + 1, prize: (board?.prizeWinnerUids ?? []).includes(e.uid), name: e.name, sub: e.university ? universityLabel(e.university, language) : undefined,
       points: e.points, avatar: e, me: e.uid === user?.id,
     }));
   }, [tab, board, friends, user?.id, monthPoints, language]);
@@ -111,7 +111,7 @@ export default function KfgLeaderboardTab() {
               accessibilityLabel={`${r.rank}. ${r.name}, ${t.kfgPoints(formatPoints(r.points, language))}`}
               style={[styles.row, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}
             >
-              <Text style={[styles.rank, { color: r.rank <= KFG_LIMITS.prizeWinners ? colors.accentInk : colors.textHint }]}>{r.rank}</Text>
+              <Text style={[styles.rank, { color: r.prize ? colors.accentInk : colors.textHint }]}>{r.prize ? '🏆' : r.rank}</Text>
               {r.avatar && (
                 <AvatarPile profiles={[{ uid: r.avatar.uid, name: r.avatar.name, avatarColor: r.avatar.avatarColor, photoUri: r.avatar.photoUri }]} size={30} />
               )}
