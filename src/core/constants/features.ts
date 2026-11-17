@@ -8,7 +8,7 @@ export const FEATURES = {
   rides: true,
   recurringEvents: true,
   /** Keno for Good section (volunteering missions, KfG points, character). */
-  kenoForGood: __DEV__,
+  kenoForGood: true,
   /** KfG monthly prizes (🏆 + prize rule on the leaderboard). Off until real prizes exist — the app mustn't promise them. */
   kfgPrizes: false,
 } as const;
