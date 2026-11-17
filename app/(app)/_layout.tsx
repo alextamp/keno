@@ -49,7 +49,9 @@ export default function AppLayout() {
       <Stack.Screen name="challenges" />
       <Stack.Screen name="wrapped" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="organiser-stats" />
-      <Stack.Screen name="kfg/index" />
+      {/* Inside Keno for Good a horizontal swipe only changes its tabs (the
+          pager); leaving is the "‹ keno." arrow only — no iOS edge-swipe back. */}
+      <Stack.Screen name="kfg/index" options={{ gestureEnabled: false, fullScreenGestureEnabled: false }} />
       <Stack.Screen name="kfg/mission/[id]" />
       <Stack.Screen name="kfg/create" />
       <Stack.Screen name="kfg/verify/[id]" />
