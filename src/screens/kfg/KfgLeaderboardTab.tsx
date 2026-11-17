@@ -18,6 +18,7 @@ import { isLeft } from '@/core/utils/either';
 import { fetchUserProfiles } from '@/core/utils/userProfiles';
 import { useAuthStore } from '@/features/auth/presentation/store/auth.store';
 import { kfgRepository } from '@/features/kfg/data/repositories/kfg.repository.impl';
+import { FEATURES } from '@/core/constants/features';
 import { KfgLeaderboard, KfgLeaderboardEntry } from '@/features/kfg/domain/entities/kfg.entity';
 import { useKfgStore } from '@/features/kfg/presentation/store/kfg.store';
 import { formatPoints } from '@/features/kfg/format';
@@ -73,7 +74,7 @@ export default function KfgLeaderboardTab() {
       ? [...source, { uid: user.id, name: user.name, points: monthPoints, avatarColor: user.avatarColor, photoUri: user.photoUri }]
       : source;
     return [...withMe].sort((a, b) => b.points - a.points).slice(0, 20).map((e, i) => ({
-      key: e.uid, rank: i + 1, prize: (board?.prizeWinnerUids ?? []).includes(e.uid), name: e.name, sub: e.university ? universityLabel(e.university, language) : undefined,
+      key: e.uid, rank: i + 1, prize: FEATURES.kfgPrizes && (board?.prizeWinnerUids ?? []).includes(e.uid), name: e.name, sub: e.university ? universityLabel(e.university, language) : undefined,
       points: e.points, avatar: e, me: e.uid === user?.id,
     }));
   }, [tab, board, friends, user?.id, monthPoints, language]);
@@ -151,7 +152,7 @@ export default function KfgLeaderboardTab() {
         </View>
       )}
 
-      <Text style={[styles.rule, { color: colors.textHint }]}>{t.kfgPrizeRule(KFG_LIMITS.prizeWinners)}</Text>
+      {FEATURES.kfgPrizes && <Text style={[styles.rule, { color: colors.textHint }]}>{t.kfgPrizeRule(KFG_LIMITS.prizeWinners)}</Text>}
       <Text style={[styles.sub, styles.center, { color: colors.textDecor }]}>{t.kfgRankUpdated}</Text>
     </ScrollView>
   );
