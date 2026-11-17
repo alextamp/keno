@@ -38,7 +38,7 @@ top 3. **KfG points are separate from the app's XP** and can't be bought.
 | Points, level, streak, monthly score, rank snapshot | `kfgProfiles`, `kfgLedger` | profile: any signed-in user; ledger: the user, admins | ledger kept after account deletion **with the uid removed** |
 | Character and owned / worn cosmetic items | `kfgProfiles/{uid}` | any signed-in user | while the account exists |
 | Claimed weekly quests / challenges | `kfgProfiles/{uid}/claims` | the user only | while the account exists |
-| Before/after verification photos (EXIF stripped on upload) | Storage `kfg-photos/{uid}/` | the user, admins | while the account exists (**no automatic deletion yet**) |
+| Before/after verification photos (EXIF stripped on upload) | Storage `kfg-photos/{uid}/` | the user, admins | **deleted 30 days after the decision** (approved / rejected / expired); kept while still in review |
 | Photo GPS position + time (sent by the app at capture) | `kfgVerifications` | the user, admins | coordinates deleted 30 days after upload (unless still under review) |
 | Face count from Google Cloud Vision | `kfgVerifications` | the user, admins | while the account exists |
 | Mission photo wall (photos people upload after attending) | `kfgMissions/{id}/photos` + Storage | any signed-in user | **deleted after 30 days** (same sweep as events) |
@@ -93,5 +93,5 @@ event reminders in Settings.
 12. **Public mission web page** — what is published (see above) and that organizers' names appear on it.
 13. **Rides to missions** reuse the existing rides disclaimer — make sure it covers missions, not only events.
 14. **Account deletion** removes the user's KfG data (participations, verifications, trust score, profile, cosmetics, claims, photos, place in waitlists / co-hosts / requests / present lists, kudos) and cancels their upcoming missions. The points ledger is kept **without the user id** so past leaderboards stay consistent. Mention this.
-15. **Verification photo retention** — `kfg-photos/` aren't auto-deleted today (unlike the photo wall). A retention period should be decided; small change in `kfgSweepPhotoLocations`.
+15. **Verification photo retention** — before/after photos are deleted 30 days after they're decided (approved, rejected or expired); their location 30 days after upload.
 16. **Reporting** — missions can be reported to the Keno team, who can cancel them (same SLA as events).

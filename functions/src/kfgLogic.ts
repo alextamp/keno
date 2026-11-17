@@ -34,6 +34,8 @@ export const KFG_LIMITS = {
   photoMaxDistanceM: 150,
   photoReviewSampleRate: 0.1,
   photoLocationRetentionDays: 30,
+  /** Before/after verification photos are deleted this long after the decision (approved / rejected / expired). */
+  verificationPhotoRetentionDays: 30,
   leaderboardTop: 100,
   maxCapacity: 200,
   maxDurationHours: 12,

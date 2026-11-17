@@ -62,6 +62,13 @@ const call = (fn, uid, data) => kfg[fn].run({ data, auth: { uid, token: {} }, ra
     () => { throw new Error('FAIL: second review should be refused'); },
     () => ok(true, 'already-decided pair cannot be reviewed again'),
   );
+
+  // Retention: decided photos are deleted 30 days after the decision, not before.
+  ok((await kfg.sweepVerificationPhotos()) === 0, 'freshly decided photos are kept');
+  ok((await kfg.sweepVerificationPhotos(Date.now() + 31 * 86400000)) === 1, 'photos swept 30+ days after the decision');
+  const [stillThere] = await bucket.file(`kfg-photos/u1/${participationId}_before.jpg`).exists();
+  const swept = (await db.doc(`kfgParticipations/${participationId}`).get()).data();
+  ok(!stillThere && Object.keys(swept.photos).length === 0 && swept.photosDeletedAt, 'files gone, participation keeps no photo paths');
   console.log('\nALL PASSED');
   process.exit(0);
 })().catch((e) => { console.error(e.message ?? e); process.exit(1); });

@@ -46,6 +46,8 @@ export const KFG_LIMITS = {
   /** Share of photo submissions sent to manual review even when every automatic check passed. */
   photoReviewSampleRate: 0.1,
   photoLocationRetentionDays: 30,
+  /** Before/after verification photos are deleted this long after the decision (approved / rejected / expired). */
+  verificationPhotoRetentionDays: 30,
   /** Shown as "Προς το top N" on the leaderboard; also unlocks the matching cosmetic. */
   leaderboardTop: 100,
   prizeWinners: 3,

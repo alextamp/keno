@@ -1260,8 +1260,14 @@ export const kfgUpdateLeaderboard = onSchedule('every 30 minutes', async () => {
 
 // ── Housekeeping ────────────────────────────────────────────────────────────
 
-/** Photo coordinates are only needed for the checks and a review; drop them after the retention period. */
+/**
+ * Photo coordinates are only needed for the checks and a review; drop them
+ * after the retention period. The before/after photos themselves are deleted
+ * 30 days after they were decided (paid, reviewed, rejected or expired) —
+ * never while still waiting in the review queue.
+ */
 export const kfgSweepPhotoLocations = onSchedule('every 24 hours', async () => {
+  await sweepVerificationPhotos();
   const cutoff = Timestamp.fromMillis(Date.now() - KFG_LIMITS.photoLocationRetentionDays * 86_400_000);
   const snap = await db.collection(VERIFICATIONS).where('type', '==', 'photo').where('createdAt', '<', cutoff).get();
   const stale = snap.docs.filter((d) => d.data().lat != null && d.data().reviewState !== 'queued');
@@ -1271,6 +1277,27 @@ export const kfgSweepPhotoLocations = onSchedule('every 24 hours', async () => {
     await batch.commit();
   }
 });
+
+export async function sweepVerificationPhotos(now = Date.now()): Promise<number> {
+  const cutoff = now - KFG_LIMITS.verificationPhotoRetentionDays * 86_400_000;
+  const snap = await db.collection(PARTICIPATIONS)
+    .where('kind', '==', 'photo').where('status', 'in', ['completed', 'rejected', 'expired']).get();
+  const bucket = admin.storage().bucket();
+  let deleted = 0;
+  for (const d of snap.docs) {
+    const p = d.data();
+    const paths = Object.values(p.photos ?? {}).filter((x): x is string => typeof x === 'string' && !!x);
+    if (!paths.length || p.reviewState === 'queued') continue;
+    const decidedAt = (p.reviewedAt ?? p.completedAt ?? p.joinedAt) as Timestamp | undefined;
+    if (!decidedAt || decidedAt.toMillis() > cutoff) continue;
+    await Promise.all(paths.map((path) => bucket.file(path).delete({ ignoreNotFound: true }).catch((err) =>
+      logger.error('sweepVerificationPhotos: delete failed', { path, err: String(err) }))));
+    await d.ref.update({ photos: {}, photosDeletedAt: FieldValue.serverTimestamp() });
+    deleted++;
+  }
+  if (deleted) logger.log(`sweepVerificationPhotos: removed photos of ${deleted} participation(s)`);
+  return deleted;
+}
 
 /** Called from onUserDeleted (index.ts). The ledger is kept for the leaderboard audit trail, without the uid. */
 export async function deleteKfgUserData(uid: string): Promise<void> {
